@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Package, Plus, Trash2, User, CalendarClock, ListPlus } from "lucide-react";
 import { createOrder } from "@/actions/orders";
 import { getTierPrice, calcSubtotal, formatRupiah } from "@/lib/pricing";
+import { SelectField } from "@/components/SelectField";
+import { DateTimePicker } from "@/components/DateTimePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -216,20 +218,19 @@ export function OrderForm({
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="customerId">Pilih Pelanggan</Label>
-            <select
+            <SelectField
               id="customerId"
               name="customerId"
               value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-            >
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.phone}){c.isBlacklisted ? " — BLACKLIST" : ""}
-                </option>
-              ))}
-              <option value="new">+ Pelanggan baru</option>
-            </select>
+              onValueChange={setCustomerId}
+              options={[
+                ...customers.map((c) => ({
+                  label: `${c.name} (${c.phone})${c.isBlacklisted ? " — BLACKLIST" : ""}`,
+                  value: String(c.id),
+                })),
+                { label: "+ Pelanggan baru", value: "new" },
+              ]}
+            />
           </div>
           {customerId === "new" && (
             <>
@@ -281,13 +282,11 @@ export function OrderForm({
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="startDate">Mulai</Label>
-            <Input
+            <DateTimePicker
               id="startDate"
               name="startDate"
-              type="datetime-local"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
+              onChange={setStartDate}
             />
           </div>
         </div>
@@ -338,17 +337,14 @@ export function OrderForm({
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="space-y-1 md:col-span-2">
                   <Label>Produk</Label>
-                  <select
-                    value={item.productId}
-                    onChange={(e) => updateItem(item.key, { productId: Number(e.target.value) })}
-                    className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-                  >
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.sku})
-                      </option>
-                    ))}
-                  </select>
+                  <SelectField
+                    value={String(item.productId)}
+                    onValueChange={(v) => updateItem(item.key, { productId: Number(v) })}
+                    options={products.map((p) => ({
+                      label: `${p.name} (${p.sku})`,
+                      value: String(p.id),
+                    }))}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label>Qty</Label>
@@ -363,19 +359,11 @@ export function OrderForm({
                 </div>
                 <div className="space-y-1">
                   <Label>Durasi</Label>
-                  <select
-                    value={item.durationHours}
-                    onChange={(e) =>
-                      updateItem(item.key, { durationHours: Number(e.target.value) })
-                    }
-                    className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-                  >
-                    {DURATIONS.map((d) => (
-                      <option key={d} value={d}>
-                        {d} jam
-                      </option>
-                    ))}
-                  </select>
+                  <SelectField
+                    value={String(item.durationHours)}
+                    onValueChange={(v) => updateItem(item.key, { durationHours: Number(v) })}
+                    options={DURATIONS.map((d) => ({ label: `${d} jam`, value: String(d) }))}
+                  />
                 </div>
               </div>
               <div className="grid gap-3 md:grid-cols-4">
@@ -391,19 +379,17 @@ export function OrderForm({
                 </div>
                 <div className="space-y-1">
                   <Label>Diskon</Label>
-                  <select
+                  <SelectField
                     value={item.discountType}
-                    onChange={(e) =>
-                      updateItem(item.key, {
-                        discountType: e.target.value as ItemDraft["discountType"],
-                      })
+                    onValueChange={(v) =>
+                      updateItem(item.key, { discountType: v as ItemDraft["discountType"] })
                     }
-                    className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-                  >
-                    <option value="none">Tanpa diskon</option>
-                    <option value="amount">Nominal (Rp)</option>
-                    <option value="percent">Persen (%)</option>
-                  </select>
+                    options={[
+                      { label: "Tanpa diskon", value: "none" },
+                      { label: "Nominal (Rp)", value: "amount" },
+                      { label: "Persen (%)", value: "percent" },
+                    ]}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label>Nilai Diskon</Label>

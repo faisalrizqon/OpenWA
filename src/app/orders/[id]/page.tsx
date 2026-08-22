@@ -15,6 +15,7 @@ import { formatRupiah } from "@/lib/pricing";
 import { formatBookingWA, waLink } from "@/lib/wa";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ReturnForm } from "@/components/ReturnForm";
+import { SelectField } from "@/components/SelectField";
 import { updateOrderStatus, addPayment } from "@/actions/orders";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -344,35 +345,26 @@ export default async function OrderDetailPage({
                 <label htmlFor="paymentType" className="text-xs font-medium text-muted-foreground">
                   Jenis
                 </label>
-                <select
+                <SelectField
                   id="paymentType"
                   name="paymentType"
-                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
                   defaultValue="dp"
-                >
-                  {Object.entries(PAYMENT_TYPES).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
+                  options={Object.entries(PAYMENT_TYPES).map(([v, l]) => ({
+                    label: l,
+                    value: v,
+                  }))}
+                />
               </div>
               <div className="space-y-1">
                 <label htmlFor="method" className="text-xs font-medium text-muted-foreground">
                   Metode
                 </label>
-                <select
+                <SelectField
                   id="method"
                   name="method"
-                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
                   defaultValue=""
-                >
-                  {Object.entries(METHODS).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
+                  options={Object.entries(METHODS).map(([v, l]) => ({ label: l, value: v }))}
+                />
               </div>
               <div className="space-y-1">
                 <label htmlFor="note" className="text-xs font-medium text-muted-foreground">

@@ -5,6 +5,7 @@ import { CheckCircle2 } from "lucide-react";
 import { submitReturn } from "@/actions/orders";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { SelectField } from "@/components/SelectField";
 
 interface ReturnUnit {
   unitId: number;
@@ -47,25 +48,22 @@ export function ReturnForm({ orderId, units }: { orderId: string; units: ReturnU
                   <span className="ml-2 text-muted-foreground">#{u.serialNumber}</span>
                 )}
               </div>
-              <div>
+              <div className="w-40">
                 <Label htmlFor={`cond-${u.unitId}`} className="sr-only">
                   Kondisi {u.productName}
                 </Label>
-                <select
+                <SelectField
                   id={`cond-${u.unitId}`}
-                  value={conditions[u.unitId] ?? ""}
-                  onChange={(e) =>
-                    setConditions((prev) => ({ ...prev, [u.unitId]: e.target.value }))
+                  value={conditions[u.unitId] || undefined}
+                  onValueChange={(v) =>
+                    setConditions((prev) => ({ ...prev, [u.unitId]: v }))
                   }
-                  className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-                >
-                  <option value="">— pilih kondisi —</option>
-                  {Object.entries(CONDITIONS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="— pilih kondisi —"
+                  options={Object.entries(CONDITIONS).map(([value, label]) => ({
+                    label,
+                    value,
+                  }))}
+                />
               </div>
             </div>
           ))}

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { SelectField } from "@/components/SelectField";
 
 export default async function NewProductPage({
   searchParams,
@@ -56,19 +57,13 @@ export default async function NewProductPage({
             </div>
             <div className="space-y-2">
               <Label htmlFor="categoryId">Kategori</Label>
-              <select
+              <SelectField
                 id="categoryId"
                 name="categoryId"
-                required
-                defaultValue={categories[0]?.id ?? ""}
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+                defaultValue={categories[0] ? String(categories[0].id) : undefined}
+                placeholder="Pilih kategori"
+                options={categories.map((c) => ({ label: c.name, value: String(c.id) }))}
+              />
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="newCategoryName">Kategori Baru (opsional)</Label>

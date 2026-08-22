@@ -25,17 +25,20 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex shrink-0 flex-col border-b border-sidebar-border bg-sidebar md:w-60 md:h-screen md:sticky md:top-0 md:border-r md:border-b-0">
-      <div className="flex items-center gap-2.5 px-4 py-3.5 md:py-5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+    <aside className="glass sticky top-0 z-30 flex shrink-0 flex-col border-b border-sidebar-border md:h-screen md:w-64 md:border-r md:border-b-0">
+      <div className="flex items-center gap-3 px-5 py-4 md:py-6">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-violet-500 text-primary-foreground shadow-lg shadow-primary/25">
           <Camera className="size-5" aria-hidden />
         </span>
         <div className="leading-tight">
-          <p className="text-base font-bold tracking-tight">MudahSewa</p>
+          <p className="text-[15px] font-extrabold tracking-tight">MudahSewa</p>
           <p className="hidden text-xs text-muted-foreground md:block">Manajemen Rental</p>
         </div>
       </div>
-      <nav className="flex flex-row gap-1 overflow-x-auto px-2 pb-2 md:flex-col md:px-3 md:pb-4">
+      <p className="hidden px-5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 md:block">
+        Menu
+      </p>
+      <nav className="flex flex-row gap-1 overflow-x-auto px-3 pb-2 md:flex-col md:px-3 md:pb-4">
         {navItems.map((item) => {
           const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -44,20 +47,28 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-all ${
                 active
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? "bg-gradient-to-r from-primary to-violet-500 text-primary-foreground shadow-md shadow-primary/25"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               }`}
             >
-              <Icon className="size-4 shrink-0" aria-hidden />
+              <Icon
+                className={`size-4.5 shrink-0 transition-transform group-hover:scale-110 ${
+                  active ? "" : "text-muted-foreground/80"
+                }`}
+                aria-hidden
+              />
               {item.label}
             </Link>
           );
         })}
       </nav>
-      <div className="mt-auto hidden border-t border-sidebar-border px-4 py-3 text-xs text-muted-foreground md:block">
-        Rental digicam · Fase 1
+      <div className="mt-auto hidden px-5 py-4 text-xs text-muted-foreground/70 md:block">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-1.5 rounded-full bg-emerald-500" />
+          Rental digicam · Fase 1
+        </span>
       </div>
     </aside>
   );
