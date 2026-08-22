@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { ClipboardList } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/pricing";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PageHeader } from "@/components/PageHeader";
+import { HeaderLink } from "@/components/HeaderLink";
+import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -13,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 const STATUS_TABS: Record<string, string> = {
   "": "Semua",
@@ -42,18 +47,14 @@ export default async function OrdersPage({
   });
 
   return (
-    <div className="p-4 space-y-6 md:p-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">Orders</h1>
-        <Link
-          href="/orders/new"
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          + Buat Order
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Orders"
+        description="Siklus booking → aktif → selesai"
+        action={<HeaderLink href="/orders/new" label="Buat Order" />}
+      />
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {Object.entries(STATUS_TABS).map(([value, label]) => {
           const active = (filter ?? "") === value;
           const href = value === "" ? "/orders" : `/orders?status=${value}`;
@@ -61,11 +62,12 @@ export default async function OrdersPage({
             <Link
               key={value || "all"}
               href={href}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
                 active
-                  ? "bg-zinc-900 text-white"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-              }`}
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
             >
               {label}
             </Link>
@@ -77,31 +79,29 @@ export default async function OrdersPage({
         <CardHeader>
           <CardTitle>Daftar Order</CardTitle>
           <CardDescription>
-            {filter ? `Filter: ${STATUS_TABS[filter]}` : "Semua status"} — {orders.length} order
+            {filter ? `Status: ${STATUS_TABS[filter]}` : "Semua status"} · {orders.length} order
           </CardDescription>
         </CardHeader>
         <CardContent>
           {orders.length === 0 ? (
-            <div className="py-8 text-center text-sm text-zinc-500">
-              <p>Belum ada order{filter ? ` dengan status ${STATUS_TABS[filter]}` : ""}.</p>
-              <Link
-                href="/orders/new"
-                className="mt-2 inline-block rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-              >
-                Buat order pertama
-              </Link>
-            </div>
+            <EmptyState
+              icon={<ClipboardList className="size-5" aria-hidden />}
+              title={filter ? `Belum ada order ${STATUS_TABS[filter].toLowerCase()}` : "Belum ada order"}
+              description="Order baru dibuat dengan status Booking dan aktif saat barang diambil."
+              ctaHref="/orders/new"
+              ctaLabel="Buat order pertama"
+            />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nomor</TableHead>
-                  <TableHead>Tanggal Mulai</TableHead>
+                  <TableHead>Mulai</TableHead>
                   <TableHead>Pelanggan</TableHead>
                   <TableHead>Item</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Dibayar</TableHead>
-                  <TableHead>Sisa</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Dibayar</TableHead>
+                  <TableHead className="text-right">Sisa</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -118,18 +118,29 @@ export default async function OrdersPage({
                   return (
                     <TableRow key={o.id}>
                       <TableCell>
-                        <Link href={`/orders/${o.id}`} className="font-medium hover:underline">
+                        <Link href={`/orders/${o.id}`} className="font-medium text-primary hover:underline">
                           {o.orderNumber}
                         </Link>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
                         {format(new Date(o.startDate), "dd MMM yyyy", { locale: localeId })}
                       </TableCell>
                       <TableCell>{o.customer.name}</TableCell>
-                      <TableCell className="max-w-64 truncate">{itemSummary}</TableCell>
-                      <TableCell>{formatRupiah(total)}</TableCell>
-                      <TableCell>{formatRupiah(paid)}</TableCell>
-                      <TableCell className={sisa > 0 ? "font-medium text-red-600" : ""}>
+                      <TableCell className="max-w-48 truncate text-muted-foreground">
+                        {itemSummary}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {formatRupiah(total)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {formatRupiah(paid)}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "text-right tabular-nums",
+                          sisa > 0 ? "font-semibold text-red-600" : "text-muted-foreground"
+                        )}
+                      >
                         {formatRupiah(sisa)}
                       </TableCell>
                       <TableCell>

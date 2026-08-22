@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { OrderForm } from "@/components/OrderForm";
+import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function NewOrderPage({
@@ -19,15 +20,12 @@ export default async function NewOrderPage({
   ]);
 
   return (
-    <div className="p-4 space-y-6 md:p-6">
-      <div>
-        <h1 className="text-2xl font-bold">Buat Order</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          <Link href="/orders" className="hover:underline">
-            ← Kembali ke daftar order
-          </Link>
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Buat Order"
+        description="Harga tier otomatis per durasi — stok dicek live"
+        backHref="/orders"
+      />
 
       {error && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -38,15 +36,13 @@ export default async function NewOrderPage({
       <Card>
         <CardHeader>
           <CardTitle>Order Baru</CardTitle>
-          <CardDescription>
-            Harga mengikuti tier durasi (6/12/24/48 jam) — bisa di-override per item
-          </CardDescription>
+          <CardDescription>Durasi tier: 6 / 12 / 24 / 48 jam, di atasnya kelipatan harian</CardDescription>
         </CardHeader>
         <CardContent>
           {products.length === 0 ? (
-            <p className="py-8 text-center text-sm text-zinc-500">
+            <p className="py-8 text-center text-sm text-muted-foreground">
               Belum ada produk aktif.{" "}
-              <Link href="/products/new" className="text-blue-600 hover:underline">
+              <Link href="/products/new" className="font-medium text-primary hover:underline">
                 Tambah produk dulu
               </Link>
               .

@@ -2,6 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import {
+  AlertTriangle,
+  Ban,
+  CheckCircle2,
+  MessageCircle,
+  PlayCircle,
+  Wallet,
+} from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/pricing";
 import { formatBookingWA, waLink } from "@/lib/wa";
@@ -18,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 const PAYMENT_TYPES: Record<string, string> = {
   dp: "DP",
@@ -61,6 +70,7 @@ export default async function OrderDetailPage({
     .reduce((s, p) => s + p.amount, 0);
   const sisa = total - paid;
   const overdue = order.status === "active" && order.endDate < new Date();
+  const active = order.status === "active" || order.status === "late";
 
   const bookingWA = formatBookingWA({
     orderNumber: order.orderNumber,
@@ -86,36 +96,42 @@ export default async function OrderDetailPage({
     }));
 
   return (
-    <div className="p-4 space-y-6 md:p-6">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold">{order.orderNumber}</h1>
+        <Link
+          href="/orders"
+          className="text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          ← Orders
+        </Link>
+        <h1 className="text-xl font-bold tracking-tight md:text-2xl">{order.orderNumber}</h1>
         <StatusBadge status={order.status} />
-        <p className="w-full text-sm text-zinc-500">
-          <Link href="/orders" className="hover:underline">
-            ← Kembali ke daftar order
-          </Link>
-        </p>
+        <span className="text-sm text-muted-foreground">
+          {dateFmt(order.startDate)} → {dateFmt(order.endDate)}
+        </span>
       </div>
 
       {overdue && (
-        <p className="rounded-lg bg-yellow-100 px-4 py-3 text-sm font-medium text-yellow-800">
-          ⚠️ Melewati tanggal kembali ({dateFmt(order.endDate)})
+        <p className="flex items-center gap-2 rounded-lg bg-amber-100 px-4 py-3 text-sm font-medium text-amber-900">
+          <AlertTriangle className="size-4 shrink-0" aria-hidden />
+          Melewati tanggal kembali ({dateFmt(order.endDate)}) — pertimbangkan tandai terlambat
         </p>
       )}
 
       {error === "payment" && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-          Pembayaran tidak valid — jumlah harus lebih dari 0
+          Pembayaran tidak valid — jumlah harus lebih dari 0.
         </p>
       )}
       {error === "file" && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-          File tidak valid — hanya JPG/PNG/WebP maksimal 5MB
+          File tidak valid — hanya JPG/PNG/WebP maksimal 5MB.
         </p>
       )}
       {error === "return" && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-          Data return tidak valid
+          Data return tidak valid.
         </p>
       )}
       {error && !["payment", "file", "return"].includes(error) && (
@@ -125,90 +141,130 @@ export default async function OrderDetailPage({
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Customer panel */}
+        {/* Customer + status actions */}
         <Card>
           <CardHeader>
-            <CardTitle>Pelanggan</CardTitle>
+            <CardTitle>Pelanggan & Aksi</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
+          <CardContent className="space-y-4">
             <div className="flex items-center gap-2">
               <Link
                 href={`/customers/${order.customerId}`}
-                className="font-medium text-blue-600 hover:underline"
+                className="font-medium text-primary hover:underline"
               >
                 {order.customer.name}
               </Link>
-              {order.customer.isBlacklisted && <span title="Blacklist">🚫</span>}
+              {order.customer.isBlacklisted && (
+                <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                  Blacklist
+                </span>
+              )}
+              <span className="text-sm text-muted-foreground">{order.customer.phone}</span>
             </div>
-            <p className="text-zinc-500">{order.customer.phone}</p>
-            <div className="flex flex-wrap gap-2 pt-1">
+
+            <div className="flex flex-wrap gap-2">
               <a
                 href={waLink(order.customer.phone, bookingWA)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
               >
-                Konfirmasi Booking (WA)
+                <MessageCircle className="size-4" aria-hidden />
+                Konfirmasi Booking
               </a>
               {sisa > 0 && (
                 <a
                   href={waLink(order.customer.phone, reminderWA)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-amber-500 px-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-600"
                 >
-                  Ingatkan Pelunasan (WA)
+                  <Wallet className="size-4" aria-hidden />
+                  Ingatkan Pelunasan
                 </a>
               )}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Status panel */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Status</CardTitle>
-            <CardDescription>Transisi stok otomatis saat aktivasi/selesai</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 border-t pt-4">
               {order.status === "booking" && (
                 <form action={updateOrderStatus}>
                   <input type="hidden" name="orderId" value={order.id} />
                   <input type="hidden" name="newStatus" value="active" />
-                  <Button type="submit">Aktifkan</Button>
+                  <Button type="submit" className="gap-1.5">
+                    <PlayCircle className="size-4" aria-hidden />
+                    Aktifkan
+                  </Button>
                 </form>
               )}
               {order.status === "active" && (
                 <form action={updateOrderStatus}>
                   <input type="hidden" name="orderId" value={order.id} />
                   <input type="hidden" name="newStatus" value="late" />
-                  <Button type="submit" variant="destructive">
+                  <Button type="submit" variant="destructive" className="gap-1.5">
+                    <AlertTriangle className="size-4" aria-hidden />
                     Tandai Terlambat
                   </Button>
                 </form>
               )}
-              {(order.status === "booking" || order.status === "active" || order.status === "late") && (
+              {order.status !== "cancelled" && order.status !== "completed" && (
                 <form action={updateOrderStatus}>
                   <input type="hidden" name="orderId" value={order.id} />
                   <input type="hidden" name="newStatus" value="cancelled" />
-                  <Button type="submit" variant="outline">
+                  <Button type="submit" variant="outline" className="gap-1.5">
+                    <Ban className="size-4" aria-hidden />
                     Batalkan
                   </Button>
                 </form>
               )}
+              {order.status === "completed" && (
+                <span className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 text-sm font-medium text-emerald-700">
+                  <CheckCircle2 className="size-4" aria-hidden />
+                  Order selesai
+                </span>
+              )}
             </div>
-            <p className="text-xs text-zinc-500">
-              Mulai: {dateFmt(order.startDate)} · Kembali: {dateFmt(order.endDate)}
-            </p>
+
             {order.noteOrder && (
-              <p className="rounded-lg bg-zinc-50 px-3 py-2 text-sm">{order.noteOrder}</p>
+              <p className="rounded-lg bg-muted px-3 py-2 text-sm">{order.noteOrder}</p>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Financial summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ringkasan Pembayaran</CardTitle>
+            <CardDescription>
+              {order.payments.length} transaksi tercatat
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm text-muted-foreground">Total</span>
+              <span className="text-xl font-bold tabular-nums">{formatRupiah(total)}</span>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm text-muted-foreground">Dibayar</span>
+              <span className="font-medium tabular-nums text-emerald-600">
+                {formatRupiah(paid)}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between border-t pt-2">
+              <span className="text-sm font-medium">Sisa</span>
+              <span
+                className={cn(
+                  "text-lg font-bold tabular-nums",
+                  sisa > 0 ? "text-red-600" : "text-emerald-600"
+                )}
+              >
+                {formatRupiah(sisa)}
+              </span>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Items table */}
+      {/* Items */}
       <Card>
         <CardHeader>
           <CardTitle>Item</CardTitle>
@@ -218,72 +274,60 @@ export default async function OrderDetailPage({
             <TableHeader>
               <TableRow>
                 <TableHead>Produk</TableHead>
-                <TableHead>Qty</TableHead>
-                <TableHead>Durasi (jam)</TableHead>
-                <TableHead>Harga/unit</TableHead>
-                <TableHead>Diskon</TableHead>
-                <TableHead>Subtotal</TableHead>
+                <TableHead className="text-center">Qty</TableHead>
+                <TableHead className="text-center">Durasi</TableHead>
+                <TableHead className="text-right">Harga/unit</TableHead>
+                <TableHead className="text-right">Diskon</TableHead>
+                <TableHead className="text-right">Subtotal</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {order.items.map((it) => (
                 <TableRow key={it.id}>
-                  <TableCell className="font-medium">
-                    {it.product.name}
+                  <TableCell>
+                    <p className="font-medium">{it.product.name}</p>
                     {it.unit && (
-                      <span className="ml-2 text-xs text-zinc-500">
-                        #{it.unit.serialNumber ?? it.unit.id} ({it.unit.condition})
-                      </span>
+                      <p className="text-xs text-muted-foreground">
+                        Unit #{it.unit.serialNumber ?? it.unit.id} · {it.unit.condition}
+                      </p>
                     )}
                   </TableCell>
-                  <TableCell>{it.quantity}</TableCell>
-                  <TableCell>{it.durationHours}</TableCell>
-                  <TableCell>{formatRupiah(it.unitPrice)}</TableCell>
-                  <TableCell className="text-xs text-zinc-500">
+                  <TableCell className="text-center tabular-nums">{it.quantity}</TableCell>
+                  <TableCell className="text-center text-muted-foreground">
+                    {it.durationHours} jam
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatRupiah(it.unitPrice)}
+                  </TableCell>
+                  <TableCell className="text-right text-xs text-muted-foreground">
                     {it.discountType === "amount"
                       ? `-${formatRupiah(it.discountValue)}`
                       : it.discountType === "percent"
                         ? `-${it.discountValue}%`
                         : "—"}
                   </TableCell>
-                  <TableCell className="font-medium">{formatRupiah(it.subtotal)}</TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">
+                    {formatRupiah(it.subtotal)}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          <div className="mt-4 space-y-1 border-t pt-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-zinc-500">Total</span>
-              <span className="font-semibold">{formatRupiah(total)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-zinc-500">Dibayar</span>
-              <span>{formatRupiah(paid)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className={sisa > 0 ? "font-semibold text-red-600" : "font-semibold"}>
-                Sisa
-              </span>
-              <span className={sisa > 0 ? "font-semibold text-red-600" : "font-semibold"}>
-                {formatRupiah(sisa)}
-              </span>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Payment panel */}
+        {/* Payment form + history */}
         <Card>
           <CardHeader>
-            <CardTitle>Pembayaran</CardTitle>
-            <CardDescription>Catat DP / pelunasan / denda</CardDescription>
+            <CardTitle>Catat Pembayaran</CardTitle>
+            <CardDescription>DP / pelunasan / denda / refund deposit</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <form action={addPayment} className="grid gap-3 sm:grid-cols-2">
               <input type="hidden" name="orderId" value={order.id} />
               <div className="space-y-1">
-                <label htmlFor="amount" className="text-xs font-medium text-zinc-500">
+                <label htmlFor="amount" className="text-xs font-medium text-muted-foreground">
                   Jumlah (Rp)
                 </label>
                 <input
@@ -292,11 +336,12 @@ export default async function OrderDetailPage({
                   type="number"
                   min="1"
                   required
-                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+                  placeholder="30000"
+                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm tabular-nums"
                 />
               </div>
               <div className="space-y-1">
-                <label htmlFor="paymentType" className="text-xs font-medium text-zinc-500">
+                <label htmlFor="paymentType" className="text-xs font-medium text-muted-foreground">
                   Jenis
                 </label>
                 <select
@@ -313,7 +358,7 @@ export default async function OrderDetailPage({
                 </select>
               </div>
               <div className="space-y-1">
-                <label htmlFor="method" className="text-xs font-medium text-zinc-500">
+                <label htmlFor="method" className="text-xs font-medium text-muted-foreground">
                   Metode
                 </label>
                 <select
@@ -330,7 +375,7 @@ export default async function OrderDetailPage({
                 </select>
               </div>
               <div className="space-y-1">
-                <label htmlFor="note" className="text-xs font-medium text-zinc-500">
+                <label htmlFor="note" className="text-xs font-medium text-muted-foreground">
                   Catatan
                 </label>
                 <input
@@ -353,18 +398,22 @@ export default async function OrderDetailPage({
                     <TableHead>Tanggal</TableHead>
                     <TableHead>Jenis</TableHead>
                     <TableHead>Metode</TableHead>
-                    <TableHead>Jumlah</TableHead>
+                    <TableHead className="text-right">Jumlah</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {order.payments.map((p) => (
                     <TableRow key={p.id}>
-                      <TableCell>
+                      <TableCell className="text-muted-foreground">
                         {format(new Date(p.paidAt), "dd MMM yyyy", { locale: localeId })}
                       </TableCell>
                       <TableCell>{PAYMENT_TYPES[p.paymentType] ?? p.paymentType}</TableCell>
-                      <TableCell>{p.method ? (METHODS[p.method] ?? p.method) : "—"}</TableCell>
-                      <TableCell>{formatRupiah(p.amount)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {p.method ? (METHODS[p.method] ?? p.method) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {formatRupiah(p.amount)}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -378,13 +427,13 @@ export default async function OrderDetailPage({
           <CardHeader>
             <CardTitle>Return & Penyelesaian</CardTitle>
             <CardDescription>
-              {order.status === "active" || order.status === "late"
+              {active
                 ? "Foto kondisi barang + set kondisi unit, lalu selesaikan"
-                : "Hanya tersedia saat order aktif/terlambat"}
+                : "Tersedia saat order aktif / terlambat"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {order.status === "active" || order.status === "late" ? (
+            {active ? (
               <>
                 <ReturnForm orderId={order.id} units={assignedUnits} />
                 {order.returnPhotos.length > 0 && (
@@ -395,7 +444,7 @@ export default async function OrderDetailPage({
                         key={rp.id}
                         src={rp.filePath}
                         alt="Foto return"
-                        className="w-24 rounded border"
+                        className="h-24 w-24 rounded-lg border object-cover"
                       />
                     ))}
                   </div>
@@ -409,12 +458,12 @@ export default async function OrderDetailPage({
                     key={rp.id}
                     src={rp.filePath}
                     alt="Foto return"
-                    className="w-24 rounded border"
+                    className="h-24 w-24 rounded-lg border object-cover"
                   />
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-zinc-500">Belum ada proses return.</p>
+              <p className="text-sm text-muted-foreground">Belum ada proses return.</p>
             )}
           </CardContent>
         </Card>

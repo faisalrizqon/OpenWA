@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Package, Plus, Trash2, User, CalendarClock, ListPlus } from "lucide-react";
 import { createOrder } from "@/actions/orders";
 import { getTierPrice, calcSubtotal, formatRupiah } from "@/lib/pricing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
 interface ProductOption {
   id: number;
   name: string;
@@ -206,8 +206,13 @@ export function OrderForm({
       />
 
       {/* Customer */}
-      <div className="rounded-xl border p-4 space-y-4">
-        <h2 className="font-semibold">Pelanggan</h2>
+      <section className="space-y-4 rounded-xl border bg-card p-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <span className="flex size-6 items-center justify-center rounded-md bg-accent text-accent-foreground">
+            <User className="size-3.5" aria-hidden />
+          </span>
+          Pelanggan
+        </h2>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="customerId">Pilih Pelanggan</Label>
@@ -263,11 +268,16 @@ export function OrderForm({
           <input type="hidden" name="newCustomerName" value={newName} />
         )}
         {customerId === "new" && <input type="hidden" name="newCustomerPhone" value={newPhone} />}
-      </div>
+      </section>
 
       {/* Start date */}
-      <div className="rounded-xl border p-4 space-y-4">
-        <h2 className="font-semibold">Waktu Mulai</h2>
+      <section className="space-y-4 rounded-xl border bg-card p-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <span className="flex size-6 items-center justify-center rounded-md bg-accent text-accent-foreground">
+            <CalendarClock className="size-3.5" aria-hidden />
+          </span>
+          Waktu Mulai
+        </h2>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="startDate">Mulai</Label>
@@ -281,19 +291,34 @@ export function OrderForm({
             />
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Items */}
-      <div className="rounded-xl border p-4 space-y-4">
+      <section className="space-y-4 rounded-xl border bg-card p-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Item</h2>
-          <Button type="button" variant="outline" size="sm" onClick={addItem} disabled={products.length === 0}>
-            + Tambah Item
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
+            <span className="flex size-6 items-center justify-center rounded-md bg-accent text-accent-foreground">
+              <ListPlus className="size-3.5" aria-hidden />
+            </span>
+            Item
+          </h2>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addItem}
+            disabled={products.length === 0}
+            className="gap-1.5"
+          >
+            <Plus className="size-3.5" aria-hidden />
+            Tambah Item
           </Button>
         </div>
 
         {items.length === 0 && (
-          <p className="text-sm text-zinc-500">Belum ada item. Klik &quot;+ Tambah Item&quot;.</p>
+          <p className="text-sm text-muted-foreground">
+            Belum ada item. Klik &quot;Tambah Item&quot;.
+          </p>
         )}
 
         {pricedItems.map(({ item, product, unitPrice, subtotal }) => {
@@ -304,7 +329,12 @@ export function OrderForm({
             item.quantity;
           const insufficient = available !== undefined && needed > available;
           return (
-            <div key={item.key} className="rounded-lg bg-zinc-50 p-3 space-y-3">
+            <div
+              key={item.key}
+              className={`space-y-3 rounded-xl border p-3 ${
+                insufficient ? "border-red-300 bg-red-50/50" : "border-border bg-muted/40"
+              }`}
+            >
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="space-y-1 md:col-span-2">
                   <Label>Produk</Label>
@@ -332,7 +362,7 @@ export function OrderForm({
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label>Durasi (jam)</Label>
+                  <Label>Durasi</Label>
                   <select
                     value={item.durationHours}
                     onChange={(e) =>
@@ -387,13 +417,18 @@ export function OrderForm({
                 </div>
                 <div className="space-y-1">
                   <Label>Subtotal</Label>
-                  <div className="flex h-8 items-center text-sm font-semibold">
+                  <div className="flex h-8 items-center text-sm font-semibold tabular-nums">
                     {formatRupiah(subtotal)}
                   </div>
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <p className={`text-xs ${insufficient ? "text-red-600" : "text-zinc-500"}`}>
+                <p
+                  className={`flex items-center gap-1.5 text-xs ${
+                    insufficient ? "font-medium text-red-600" : "text-muted-foreground"
+                  }`}
+                >
+                  <Package className="size-3.5" aria-hidden />
                   {available === undefined
                     ? "Memeriksa stok…"
                     : `sisa ${available} unit${insufficient ? " — stok tidak cukup" : ""}`}
@@ -403,7 +438,9 @@ export function OrderForm({
                   variant="ghost"
                   size="sm"
                   onClick={() => removeItem(item.key)}
+                  className="gap-1 text-muted-foreground hover:text-destructive"
                 >
+                  <Trash2 className="size-3.5" aria-hidden />
                   Hapus
                 </Button>
               </div>
@@ -418,10 +455,10 @@ export function OrderForm({
             ))}
           </div>
         )}
-      </div>
+      </section>
 
       {/* Note + total */}
-      <div className="rounded-xl border p-4 space-y-4">
+      <section className="space-y-4 rounded-xl border bg-card p-4">
         <div className="space-y-2">
           <Label htmlFor="noteOrder">Catatan Order (opsional)</Label>
           <textarea
@@ -431,8 +468,8 @@ export function OrderForm({
           />
         </div>
         <div className="flex items-center justify-between border-t pt-3">
-          <span className="font-medium">Total</span>
-          <span className="text-xl font-bold">{formatRupiah(total)}</span>
+          <span className="text-sm font-medium text-muted-foreground">Total</span>
+          <span className="text-xl font-bold tabular-nums">{formatRupiah(total)}</span>
         </div>
         <Button type="submit" disabled={!canSubmit} className="w-full">
           Simpan Order
@@ -440,7 +477,7 @@ export function OrderForm({
         {!customerValid && customerId === "new" && (
           <p className="text-xs text-red-600">Lengkapi nama & nomor WA pelanggan baru.</p>
         )}
-      </div>
+      </section>
     </form>
   );
 }

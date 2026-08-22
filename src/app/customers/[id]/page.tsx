@@ -2,11 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { ClipboardList, ImageIcon } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/pricing";
 import { StatusBadge } from "@/components/StatusBadge";
 import { BlacklistToggle } from "@/components/BlacklistToggle";
 import { KtpUpload } from "@/components/KtpUpload";
+import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -29,7 +31,8 @@ export default async function CustomerDetailPage({
   searchParams,
 }: PageProps<"/customers/[id]">) {
   const { id } = await params;
-  const { error } = await searchParams;
+  const errorParam = await searchParams;
+  const error = Array.isArray(errorParam.error) ? errorParam.error[0] : errorParam.error;
   const customerId = Number(id);
   if (!Number.isInteger(customerId)) notFound();
 
@@ -46,31 +49,21 @@ export default async function CustomerDetailPage({
   if (!customer) notFound();
 
   return (
-    <div className="p-4 space-y-6 md:p-6">
-      <div>
-        <h1 className="text-2xl font-bold">
-          {customer.name}{" "}
-          {customer.isBlacklisted && (
-            <span className="align-middle inline-block rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
-              Blacklist
-            </span>
-          )}
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          <Link href="/customers" className="hover:underline">
-            ← Kembali ke daftar pelanggan
-          </Link>
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={customer.name}
+        description={customer.phone}
+        backHref="/customers"
+      />
 
       {error === "file" && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-          File tidak valid — hanya JPG/PNG/WebP maksimal 5MB
+          File tidak valid — hanya JPG/PNG/WebP maksimal 5MB.
         </p>
       )}
       {error === "reason" && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-          Alasan blacklist wajib diisi (min. 3 karakter)
+          Alasan blacklist wajib diisi (min. 3 karakter).
         </p>
       )}
 
@@ -81,36 +74,36 @@ export default async function CustomerDetailPage({
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div>
-              <span className="text-zinc-500">Nomor WA: </span>
+              <span className="text-muted-foreground">Nomor WA: </span>
               <a
                 href={`https://wa.me/62${customer.phone.slice(1)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
+                className="font-medium text-emerald-600 hover:underline"
               >
                 {customer.phone}
               </a>
             </div>
             {customer.email && (
               <div>
-                <span className="text-zinc-500">Email: </span>
+                <span className="text-muted-foreground">Email: </span>
                 {customer.email}
               </div>
             )}
             {customer.address && (
               <div>
-                <span className="text-zinc-500">Alamat: </span>
+                <span className="text-muted-foreground">Alamat: </span>
                 {customer.address}
               </div>
             )}
             {customer.notes && (
               <div>
-                <span className="text-zinc-500">Catatan: </span>
+                <span className="text-muted-foreground">Catatan: </span>
                 {customer.notes}
               </div>
             )}
             <div>
-              <span className="text-zinc-500">Terdaftar: </span>
+              <span className="text-muted-foreground">Terdaftar: </span>
               {format(new Date(customer.createdAt), "dd MMM yyyy", { locale: localeId })}
             </div>
           </CardContent>
@@ -120,14 +113,14 @@ export default async function CustomerDetailPage({
           <CardHeader>
             <CardTitle>Blacklist</CardTitle>
             <CardDescription>
-              Pelanggan blacklist ditandai merah di daftar dan diperingatkan saat membuat order
+              Pelanggan blacklist ditandai merah dan diperingatkan saat membuat order
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {customer.isBlacklisted ? (
               <>
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-                  Alasan: {customer.blacklistReason}
+                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                  {customer.blacklistReason}
                 </p>
                 <BlacklistToggle customerId={customer.id} isBlacklisted={customer.isBlacklisted} />
               </>
@@ -145,14 +138,20 @@ export default async function CustomerDetailPage({
         </CardHeader>
         <CardContent>
           {customer.orders.length === 0 ? (
-            <p className="py-4 text-center text-sm text-zinc-500">Belum ada order.</p>
+            <div className="flex flex-col items-center gap-1 py-8 text-center text-sm text-muted-foreground">
+              <ClipboardList className="size-5" aria-hidden />
+              <p>Belum ada order.</p>
+              <Link href="/orders/new" className="font-medium text-primary hover:underline">
+                Buat order untuk pelanggan ini
+              </Link>
+            </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nomor</TableHead>
                   <TableHead>Tanggal</TableHead>
-                  <TableHead>Total</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -160,14 +159,14 @@ export default async function CustomerDetailPage({
                 {customer.orders.map((o) => (
                   <TableRow key={o.id}>
                     <TableCell>
-                      <Link href={`/orders/${o.id}`} className="font-medium hover:underline">
+                      <Link href={`/orders/${o.id}`} className="font-medium text-primary hover:underline">
                         {o.orderNumber}
                       </Link>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-muted-foreground">
                       {format(new Date(o.startDate), "dd MMM yyyy", { locale: localeId })}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
                       {formatRupiah(o.items.reduce((s, it) => s + it.subtotal, 0))}
                     </TableCell>
                     <TableCell>
@@ -188,19 +187,31 @@ export default async function CustomerDetailPage({
         </CardHeader>
         <CardContent className="space-y-4">
           {customer.documents.length === 0 ? (
-            <p className="text-sm text-zinc-500">Belum ada dokumen terunggah.</p>
+            <div className="flex flex-col items-center gap-1 py-6 text-center text-sm text-muted-foreground">
+              <ImageIcon className="size-5" aria-hidden />
+              <p>Belum ada dokumen terunggah.</p>
+            </div>
           ) : (
             <div className="flex flex-wrap gap-4">
               {customer.documents.map((d) => (
-                <div key={d.id} className="space-y-1">
+                <figure key={d.id} className="space-y-1.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={d.filePath} alt={d.docType} className="w-40 rounded border" />
-                  <p className="text-xs text-zinc-500">{DOC_LABELS[d.docType] ?? d.docType}</p>
-                </div>
+                  <img
+                    src={d.filePath}
+                    alt={DOC_LABELS[d.docType] ?? d.docType}
+                    className="h-40 w-40 rounded-xl border object-cover"
+                  />
+                  <figcaption className="text-xs text-muted-foreground">
+                    {DOC_LABELS[d.docType] ?? d.docType} ·{" "}
+                    {format(new Date(d.uploadedAt), "dd MMM yyyy", { locale: localeId })}
+                  </figcaption>
+                </figure>
               ))}
             </div>
           )}
-          <KtpUpload customerId={customer.id} />
+          <div className="border-t pt-4">
+            <KtpUpload customerId={customer.id} />
+          </div>
         </CardContent>
       </Card>
     </div>

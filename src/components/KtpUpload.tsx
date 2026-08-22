@@ -1,5 +1,6 @@
 "use client";
 
+import { Upload } from "lucide-react";
 import { uploadDocument } from "@/actions/customers";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -30,10 +31,13 @@ export function KtpUpload({ customerId }: { customerId: number }) {
           type="file"
           required
           accept="image/jpeg,image/png,image/webp"
-          className="text-sm"
+          className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-accent-foreground hover:file:bg-accent/80"
         />
       </div>
-      <Button type="submit">Unggah</Button>
+      <Button type="submit" variant="secondary" className="gap-1.5">
+        <Upload className="size-4" aria-hidden />
+        Unggah
+      </Button>
     </form>
   );
 }

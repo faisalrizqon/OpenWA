@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import { submitReturn } from "@/actions/orders";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -32,15 +33,18 @@ export function ReturnForm({ orderId, units }: { orderId: string; units: ReturnU
       <input type="hidden" name="conditions" value={conditionsJson} />
 
       {units.length === 0 ? (
-        <p className="text-sm text-zinc-500">Tidak ada unit ter-assign pada order ini.</p>
+        <p className="text-sm text-muted-foreground">Tidak ada unit ter-assign pada order ini.</p>
       ) : (
         <div className="space-y-3">
           {units.map((u) => (
-            <div key={u.unitId} className="flex items-center justify-between gap-4">
+            <div
+              key={u.unitId}
+              className="flex items-center justify-between gap-4 rounded-lg bg-muted/40 px-3 py-2"
+            >
               <div className="text-sm">
                 <span className="font-medium">{u.productName}</span>
                 {u.serialNumber && (
-                  <span className="ml-2 text-zinc-500">#{u.serialNumber}</span>
+                  <span className="ml-2 text-muted-foreground">#{u.serialNumber}</span>
                 )}
               </div>
               <div>
@@ -76,7 +80,7 @@ export function ReturnForm({ orderId, units }: { orderId: string; units: ReturnU
           type="file"
           multiple
           accept="image/*"
-          className="text-sm"
+          className="w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-accent-foreground hover:file:bg-accent/80"
         />
       </div>
 
@@ -89,7 +93,8 @@ export function ReturnForm({ orderId, units }: { orderId: string; units: ReturnU
         />
       </div>
 
-      <Button type="submit" className="w-full" disabled={units.length === 0}>
+      <Button type="submit" className="w-full gap-1.5" disabled={units.length === 0}>
+        <CheckCircle2 className="size-4" aria-hidden />
         Selesaikan Order
       </Button>
     </form>

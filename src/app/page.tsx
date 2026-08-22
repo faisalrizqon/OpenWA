@@ -1,16 +1,14 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { ClipboardList, Clock3, Wallet, CircleDollarSign, AlertTriangle } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/pricing";
 import { StatusBadge } from "@/components/StatusBadge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PageHeader } from "@/components/PageHeader";
+import { HeaderLink } from "@/components/HeaderLink";
+import { EmptyState } from "@/components/EmptyState";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -48,41 +46,72 @@ export default async function DashboardPage() {
   );
   const unpaid = Math.max(0, totalOrderValue - totalReceived);
 
-  return (
-    <div className="p-4 space-y-6 md:p-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+  const stats = [
+    {
+      label: "Order Aktif",
+      value: String(activeCount),
+      icon: ClipboardList,
+      tone: "bg-blue-50 text-blue-600",
+    },
+    {
+      label: "Terlambat",
+      value: String(lateCount),
+      icon: AlertTriangle,
+      tone: "bg-red-50 text-red-600",
+    },
+    {
+      label: "Booking",
+      value: String(bookingCount),
+      icon: Clock3,
+      tone: "bg-amber-50 text-amber-600",
+    },
+    {
+      label: "Total Diterima",
+      value: formatRupiah(totalReceived),
+      icon: CircleDollarSign,
+      tone: "bg-emerald-50 text-emerald-600",
+      money: true,
+    },
+    {
+      label: "Belum Lunas",
+      value: formatRupiah(unpaid),
+      icon: Wallet,
+      tone: "bg-violet-50 text-violet-600",
+      money: true,
+    },
+  ];
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-        <Card>
-          <CardHeader>
-            <CardDescription>Order Aktif</CardDescription>
-            <CardTitle className="text-3xl">{activeCount}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Terlambat</CardDescription>
-            <CardTitle className="text-3xl">{lateCount}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Booking</CardDescription>
-            <CardTitle className="text-3xl">{bookingCount}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Total Diterima</CardDescription>
-            <CardTitle className="text-2xl">{formatRupiah(totalReceived)}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Belum Lunas</CardDescription>
-            <CardTitle className="text-2xl">{formatRupiah(unpaid)}</CardTitle>
-          </CardHeader>
-        </Card>
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Dashboard"
+        description="Ringkasan operasional rental hari ini"
+        action={<HeaderLink href="/orders/new" label="Buat Order" />}
+      />
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-5">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <Card key={s.label} size="sm">
+              <CardContent className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-medium text-muted-foreground">{s.label}</p>
+                  <p
+                    className={`mt-1 font-bold tabular-nums tracking-tight ${
+                      s.money ? "text-lg md:text-xl" : "text-2xl md:text-3xl"
+                    }`}
+                  >
+                    {s.value}
+                  </p>
+                </div>
+                <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${s.tone}`}>
+                  <Icon className="size-4.5" aria-hidden />
+                </span>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <Card>
@@ -92,15 +121,13 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           {recentOrders.length === 0 ? (
-            <div className="py-8 text-center text-sm text-zinc-500">
-              <p>Belum ada order.</p>
-              <Link
-                href="/orders/new"
-                className="mt-2 inline-block rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-              >
-                Buat order pertama
-              </Link>
-            </div>
+            <EmptyState
+              icon={<ClipboardList className="size-5" aria-hidden />}
+              title="Belum ada order"
+              description="Buat order pertama untuk mulai mengelola penyewaan."
+              ctaHref="/orders/new"
+              ctaLabel="Buat order pertama"
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -109,7 +136,7 @@ export default async function DashboardPage() {
                   <TableHead>Pelanggan</TableHead>
                   <TableHead>Produk</TableHead>
                   <TableHead>Mulai</TableHead>
-                  <TableHead>Total</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -117,18 +144,18 @@ export default async function DashboardPage() {
                 {recentOrders.map((o) => (
                   <TableRow key={o.id}>
                     <TableCell>
-                      <Link href={`/orders/${o.id}`} className="font-medium hover:underline">
+                      <Link href={`/orders/${o.id}`} className="font-medium text-primary hover:underline">
                         {o.orderNumber}
                       </Link>
                     </TableCell>
                     <TableCell>{o.customer.name}</TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-48 truncate text-muted-foreground">
                       {o.items.map((it) => `${it.product.name} ×${it.quantity}`).join(", ")}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground">
                       {format(new Date(o.startDate), "dd MMM yyyy", { locale: localeId })}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
                       {formatRupiah(o.items.reduce((s, it) => s + it.subtotal, 0))}
                     </TableCell>
                     <TableCell>
