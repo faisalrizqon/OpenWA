@@ -26,7 +26,8 @@ const STATUS_TABS: Record<string, string> = {
 export default async function OrdersPage({
   searchParams,
 }: PageProps<"/orders">) {
-  const { status } = await searchParams;
+  const statusParam = await searchParams;
+  const status = Array.isArray(statusParam.status) ? statusParam.status[0] : statusParam.status;
   const validStatuses = ["booking", "active", "late", "completed", "cancelled"];
   const filter = validStatuses.includes(status ?? "") ? (status as string) : undefined;
 

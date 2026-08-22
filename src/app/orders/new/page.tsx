@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export default async function NewOrderPage({
   searchParams,
 }: PageProps<"/orders/new">) {
-  const { error } = await searchParams;
+  const errorParam = await searchParams;
+  const error = Array.isArray(errorParam.error) ? errorParam.error[0] : errorParam.error;
 
   const [products, customers] = await Promise.all([
     prisma.product.findMany({

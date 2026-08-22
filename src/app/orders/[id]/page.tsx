@@ -41,7 +41,8 @@ export default async function OrderDetailPage({
   searchParams,
 }: PageProps<"/orders/[id]">) {
   const { id } = await params;
-  const { error } = await searchParams;
+  const errorParam = await searchParams;
+  const error = Array.isArray(errorParam.error) ? errorParam.error[0] : errorParam.error;
 
   const order = await prisma.order.findUnique({
     where: { id },
