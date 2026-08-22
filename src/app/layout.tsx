@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
-import { Sidebar } from "@/components/Sidebar";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -16,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MudahSewa — Manajemen Rental",
-  description: "Sistem manajemen rental digicam & multi-kategori",
+  title: "MudahSewa — Sewa Kamera & Digicam",
+  description: "Sewa digicam & kamera harian dengan harga bersahabat. Booking mudah via WhatsApp.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -26,14 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="id"
       className={`${jakarta.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-screen flex flex-col bg-background text-foreground md:flex-row">
-        <Sidebar />
-        <main className="min-w-0 flex-1">
-          <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-10 md:py-10">
-            {children}
-          </div>
-        </main>
-      </body>
+      <body className="min-h-screen bg-background text-foreground">{children}</body>
     </html>
   );
 }

@@ -9,6 +9,7 @@ import {
   Users,
   CalendarDays,
   BarChart3,
+  Store,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,7 +28,7 @@ export function Sidebar() {
   return (
     <aside className="glass sticky top-0 z-30 flex shrink-0 flex-col border-b border-sidebar-border md:h-screen md:w-64 md:border-r md:border-b-0">
       <div className="flex items-center gap-3 px-5 py-4 md:py-6">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-violet-500 text-primary-foreground shadow-lg shadow-primary/25">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
           <Camera className="size-5" aria-hidden />
         </span>
         <div className="leading-tight">
@@ -49,7 +50,7 @@ export function Sidebar() {
               aria-current={active ? "page" : undefined}
               className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-all ${
                 active
-                  ? "bg-gradient-to-r from-primary to-violet-500 text-primary-foreground shadow-md shadow-primary/25"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               }`}
             >
@@ -64,8 +65,16 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="mt-auto hidden px-5 py-4 text-xs text-muted-foreground/70 md:block">
-        <span className="inline-flex items-center gap-1.5">
+      <div className="mt-auto space-y-2 px-3 pb-4 pt-2">
+        <Link
+          href="/katalog"
+          target="_blank"
+          className="flex items-center gap-2.5 rounded-xl border border-border/70 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          <Store className="size-4.5 shrink-0" aria-hidden />
+          Lihat Katalog Publik
+        </Link>
+        <span className="hidden items-center gap-1.5 px-2 text-xs text-muted-foreground/70 md:inline-flex">
           <span className="size-1.5 rounded-full bg-emerald-500" />
           Rental digicam · Fase 1
         </span>

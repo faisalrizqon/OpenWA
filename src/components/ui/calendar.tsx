@@ -102,7 +102,7 @@ export function Calendar({
                 "relative flex h-8 items-center justify-center rounded-lg text-sm tabular-nums transition-colors",
                 inMonth ? "text-foreground" : "text-muted-foreground/40",
                 isSelected
-                  ? "bg-gradient-to-br from-primary to-violet-500 font-semibold text-primary-foreground shadow-sm"
+                  ? "bg-primary font-semibold text-primary-foreground shadow-sm"
                   : "hover:bg-accent hover:text-accent-foreground",
                 !isSelected && isToday && "font-semibold text-primary"
               )}

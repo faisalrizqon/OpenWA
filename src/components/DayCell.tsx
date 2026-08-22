@@ -69,7 +69,7 @@ export function DayCell({ data }: { data: DayData }) {
           className={cn(
             "flex size-6 items-center justify-center rounded-lg text-xs font-semibold tabular-nums",
             isToday
-              ? "bg-gradient-to-br from-primary to-violet-500 text-primary-foreground shadow-sm"
+              ? "bg-primary text-primary-foreground shadow-sm"
               : inMonth
                 ? isWeekend
                   ? "text-rose-500/80"
