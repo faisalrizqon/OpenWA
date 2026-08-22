@@ -13,11 +13,11 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^7.9.1",
+    "@prisma/client": "^6.19.3",
     "date-fns": "^4.4.0",
     "exceljs": "^4.4.0",
     "next": "16.3.2",
-    "prisma": "^7.9.1",
+    "prisma": "^6.19.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "zod": "^4.4.3"
@@ -36,9 +36,11 @@
     "vitest": "^4.1.11"
   },
   "allowScripts": {
-    "@prisma/engines@7.9.1": true,
     "esbuild@0.28.2": true,
     "prisma@7.9.1": true,
-    "unrs-resolver@1.12.2": true
+    "unrs-resolver@1.12.2": true,
+    "better-sqlite3@12.11.1": true,
+    "better-sqlite3@13.0.3": true,
+    "@prisma/engines@6.19.3": true
   }
 }

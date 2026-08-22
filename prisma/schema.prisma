@@ -1,13 +1,142 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
+  url      = "file:../data/mudahsewa.db"
+}
+// --- Categories (multi-kategori future-ready) ---
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+}
+
+// --- Products with price tier (6/12/24/48 jam) ---
+model Product {
+  id           Int         @id @default(autoincrement())
+  sku          String      @unique
+  categoryId   Int
+  category     Category    @relation(fields: [categoryId], references: [id])
+  name         String
+  description  String?
+  // Price tiers (flat per duration) — rupiah
+  price6h      Float       @default(0)
+  price12h     Float       @default(0)
+  price24h     Float       @default(0) // default basePrice fallback
+  price48h     Float       @default(0)
+  stockThreshold Int        @default(1)
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  
+  units        Unit[]
+  orderItems   OrderItem[]
+}
+
+// --- Units (physical serial numbers / asset tags) ---
+model Unit {
+  id           Int         @id @default(autoincrement())
+  productId    Int
+  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  serialNumber String?     @unique
+  condition    String      @default("Bagus") // Bagus | Cukup | Rusak
+  status       String      @default("available") // available | rented | maintenance | lost
+  notes        String?
+  createdAt    DateTime    @default(now())
+  
+  orderItems   OrderItem[]
+}
+
+// --- Customers + Blacklist + CRM ---
+model Customer {
+  id               Int         @id @default(autoincrement())
+  name             String
+  phone            String      @unique
+  email            String?
+  address          String?
+  notes            String?
+  isBlacklisted    Boolean     @default(false)
+  blacklistReason  String?
+  createdAt        DateTime    @default(now())
+  
+  orders           Order[]
+  documents        Document[]
+}
+
+// --- Documents (KTP / selfie KTP / kartu pelajar) ---
+model Document {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  docType    String   // ktp | selfie_ktp | kartu_pelajar | other
+  filePath   String
+  uploadedAt DateTime @default(now())
+}
+
+// --- Orders lifecycle: booking → active → late → completed/cancelled ---
+model Order {
+  id           String       @id @default(cuid())
+  orderNumber  String       @unique
+  customerId   Int
+  customer     Customer     @relation(fields: [customerId], references: [id])
+  courier      String?      // delivery service (optional phase 2)
+  shippingCost Float        @default(0)
+  handledBy    String?      // staff name (phase 2 fee tracking)
+  
+  status       String       @default("booking") // booking | active | late | completed | cancelled
+  startDate    DateTime
+  endDate      DateTime
+  noteOrder    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  
+  items        OrderItem[]
+  payments     Payment[]
+  returnPhotos ReturnPhoto[]
+}
+
+// --- Order Items with explicit durationHours and locked unitPrice ---
+model OrderItem {
+  id            Int      @id @default(autoincrement())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId     Int
+  product       Product  @relation(fields: [productId], references: [id])
+  unitId        Int?     // optional physical unit assignment when activated
+  unit          Unit?    @relation(fields: [unitId], references: [id])
+  
+  quantity      Int      @default(1)
+  durationHours Int      @default(24)
+  unitPrice     Float    // harga tier yang dikunci saat order dibuat
+  discountType  String?  // amount | percent | null
+  discountValue Float    @default(0)
+  subtotal      Float    @default(0)
+}
+
+// --- Payments: dp, pelunasan, denda, deposit_refund ---
+model Payment {
+  id          Int      @id @default(autoincrement())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount      Float
+  paymentType String   // dp | pelunasan | denda | deposit_refund
+  method      String?  // cash | transfer_bca | transfer_mandiri | etc
+  note        String?
+  paidAt      DateTime @default(now())
+}
+
+// --- Return validation with photos & condition check ---
+model ReturnPhoto {
+  id         Int      @id @default(autoincrement())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  filePath   String
+  note       String?
+  uploadedAt DateTime @default(now())
 }
