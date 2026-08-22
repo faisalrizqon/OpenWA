@@ -36,6 +36,12 @@ const PAYMENT_TYPES: Record<string, string> = {
   deposit_refund: "Refund Deposit",
 };
 
+const GUARANTEE_TYPES: Record<string, string> = {
+  ktp: "KTP",
+  kartu_pelajar: "Kartu Pelajar",
+  lainnya: "Lainnya",
+};
+
 const METHODS: Record<string, string> = {
   "": "—",
   cash: "Cash",
@@ -227,6 +233,48 @@ export default async function OrderDetailPage({
 
             {order.noteOrder && (
               <p className="rounded-lg bg-muted px-3 py-2 text-sm">{order.noteOrder}</p>
+            )}
+
+            {(order.guaranteeType || order.deliveryMode === "courier" || order.rescheduledFrom) && (
+              <dl className="grid gap-x-4 gap-y-1.5 border-t pt-3 text-sm sm:grid-cols-2">
+                {order.guaranteeType && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted-foreground">Jaminan</dt>
+                    <dd className="font-medium">
+                      {GUARANTEE_TYPES[order.guaranteeType] ?? order.guaranteeType}
+                      {order.guaranteeNumber ? ` · ${order.guaranteeNumber}` : ""}
+                    </dd>
+                  </div>
+                )}
+                {order.deliveryMode === "courier" && (
+                  <>
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-muted-foreground">Pengantaran</dt>
+                      <dd className="font-medium">
+                        Diantar kurir{order.deliveryAddress ? ` · ${order.deliveryAddress}` : ""}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-muted-foreground">Gaji Transport</dt>
+                      <dd className="font-medium tabular-nums">
+                        {formatRupiah(order.courierFee)}
+                      </dd>
+                    </div>
+                  </>
+                )}
+                {order.rescheduledFrom && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted-foreground">Reschedule dari</dt>
+                    <dd className="font-medium">{dateFmt(order.rescheduledFrom)}</dd>
+                  </div>
+                )}
+                {order.returnedAt && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted-foreground">Dikembalikan</dt>
+                    <dd className="font-medium">{dateFmt(order.returnedAt)}</dd>
+                  </div>
+                )}
+              </dl>
             )}
           </CardContent>
         </Card>

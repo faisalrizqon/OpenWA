@@ -24,6 +24,12 @@ export async function createOrder(formData: FormData) {
   const newCustomerPhone = String(formData.get("newCustomerPhone") ?? "").trim();
   const startDateRaw = String(formData.get("startDate") ?? "");
   const noteOrder = String(formData.get("noteOrder") ?? "").trim();
+  const guaranteeType = String(formData.get("guaranteeType") ?? "").trim();
+  const guaranteeNumber = String(formData.get("guaranteeNumber") ?? "").trim();
+  const deliveryModeRaw = String(formData.get("deliveryMode") ?? "pickup").trim();
+  const deliveryAddress = String(formData.get("deliveryAddress") ?? "").trim();
+  const courierFeeRaw = Number(formData.get("courierFee"));
+  const rescheduledFromRaw = String(formData.get("rescheduledFrom") ?? "").trim();
 
   let items: ItemInput[] = [];
   try {
@@ -52,6 +58,16 @@ export async function createOrder(formData: FormData) {
   const usingExisting = customerIdRaw !== "new" && Number.isInteger(Number(customerIdRaw));
   const newCustomerValid =
     newCustomerName.length > 0 && /^0\d{8,13}$/.test(newCustomerPhone);
+
+  const deliveryMode = deliveryModeRaw === "courier" ? "courier" : "pickup";
+  const courierFee =
+    deliveryMode === "courier" && Number.isFinite(courierFeeRaw) && courierFeeRaw >= 0
+      ? courierFeeRaw
+      : 0;
+  const rescheduledFrom =
+    rescheduledFromRaw !== "" && !isNaN(new Date(`${rescheduledFromRaw}T00:00`).getTime())
+      ? new Date(`${rescheduledFromRaw}T00:00`)
+      : null;
 
   if (!itemsValid || isNaN(startDate.getTime()) || (!usingExisting && !newCustomerValid)) {
     redirect("/orders/new?error=invalid");
@@ -140,6 +156,12 @@ export async function createOrder(formData: FormData) {
           startDate,
           endDate,
           noteOrder: noteOrder || null,
+          guaranteeType: guaranteeType || null,
+          guaranteeNumber: guaranteeNumber || null,
+          deliveryMode,
+          deliveryAddress: deliveryMode === "courier" ? deliveryAddress || null : null,
+          courierFee,
+          rescheduledFrom,
         },
       });
 
@@ -346,7 +368,10 @@ export async function submitReturn(formData: FormData) {
         await tx.unit.update({ where: { id: c.unitId }, data: { condition: c.condition } });
       }
       await releaseOrderUnits(tx, orderId);
-      await tx.order.update({ where: { id: orderId }, data: { status: "completed" } });
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: "completed", returnedAt: new Date() },
+      });
     });
   } catch (e) {
     if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;

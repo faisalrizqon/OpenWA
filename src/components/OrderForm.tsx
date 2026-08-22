@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Package, Plus, Trash2, User, CalendarClock, ListPlus } from "lucide-react";
+import { Package, Plus, Trash2, User, CalendarClock, ListPlus, ShieldCheck } from "lucide-react";
 import { createOrder } from "@/actions/orders";
 import { getTierPrice, calcSubtotal, formatRupiah } from "@/lib/pricing";
 import { SelectField } from "@/components/SelectField";
-import { DateTimePicker } from "@/components/DateTimePicker";
+import { DateTimePicker, DatePicker } from "@/components/DateTimePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +62,9 @@ export function OrderForm({
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [startDate, setStartDate] = useState(toLocalInputValue(now));
+  const [rescheduledFrom, setRescheduledFrom] = useState("");
+  const [guaranteeType, setGuaranteeType] = useState("");
+  const [deliveryMode, setDeliveryMode] = useState("pickup");
   const [items, setItems] = useState<ItemDraft[]>(() =>
     products.length > 0
       ? [
@@ -289,6 +292,87 @@ export function OrderForm({
               onChange={setStartDate}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="rescheduledFrom">Reschedule Dari (opsional)</Label>
+            <DatePicker
+              value={rescheduledFrom}
+              onChange={setRescheduledFrom}
+              placeholder="— tanggal lama —"
+            />
+            {rescheduledFrom && (
+              <input type="hidden" name="rescheduledFrom" value={rescheduledFrom} />
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Guarantee & logistics (hasil normalisasi Catatan Notion) */}
+      <section className="space-y-4 rounded-xl border bg-card p-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <span className="flex size-6 items-center justify-center rounded-md bg-accent text-accent-foreground">
+            <ShieldCheck className="size-3.5" aria-hidden />
+          </span>
+          Jaminan & Logistik
+        </h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="guaranteeType">Jaminan</Label>
+            <SelectField
+              id="guaranteeType"
+              name="guaranteeType"
+              value={guaranteeType}
+              onValueChange={setGuaranteeType}
+              options={[
+                { label: "— tanpa jaminan —", value: "" },
+                { label: "KTP", value: "ktp" },
+                { label: "Kartu Pelajar", value: "kartu_pelajar" },
+                { label: "Lainnya", value: "lainnya" },
+              ]}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="guaranteeNumber">No. Jaminan (opsional)</Label>
+            <Input
+              id="guaranteeNumber"
+              name="guaranteeNumber"
+              placeholder="mis. no. KTP"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="deliveryMode">Metode Pengambilan</Label>
+            <SelectField
+              id="deliveryMode"
+              name="deliveryMode"
+              value={deliveryMode}
+              onValueChange={setDeliveryMode}
+              options={[
+                { label: "Ambil sendiri (pickup)", value: "pickup" },
+                { label: "Diantar kurir (COD)", value: "courier" },
+              ]}
+            />
+          </div>
+          {deliveryMode === "courier" && (
+            <div className="space-y-2">
+              <Label htmlFor="deliveryAddress">Alamat Antar</Label>
+              <Input
+                id="deliveryAddress"
+                name="deliveryAddress"
+                placeholder="mis. Weleri"
+              />
+            </div>
+          )}
+          {deliveryMode === "courier" && (
+            <div className="space-y-2">
+              <Label htmlFor="courierFee">Gaji Transport Kurir (Rp)</Label>
+              <Input
+                id="courierFee"
+                name="courierFee"
+                type="number"
+                min={0}
+                defaultValue={5000}
+              />
+            </div>
+          )}
         </div>
       </section>
 

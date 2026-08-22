@@ -1,131 +1,184 @@
-import { Fragment } from "react";
-import Link from "next/link";
-import { addDays, format, isSameDay, isWeekend } from "date-fns";
+import {
+  addDays,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  isSameDay,
+  isSameMonth,
+  isWeekend,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
+import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { CalendarDays, Camera } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock3, PackageCheck, AlertTriangle } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { rangesOverlap } from "@/lib/availability";
 import { PageHeader } from "@/components/PageHeader";
+import { HeaderLink } from "@/components/HeaderLink";
 import { EmptyState } from "@/components/EmptyState";
-import { CalendarNav } from "@/components/CalendarNav";
+import { MonthNav } from "@/components/MonthNav";
+import { DayCell, type DayData } from "@/components/DayCell";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const DAYS = 30;
-
-const STATUS_CELL: Record<string, string> = {
-  booking: "bg-amber-400/90 hover:bg-amber-500 ring-amber-500/30",
-  active: "bg-rose-500/90 hover:bg-rose-600 ring-rose-500/30",
-  late: "bg-rose-600 hover:bg-rose-700 ring-rose-600/40",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  booking: "Booking",
-  active: "Aktif",
-  late: "Terlambat",
-};
+const WEEKDAYS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 
 const LEGEND: { label: string; className: string }[] = [
-  { label: "Tersedia", className: "bg-emerald-100 ring-1 ring-emerald-300" },
-  { label: "Booking", className: "bg-amber-400/90" },
-  { label: "Aktif", className: "bg-rose-500/90" },
-  { label: "Terlambat", className: "bg-rose-600" },
+  { label: "Semua tersedia", className: "bg-emerald-50/60 ring-emerald-200" },
+  { label: "Sebagian terpakai", className: "bg-amber-50 ring-amber-200" },
+  { label: "Hampir penuh", className: "bg-orange-100/70 ring-orange-200" },
+  { label: "Penuh", className: "bg-rose-100 ring-rose-200" },
 ];
 
 export default async function CalendarPage({ searchParams }: PageProps<"/calendar">) {
   const sp = await searchParams;
-  const startParam = Array.isArray(sp.start) ? sp.start[0] : sp.start;
+  const monthParam = Array.isArray(sp.month) ? sp.month[0] : sp.month;
 
-  const start = startParam ? new Date(`${startParam}T00:00`) : new Date();
-  if (isNaN(start.getTime())) start.setTime(Date.now());
-  start.setHours(0, 0, 0, 0);
+  const anchor = monthParam ? new Date(`${monthParam}-01T00:00`) : new Date();
+  if (isNaN(anchor.getTime())) anchor.setTime(Date.now());
 
-  const windowEnd = addDays(start, DAYS);
+  const monthStart = startOfMonth(anchor);
+  const monthEnd = endOfMonth(anchor);
+  const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const monthKey = format(monthStart, "yyyy-MM");
 
-  const [products, orders] = await Promise.all([
-    prisma.product.findMany({
-      where: { active: true },
-      orderBy: { id: "asc" },
-      include: {
-        units: { where: { status: { notIn: ["maintenance", "lost"] } }, orderBy: { id: "asc" } },
-      },
-    }),
-    prisma.order.findMany({
-      where: {
-        status: { in: ["booking", "active", "late"] },
-        startDate: { lt: windowEnd },
-        endDate: { gt: start },
-      },
-      include: { items: { select: { unitId: true, productId: true } } },
-    }),
-  ]);
-
-  const days = Array.from({ length: DAYS }, (_, i) => addDays(start, i));
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const assignedItems = orders.flatMap((o) =>
-    o.items
-      .filter((it) => it.unitId != null)
-      .map((it) => ({
-        unitId: it.unitId as number,
-        status: o.status,
-        startDate: o.startDate,
-        endDate: o.endDate,
-        orderId: o.id,
-      }))
-  );
+  const [totalUnits, orders] = await Promise.all([
+    prisma.unit.count({ where: { status: { notIn: ["maintenance", "lost"] } } }),
+    prisma.order.findMany({
+      where: {
+        status: { in: ["booking", "active", "late"] },
+        startDate: { lt: addDays(gridEnd, 1) },
+        endDate: { gt: gridStart },
+      },
+      include: {
+        customer: { select: { name: true } },
+        items: {
+          select: { unitId: true, quantity: true, product: { select: { name: true } } },
+        },
+      },
+    }),
+  ]);
 
-  const groups = products
-    .filter((p) => p.units.length > 0)
-    .map((p) => ({
-      productId: p.id,
-      productName: p.name,
-      units: p.units.map((u) => ({
-        unitId: u.id,
-        serialNumber: u.serialNumber,
-        condition: u.condition,
-      })),
-    }));
+  const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
 
-  const totalUnits = groups.reduce((s, g) => s + g.units.length, 0);
-  const startYmd = format(start, "yyyy-MM-dd");
-
-  const cellFor = (unitId: number, day: Date) => {
-    const dayEnd = addDays(day, 1);
-    return assignedItems.find(
-      (it) => it.unitId === unitId && rangesOverlap(day, dayEnd, it.startDate, it.endDate)
+  // Bangun data per hari
+  const dayData: DayData[] = days.map((d) => {
+    const dayStart = d;
+    const dayEnd = addDays(d, 1);
+    const dayOrders = orders.filter((o) =>
+      rangesOverlap(dayStart, dayEnd, o.startDate, o.endDate)
     );
+    const busy = dayOrders.reduce(
+      (sum, o) => sum + o.items.reduce((s, it) => s + (it.unitId ? it.quantity : 0), 0),
+      0
+    );
+    return {
+      iso: d.toISOString(),
+      day: d.getDate(),
+      inMonth: isSameMonth(d, monthStart),
+      isToday: isSameDay(d, today),
+      isWeekend: isWeekend(d),
+      busy: Math.min(busy, totalUnits),
+      total: totalUnits,
+      orders: dayOrders.map((o) => ({
+        orderId: o.id,
+        orderNumber: o.orderNumber,
+        customerName: o.customer.name,
+        status: o.status,
+        units: o.items.reduce((s, it) => s + (it.unitId ? it.quantity : 0), 0),
+        products: o.items.map((it) => it.product.name).join(", "),
+      })),
+    };
+  });
+
+  // Ringkasan bulan (order yang overlap dengan bulan berjalan)
+  const monthOrders = orders.filter((o) =>
+    rangesOverlap(monthStart, addDays(monthEnd, 1), o.startDate, o.endDate)
+  );
+  const stats = {
+    booking: monthOrders.filter((o) => o.status === "booking").length,
+    active: monthOrders.filter((o) => o.status === "active").length,
+    late: monthOrders.filter((o) => o.status === "late").length,
   };
+
+  // Status hari ini
+  const todayData = dayData.find((d) => d.isToday);
+  const freeToday = todayData ? Math.max(0, todayData.total - todayData.busy) : totalUnits;
+
+  const summaryCards = [
+    {
+      label: "Unit bebas hari ini",
+      value: `${freeToday}/${totalUnits}`,
+      icon: PackageCheck,
+      tone: "bg-emerald-50 text-emerald-600",
+    },
+    {
+      label: "Booking bulan ini",
+      value: String(stats.booking),
+      icon: Clock3,
+      tone: "bg-amber-50 text-amber-600",
+    },
+    {
+      label: "Sedang disewa",
+      value: String(stats.active),
+      icon: CheckCircle2,
+      tone: "bg-blue-50 text-blue-600",
+    },
+    {
+      label: "Terlambat",
+      value: String(stats.late),
+      icon: AlertTriangle,
+      tone: "bg-rose-50 text-rose-600",
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Kalender Ketersediaan"
-        description="Jadwal per unit fisik — klik sel berwarna untuk membuka order terkait."
+        description="Pantau ketersediaan unit & jadwal order per hari. Klik tanggal untuk lihat detail."
+        action={<HeaderLink href="/orders/new" label="Buat Order" />}
       />
 
-      <Card>
-        <CardContent className="space-y-4">
-          <CalendarNav start={startYmd} spanDays={DAYS} />
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-4 text-xs text-muted-foreground">
-            {LEGEND.map((l) => (
-              <span key={l.label} className="flex items-center gap-2">
-                <span className={cn("inline-block size-3.5 rounded-md", l.className)} />
-                {l.label}
-              </span>
-            ))}
-            <span className="ml-auto flex items-center gap-2">
-              <span className="inline-block size-3.5 rounded-md bg-primary/15 ring-1 ring-primary/40" />
-              Hari ini
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {summaryCards.map((s) => {
+          const Icon = s.icon;
+          return (
+            <Card key={s.label} size="sm">
+              <CardContent className="flex items-center gap-3">
+                <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", s.tone)}>
+                  <Icon className="size-5" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-medium text-muted-foreground">{s.label}</p>
+                  <p className="text-xl font-bold tabular-nums tracking-tight">{s.value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
-      {totalUnits === 0 ? (
-        <Card>
-          <CardContent>
+      <Card>
+        <CardContent className="space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <MonthNav month={monthKey} />
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+              {LEGEND.map((l) => (
+                <span key={l.label} className="flex items-center gap-1.5">
+                  <span className={cn("inline-block size-3 rounded ring-1", l.className)} />
+                  {l.label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {totalUnits === 0 ? (
             <EmptyState
               icon={<CalendarDays className="size-5" aria-hidden />}
               title="Belum ada unit"
@@ -133,118 +186,30 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
               ctaHref="/products/new"
               ctaLabel="Tambah produk"
             />
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full border-separate border-spacing-0 text-xs">
-                <thead>
-                  <tr>
-                    <th className="sticky left-0 z-20 min-w-52 border-b bg-card px-4 py-3 text-left align-bottom text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Unit
-                    </th>
-                    {days.map((d) => {
-                      const weekend = isWeekend(d);
-                      const isToday = isSameDay(d, today);
-                      return (
-                        <th
-                          key={d.toISOString()}
-                          className={cn(
-                            "border-b border-l px-0 py-2 text-center font-normal",
-                            weekend && "bg-muted/40",
-                            isToday && "bg-primary/10"
-                          )}
-                        >
-                          <div className="text-[10px] uppercase text-muted-foreground/70">
-                            {format(d, "EEEEEE", { locale: localeId })}
-                          </div>
-                          <div
-                            className={cn(
-                              "text-sm font-semibold tabular-nums",
-                              isToday ? "text-primary" : "text-foreground"
-                            )}
-                          >
-                            {format(d, "d")}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground/60">
-                            {format(d, "MMM", { locale: localeId })}
-                          </div>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {groups.map((group) => (
-                    <Fragment key={group.productId}>
-                      <tr>
-                        <td
-                          colSpan={days.length + 1}
-                          className="sticky left-0 z-10 border-b border-t bg-muted/50 px-4 py-1.5"
-                        >
-                          <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-foreground/80">
-                            <Camera className="size-3.5 text-primary" aria-hidden />
-                            {group.productName}
-                            <span className="font-medium text-muted-foreground">
-                              · {group.units.length} unit
-                            </span>
-                          </span>
-                        </td>
-                      </tr>
-                      {group.units.map((u) => (
-                        <tr key={u.unitId} className="group/row">
-                          <td className="sticky left-0 z-10 border-b bg-card px-4 py-1.5 whitespace-nowrap group-hover/row:bg-muted/30">
-                            <span className="font-medium">
-                              #{u.serialNumber ?? u.unitId}
-                            </span>
-                            <span className="ml-2 text-muted-foreground/70">{u.condition}</span>
-                          </td>
-                          {days.map((d) => {
-                            const weekend = isWeekend(d);
-                            const isToday = isSameDay(d, today);
-                            const hit = cellFor(u.unitId, d);
-                            return (
-                              <td
-                                key={d.toISOString()}
-                                className={cn(
-                                  "border-b border-l p-1",
-                                  weekend && "bg-muted/30",
-                                  isToday && "bg-primary/[0.07]"
-                                )}
-                              >
-                                {hit ? (
-                                  <Link
-                                    href={`/orders/${hit.orderId}`}
-                                    title={`${STATUS_LABEL[hit.status] ?? hit.status} — ${format(
-                                      hit.startDate,
-                                      "dd MMM",
-                                      { locale: localeId }
-                                    )} s/d ${format(hit.endDate, "dd MMM", {
-                                      locale: localeId,
-                                    })}`}
-                                    className={cn(
-                                      "block h-6 rounded-md ring-1 transition-colors",
-                                      STATUS_CELL[hit.status] ?? "bg-zinc-300 ring-zinc-400/30"
-                                    )}
-                                  />
-                                ) : (
-                                  <span className="block h-6 rounded-md bg-emerald-100/70 ring-1 ring-emerald-200/70" />
-                                )}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
+          ) : (
+            <div>
+              <div className="mb-2 grid grid-cols-7 gap-1.5">
+                {WEEKDAYS.map((w, i) => (
+                  <div
+                    key={w}
+                    className={cn(
+                      "py-1 text-center text-[11px] font-semibold uppercase tracking-wide",
+                      i >= 5 ? "text-rose-500/70" : "text-muted-foreground/70"
+                    )}
+                  >
+                    {w}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {dayData.map((d) => (
+                  <DayCell key={d.iso} data={d} />
+                ))}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
