@@ -12,3 +12,11 @@ export const productSchema = z.object({
   stockThreshold: z.coerce.number().int().min(1).default(1),
   initialUnits: z.coerce.number().int().min(1).default(1),
 });
+
+export const customerSchema = z.object({
+  name: z.string().min(1),
+  phone: z.string().min(9).regex(/^0\d{8,13}$/),
+  email: z.string().email().optional().or(z.literal("")),
+  address: z.string().optional(),
+  notes: z.string().optional(),
+});
