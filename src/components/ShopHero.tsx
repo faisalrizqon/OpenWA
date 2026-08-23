@@ -30,7 +30,7 @@ const PERKS = [
  *  (negative margin), bukan strip full-width di dasar layar. */
 function HeroPerks() {
   return (
-    <div className="relative z-10 mx-auto -mt-9 w-full max-w-6xl px-4 md:px-8">
+    <div className="relative z-10 mx-auto -mt-6 w-full max-w-6xl px-4 md:px-8">
       <div className="grid gap-3 sm:grid-cols-3">
         {PERKS.map((perk) => {
           const Icon = perk.icon;
@@ -112,7 +112,7 @@ function PolaroidHero({ products }: { products: HeroProduct[] }) {
     "top-40 right-4 md:right-10",
   ];
   return (
-    <section className={cn("flex items-center overflow-hidden border-b border-border/70 py-10", HERO_MIN_H)}>
+    <section className={cn("flex items-center overflow-hidden py-10", HERO_MIN_H)}>
       <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 md:grid-cols-2 md:px-8">
         <div className="space-y-5">
           <span className="digicam-timestamp text-sm">
@@ -171,7 +171,7 @@ function ExifHero({ products }: { products: HeroProduct[] }) {
     { label: "AUTO ⚡︎", pos: "-bottom-3 right-6" },
   ];
   return (
-    <section className={cn("flex flex-col justify-center border-b border-border/70 py-10", HERO_MIN_H)}>
+    <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 md:grid-cols-[1.1fr_0.9fr] md:px-8">
         <div className="space-y-5">
           <span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
@@ -225,7 +225,7 @@ function ExifHero({ products }: { products: HeroProduct[] }) {
 function FilmStripHero({ products }: { products: HeroProduct[] }) {
   const frames = [...products, ...products]; // duplikasi untuk loop mulus
   return (
-    <section className={cn("flex flex-col border-b border-border/70", HERO_MIN_H)}>
+    <section className={cn("flex flex-col", HERO_MIN_H)}>
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 pt-10 pb-8 text-center md:px-8">
         <span className="digicam-timestamp text-sm">▶ PLAY &nbsp;·&nbsp; RENT · ROLL · REPEAT</span>
         <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
@@ -271,7 +271,7 @@ function FilmStripHero({ products }: { products: HeroProduct[] }) {
 /* ---------- Varian G: Cute sticker wall ---------- */
 function StickerHero({ products }: { products: HeroProduct[] }) {
   return (
-    <section className={cn("flex flex-col justify-center border-b border-border/70 py-10", HERO_MIN_H)}>
+    <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
       <div className="mx-auto w-full max-w-6xl px-4 text-center md:px-8">
         <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
           Pilih kamera,{" "}
@@ -315,7 +315,7 @@ function StickerHero({ products }: { products: HeroProduct[] }) {
 function StampHero({ products }: { products: HeroProduct[] }) {
   const featured = products[0];
   return (
-    <section className={cn("flex flex-col justify-center border-b border-border/70 py-10", HERO_MIN_H)}>
+    <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
       <div className="mx-auto w-full max-w-6xl px-4 md:px-8">
         <div className="grid items-center gap-10 md:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-5">
@@ -368,7 +368,7 @@ function StampHero({ products }: { products: HeroProduct[] }) {
 /* ---------- Varian E: 3D flip cards ---------- */
 function FlipHero({ products }: { products: HeroProduct[] }) {
   return (
-    <section className={cn("flex flex-col justify-center border-b border-border/70 py-10", HERO_MIN_H)}>
+    <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
       <div className="mx-auto w-full max-w-6xl px-4 text-center md:px-8">
         <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
           Sentuh untuk{" "}
@@ -422,7 +422,7 @@ function FlipHero({ products }: { products: HeroProduct[] }) {
 function GridHero({ products }: { products: HeroProduct[] }) {
   const wall = [...products, ...products.slice(0, 2)];
   return (
-    <section className={cn("flex flex-col justify-center border-b border-border/70 py-10", HERO_MIN_H)}>
+    <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
       <div className="mx-auto w-full max-w-6xl px-4 md:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="order-2 grid grid-cols-3 gap-3 lg:order-1">
