@@ -97,15 +97,15 @@ export function BookingWidget({ productId, product, prices }: BookingWidgetProps
   };
 
   return (
-    <div className="rounded-2xl border bg-card p-5 shadow-sm">
+    <div className="rounded-2xl border bg-card p-6 shadow-sm">
       <h3 className="flex items-center gap-2 text-base font-bold">
         <ShoppingBag className="size-4 text-primary" aria-hidden />
         Booking Sekarang
       </h3>
 
-      <div className="mt-4 space-y-3">
+      <div className="mt-5 space-y-4">
         <div>
-          <Label htmlFor="booking-start" className="mb-1.5 block text-sm">
+          <Label htmlFor="booking-start" className="mb-2 block text-sm">
             Tanggal & jam mulai sewa
           </Label>
           <DateTimePicker
@@ -114,14 +114,14 @@ export function BookingWidget({ productId, product, prices }: BookingWidgetProps
             onChange={setStartDate}
           />
           {validDate && (
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-2 text-xs text-muted-foreground">
               Selesai: {end.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
             </p>
           )}
         </div>
 
         <div>
-          <Label htmlFor="booking-duration" className="mb-1.5 block text-sm">
+          <Label htmlFor="booking-duration" className="mb-2 block text-sm">
             Durasi sewa
           </Label>
           <SelectField
@@ -134,8 +134,8 @@ export function BookingWidget({ productId, product, prices }: BookingWidgetProps
         </div>
 
         <div>
-          <Label className="mb-1.5 block text-sm">Jumlah</Label>
-          <div className="flex items-center gap-2">
+          <Label className="mb-2 block text-sm">Jumlah</Label>
+          <div className="flex items-center gap-3">
             <Button
               type="button"
               variant="outline"
@@ -158,10 +158,10 @@ export function BookingWidget({ productId, product, prices }: BookingWidgetProps
               <Plus className="size-4" aria-hidden />
             </Button>
             {checking ? (
-              <span className="ml-1 text-xs text-muted-foreground">Memeriksa stok…</span>
+              <span className="ml-1.5 text-xs text-muted-foreground">Memeriksa stok…</span>
             ) : available !== null ? (
               <span
-                className={`ml-1 text-xs font-medium ${
+                className={`ml-1.5 text-xs font-medium ${
                   available > 0 ? "text-emerald-600" : "text-rose-600"
                 }`}
               >
@@ -175,7 +175,7 @@ export function BookingWidget({ productId, product, prices }: BookingWidgetProps
           <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</p>
         )}
 
-        <div className="flex items-baseline justify-between border-t pt-3">
+        <div className="flex items-baseline justify-between border-t pt-4">
           <span className="text-sm text-muted-foreground">Estimasi total</span>
           <span className="text-lg font-bold tabular-nums">{formatRupiah(total)}</span>
         </div>

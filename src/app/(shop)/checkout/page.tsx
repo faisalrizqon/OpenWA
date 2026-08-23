@@ -1,5 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
 import {
   CalendarClock,
   PackageCheck,
@@ -15,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { checkoutOrder } from "../actions/checkout";
+import { BackLink } from "@/components/BackLink";
 
 export const dynamic = "force-dynamic";
 
@@ -23,14 +23,14 @@ export default async function CheckoutPage({ searchParams }: PageProps<"/checkou
   const error = Array.isArray(sp.error) ? sp.error[0] : sp.error;
 
   const productId = Number(sp.productId ?? "");
-  if (!Number.isInteger(productId) || productId <= 0) redirect("/katalog");
+  if (!Number.isInteger(productId) || productId <= 0) redirect("/");
 
   const quantity = Math.max(1, Number(sp.quantity ?? 1) || 1);
   const durationHours = Math.max(1, Number(sp.durationHours ?? 24) || 24);
   const startDateRaw = Array.isArray(sp.startDate) ? sp.startDate[0] : sp.startDate;
   const start = new Date(startDateRaw ?? new Date().toISOString());
   const end = new Date(start.getTime() + durationHours * 3600_000);
-  if (isNaN(start.getTime())) redirect("/katalog");
+  if (isNaN(start.getTime())) redirect("/");
 
   const product = await prisma.product.findFirst({ where: { id: productId, active: true } });
   if (!product) notFound();
@@ -41,12 +41,8 @@ export default async function CheckoutPage({ searchParams }: PageProps<"/checkou
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8 md:px-8 md:py-10">
-      <Link
-        href={`/katalog/${product.id}`}
-        className="mb-6 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        ← Kembali ke produk
-      </Link>
+      <BackLink href={`/katalog/${product.id}`} label="Kembali ke Produk" className="mb-6" />
+
 
       <h1 className="text-xl font-bold tracking-tight md:text-2xl">Checkout</h1>
 
@@ -56,7 +52,7 @@ export default async function CheckoutPage({ searchParams }: PageProps<"/checkou
         </p>
       )}
 
-      <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_360px]">
         {/* Form */}
         <Card>
           <CardHeader>
@@ -66,7 +62,7 @@ export default async function CheckoutPage({ searchParams }: PageProps<"/checkou
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={checkoutOrder} className="grid gap-4 sm:grid-cols-2">
+            <form action={checkoutOrder} className="grid gap-5 sm:grid-cols-2">
               <input
                 type="hidden"
                 name="items"
@@ -74,28 +70,28 @@ export default async function CheckoutPage({ searchParams }: PageProps<"/checkou
               />
               <input type="hidden" name="startDate" value={start.toISOString()} />
 
-              <div className="space-y-1.5 sm:col-span-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="name">Nama lengkap</Label>
                 <Input id="name" name="name" placeholder="Nama sesuai identitas" required minLength={2} />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="phone">No. WhatsApp</Label>
                 <Input id="phone" name="phone" placeholder="08xxxxxxxxxx" required pattern="^0\d{8,13}$" />
                 <p className="text-xs text-muted-foreground">Format 08xxx</p>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="email">Email (opsional)</Label>
                 <Input id="email" name="email" type="email" placeholder="nama@email.com" />
               </div>
 
-              <div className="space-y-1.5 sm:col-span-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="address">Alamat</Label>
                 <Input id="address" name="address" placeholder="Dipakai jika memilih diantar kurir" />
               </div>
 
-              <div className="space-y-1.5 sm:col-span-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="note">Catatan (opsional)</Label>
                 <textarea
                   name="note"

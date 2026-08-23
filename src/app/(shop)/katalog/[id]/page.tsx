@@ -7,6 +7,7 @@ import {
   Check,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
+import { getStoreSettings } from "@/lib/content";
 import {
   formatRupiah,
   PRICE_TIERS,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/shop";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { BookingWidget } from "@/components/BookingWidget";
+import { ExternalLink } from "@/components/LinkButton";
 import { BackLink } from "@/components/BackLink";
 
 export default async function KatalogDetailPage({ params }: PageProps<"/katalog/[id]">) {
@@ -31,11 +33,13 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
   });
   if (!product) notFound();
 
+  const shop = await getStoreSettings();
+
   const available = product.units.length;
   const tiers = PRICE_TIERS.map((t) => ({ ...t, price: product[t.key] as number })).filter(
     (t) => t.price > 0
   );
-  const message = inquiryMessage(product.name, product.sku);
+  const message = inquiryMessage(shop.storeName, product.name, product.sku);
 
   const related = await prisma.product.findMany({
     where: { active: true, categoryId: product.categoryId, id: { not: product.id } },
@@ -45,10 +49,10 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8 md:py-10">
-      <BackLink href="/katalog" label="Kembali ke Katalog" className="mb-6" />
+      <BackLink href="/" label="Kembali ke Katalog" className="mb-6" />
 
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
         {/* Gallery */}
         <div className="space-y-3">
           <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl border bg-muted">
@@ -140,7 +144,7 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
           </ul>
 
           {/* Booking widget */}
-          <div className="mt-auto pt-8">
+          <div className="mt-8 space-y-3">
             <BookingWidget
               productId={product.id}
               product={{
@@ -155,21 +159,18 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
                 price: product[t.key] as number,
               }))}
             />
-            <div className="mt-3 text-center">
-              <a
-                href={waLink(message)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:underline"
-              >
-                <WhatsAppIcon className="text-emerald-500" aria-hidden />
-                Atau pesan langsung via WhatsApp
-              </a>
+            <div className="space-y-2 pt-1">
+              <ExternalLink
+                href={waLink(shop.whatsapp, message)}
+                label="Atau pesan langsung via WhatsApp"
+                tone="neutral"
+                icon={<WhatsAppIcon aria-hidden />}
+              />
+              <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                <ShieldCheck className="size-3.5" aria-hidden />
+                Konfirmasi booking oleh admin pada jam operasional.
+              </p>
             </div>
-            <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-              <ShieldCheck className="size-3.5" aria-hidden />
-              Konfirmasi booking oleh admin pada jam operasional.
-            </p>
           </div>
         </div>
       </div>
