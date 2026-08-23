@@ -27,25 +27,28 @@ const PERKS = [
   { icon: Clock, title: "Cepat & mudah", desc: "Booking langsung via WhatsApp." },
 ];
 
-/** Kartu keunggulan (Harga bersahabat, dll.) — tampil di dalam hero section. */
+/** Kartu keunggulan (Harga bersahabat, dll.) — strip bawah yang menyatu dengan hero. */
 function HeroPerks({ className }: { className?: string }) {
   return (
-    <div className={cn("mx-auto w-full max-w-6xl px-4 pb-5 md:px-8", className)}>
-      <div className="grid gap-3 sm:grid-cols-3">
+    <div
+      className={cn(
+        "mt-auto w-full border-t border-border/40 bg-card/50 backdrop-blur-sm",
+        className
+      )}
+    >
+      <div className="mx-auto grid w-full max-w-6xl gap-x-6 gap-y-2 px-4 py-3 sm:grid-cols-3 md:px-8">
         {PERKS.map((perk) => {
           const Icon = perk.icon;
           return (
-            <Card key={perk.title} className="border-border/70 bg-card/80">
-              <CardContent className="flex items-start gap-3 p-3.5">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                  <Icon className="size-4.5" aria-hidden />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold">{perk.title}</p>
-                  <p className="text-xs text-muted-foreground">{perk.desc}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div key={perk.title} className="flex items-center gap-2.5">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent/80 text-accent-foreground">
+                <Icon className="size-4" aria-hidden />
+              </span>
+              <div className="min-w-0 leading-tight">
+                <p className="truncate text-sm font-semibold">{perk.title}</p>
+                <p className="truncate text-xs text-muted-foreground">{perk.desc}</p>
+              </div>
+            </div>
           );
         })}
       </div>
@@ -156,7 +159,7 @@ function PolaroidHero({ products }: { products: HeroProduct[] }) {
           ))}
         </div>
       </div>
-      <HeroPerks className="mt-auto" />
+      <HeroPerks />
     </section>
   );
 }
@@ -217,7 +220,7 @@ function ExifHero({ products }: { products: HeroProduct[] }) {
           ))}
         </div>
       </div>
-      <HeroPerks className="mt-auto" />
+      <HeroPerks />
     </section>
   );
 }
@@ -245,7 +248,7 @@ function FilmStripHero({ products }: { products: HeroProduct[] }) {
         </div>
       </div>
 
-      <HeroPerks className="mt-auto pt-6" />
+      <HeroPerks />
 
       {/* Film strip marquee */}
       <div className="overflow-hidden bg-foreground py-3">
@@ -310,7 +313,7 @@ function StickerHero({ products }: { products: HeroProduct[] }) {
           <CtaButtons size="md" />
         </div>
       </div>
-      <HeroPerks className="mt-auto" />
+      <HeroPerks />
     </section>
   );
 }
@@ -365,7 +368,7 @@ function StampHero({ products }: { products: HeroProduct[] }) {
           </div>
         </div>
       </div>
-      <HeroPerks className="mt-auto" />
+      <HeroPerks />
     </section>
   );
 }
@@ -419,7 +422,7 @@ function FlipHero({ products }: { products: HeroProduct[] }) {
           <CtaButtons size="md" />
         </div>
       </div>
-      <HeroPerks className="mt-auto" />
+      <HeroPerks />
     </section>
   );
 }
@@ -479,7 +482,7 @@ function GridHero({ products }: { products: HeroProduct[] }) {
           </div>
         </div>
       </div>
-      <HeroPerks className="mt-auto" />
+      <HeroPerks />
     </section>
   );
 }
