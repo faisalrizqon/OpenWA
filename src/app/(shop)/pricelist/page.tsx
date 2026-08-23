@@ -144,7 +144,7 @@ export default async function PricelistPage() {
                                 href={`/checkout?productId=${p.id}`}
                                 className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                               >
-                                Booking
+                                Book Now
                                 <ArrowRight className="size-3" aria-hidden />
                               </Link>
                             </TableCell>

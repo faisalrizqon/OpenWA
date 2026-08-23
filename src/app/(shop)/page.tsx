@@ -153,7 +153,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                             href={`/checkout?productId=${p.id}`}
                             className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                           >
-                            Booking Web
+                            Book Now
                             <ArrowRight className="size-4" aria-hidden />
                           </Link>
                         </div>
