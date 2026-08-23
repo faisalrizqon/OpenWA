@@ -1,34 +1,46 @@
 import Link from "next/link";
 import { Camera, MapPin, Clock } from "lucide-react";
-import { SHOP, waLink, generalMessage } from "@/lib/shop";
+import { getStoreSettings } from "@/lib/content";
+import { waLink, generalMessage } from "@/lib/shop";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { ShopTheme } from "@/components/ShopTheme";
+import { OpenClosedSign } from "@/components/OpenClosedSign";
 
-export default function ShopLayout({ children }: LayoutProps<"/">) {
+export default async function ShopLayout({ children }: LayoutProps<"/">) {
+  const shop = await getStoreSettings();
+
   return (
     <div className="flex min-h-screen flex-col">
       <ShopTheme />
       <header className="glass sticky top-0 z-30 border-b border-border/70">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
-          <Link href="/katalog" className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
               <Camera className="size-5" aria-hidden />
             </span>
             <span className="leading-tight">
-              <span className="block text-[15px] font-extrabold tracking-tight">{SHOP.name}</span>
-              <span className="hidden text-xs text-muted-foreground sm:block">{SHOP.tagline}</span>
+              <span className="block text-[15px] font-extrabold tracking-tight">
+                {shop.storeName}
+              </span>
+              <span className="hidden text-xs text-muted-foreground sm:block">{shop.tagline}</span>
             </span>
           </Link>
 
-          <nav className="flex items-center gap-1.5">
+          <nav className="flex items-center gap-3">
             <Link
-              href="/katalog"
+              href="/"
               className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               Katalog
             </Link>
+
+            {/* Papan gantung OPEN/CLOSED ala toko */}
+            <div className="hidden pt-1 sm:block">
+              <OpenClosedSign hours={shop.hours} />
+            </div>
+
             <a
-              href={waLink(generalMessage())}
+              href={waLink(shop.whatsapp, generalMessage(shop.storeName))}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
@@ -49,33 +61,33 @@ export default function ShopLayout({ children }: LayoutProps<"/">) {
               <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <Camera className="size-4" aria-hidden />
               </span>
-              <span className="font-bold">{SHOP.name}</span>
+              <span className="font-bold">{shop.storeName}</span>
             </div>
-            <p className="text-sm text-muted-foreground">{SHOP.tagline}</p>
+            <p className="text-sm text-muted-foreground">{shop.tagline}</p>
           </div>
 
           <div className="space-y-2 text-sm">
             <p className="font-semibold">Kontak & Jam</p>
             <p className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="size-4 shrink-0" aria-hidden />
-              {SHOP.location}
+              {shop.location}
             </p>
             <p className="flex items-center gap-2 text-muted-foreground">
               <Clock className="size-4 shrink-0" aria-hidden />
-              {SHOP.hours}
+              {shop.hours}
             </p>
           </div>
 
           <div className="space-y-2 text-sm">
             <p className="font-semibold">Pesan Sekarang</p>
             <a
-              href={waLink(generalMessage())}
+              href={waLink(shop.whatsapp, generalMessage(shop.storeName))}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 font-medium text-emerald-600 hover:underline"
             >
               <WhatsAppIcon className="text-emerald-500" aria-hidden />
-              {SHOP.whatsapp}
+              {shop.whatsapp}
             </a>
             <p className="text-muted-foreground">
               Booking cepat & tanya stok langsung via WhatsApp.
@@ -83,7 +95,7 @@ export default function ShopLayout({ children }: LayoutProps<"/">) {
           </div>
         </div>
         <div className="border-t border-border/70 py-4 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} {SHOP.name}. Semua harga dalam Rupiah.
+          © {new Date().getFullYear()} {shop.storeName}. Semua harga dalam Rupiah.
         </div>
       </footer>
     </div>

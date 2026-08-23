@@ -612,3 +612,108 @@
   from { background-position: 0% center; }
   to { background-position: 200% center; }
 }
+/* ================= Top Bar + Easter Eggs ================ */
+
+/* Film strip track marquee animation */
+.film-strip-track {
+  display: flex;
+  gap: 2rem;
+  animation: film-scroll 32s linear infinite;
+}
+.film-strip-track:hover {
+  animation-play-state: paused;
+}
+
+/* Shutter flash overlay saat klik logo kamera */
+.shutter-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: white;
+  opacity: 0;
+}
+.shutter-flash {
+  animation: shutter-blink 0.5s ease-out;
+}
+@keyframes shutter-blink {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Focus-frame effect pada nav link saat hover */
+.focus-frame {
+  position: relative;
+}
+.focus-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5rem;
+  border: 2px solid color-mix(in oklch, var(--primary) 45%, transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.focus-frame:hover::before {
+  opacity: 1;
+}
+
+/* Theme dial needle rotation */
+.theme-dial-needle {
+  transform-origin: 50% 14px;
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Viewfinder header corner brackets */
+.viewfinder-header {
+  position: relative;
+}
+.viewfinder-corner {
+  position: absolute;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-color: color-mix(in oklch, var(--foreground) 45%, transparent);
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+  transition: border-color 0.25s ease;
+}
+.group:hover .viewfinder-corner {
+  border-color: var(--primary);
+}
+.viewfinder-corner.left-1\.5.top-1\.5 { border-left-width: 2px; border-top-width: 2px; }
+.viewfinder-corner.right-1\.5.top-1\.5 { border-right-width: 2px; border-top-width: 2px; }
+.viewfinder-corner.bottom-1\.5.left-1\.5 { border-bottom-width: 2px; border-left-width: 2px; }
+.viewfinder-corner.bottom-1\.5.right-1\.5 { border-bottom-width: 2px; border-right-width: 2px; }
+
+/* ===== Papan gantung OPEN/CLOSED ===== */
+/* Ayunan idle pelan (papan tergantung tenang) */
+@keyframes sign-sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(1.5deg); }
+  75% { transform: rotate(-1.5deg); }
+}
+.animate-sign-sway {
+  transform-origin: top center;
+  animation: sign-sway 4s ease-in-out infinite;
+}
+
+/* Ayunan besar saat diklik — bolak-balik lalu kembali tenang */
+@keyframes sign-swing {
+  0% { transform: rotate(0deg); }
+  20% { transform: rotate(14deg); }
+  45% { transform: rotate(-11deg); }
+  68% { transform: rotate(7deg); }
+  86% { transform: rotate(-3deg); }
+  100% { transform: rotate(0deg); }
+}
+.animate-sign-swing {
+  transform-origin: top center;
+  animation: sign-swing 0.9s cubic-bezier(0.3, 0.8, 0.4, 1) both;
+}
+
+/* Pause ayunan saat hover agar terasa responsif */
+.group:hover .animate-sign-sway {
+  animation-play-state: paused;
+}
