@@ -29,8 +29,14 @@ function computeOpen(hours: string): boolean {
 
 /** Papan gantung OPEN/CLOSED ala toko.
  *
- *  - Status mengikuti jam operasional secara otomatis (dicek tiap menit).
- *  - Mengayun pelan seperti papan tergantung (animasi idle).
+ *  Konstruksi seperti papan nama toko asli:
+ *  - Satu PAKU di tengah atas.
+ *  - Dua TALI dari paku ke sudut kiri & kanan atas papan (membentuk V).
+ *  - Papan kayu menggantung di bawahnya.
+ *
+ *  Perilaku:
+ *  - Status mengikuti jam operasional otomatis (dicek tiap menit).
+ *  - Mengayun pelan terus-menerus (poros di paku).
  *  - Diklik -> berayun besar bolak-balik lalu kembali tenang;
  *    status selalu kembali ke kondisi asli (OPEN/CLOSED sesuai jam). */
 export function OpenClosedSign({ hours }: OpenClosedSignProps) {
@@ -62,34 +68,54 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
       aria-label={open ? "Toko buka" : "Toko tutup"}
       className="group relative flex select-none flex-col items-center focus:outline-none"
     >
-      {/* Cantolan / paku di atas */}
-      <span className="z-10 size-2 rounded-full border border-amber-700/60 bg-amber-600 shadow-sm" aria-hidden />
-      {/* Tali gantung */}
-      <span className="-mt-px h-2.5 w-px bg-amber-700/70" aria-hidden />
+      {/* PAKU di tengah atas (logam, dengan highlight) */}
+      <span
+        className="z-10 size-2.5 rounded-full bg-[radial-gradient(circle_at_32%_30%,#f3f4f6,#9ca3af_55%,#4b5563)] shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
+        aria-hidden
+      />
 
-      {/* Papan yang berayun */}
+      {/* Kelompok ayun: tali + papan. Poros ayunan = paku (top center). */}
       <span
         onAnimationEnd={() => setSwinging(false)}
         className={cn(
-          "shop-sign relative flex min-w-[96px] items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 shadow-md transition-colors",
-          open
-            ? "border-emerald-600/60 bg-emerald-50 text-emerald-700"
-            : "border-rose-600/60 bg-rose-50 text-rose-700",
+          "relative -mt-1 flex w-[120px] flex-col items-center",
           swinging ? "animate-sign-swing" : "animate-sign-sway"
         )}
       >
-        {/* Dua paku pengait di sudut atas papan */}
-        <span className="absolute -top-1 left-1.5 size-1.5 rounded-full bg-amber-700/70" aria-hidden />
-        <span className="absolute -top-1 right-1.5 size-1.5 rounded-full bg-amber-700/70" aria-hidden />
+        {/* TALI kanan & kiri dari paku ke sudut atas papan */}
+        <svg width="120" height="30" viewBox="0 0 120 30" aria-hidden className="block">
+          <line x1="60" y1="0" x2="20" y2="29" strokeWidth="1.5" className="stroke-amber-800/70" />
+          <line x1="60" y1="0" x2="100" y2="29" strokeWidth="1.5" className="stroke-amber-800/70" />
+          {/* Mata kait di ujung tali yang menempel ke papan */}
+          <circle cx="20" cy="29" r="2" className="fill-amber-900/80" />
+          <circle cx="100" cy="29" r="2" className="fill-amber-900/80" />
+        </svg>
+
+        {/* PAPAN kayu — sudut atasnya tepat di ujung tali (x=20 & x=100, lebar 80px) */}
         <span
           className={cn(
-            "size-1.5 rounded-full",
-            open ? "animate-pulse bg-emerald-500" : "bg-rose-500"
+            "relative -mt-px flex w-20 items-center justify-center gap-1.5 rounded-md border border-amber-800/40 bg-gradient-to-b from-amber-100 to-amber-200 px-1.5 py-1.5 shadow-[0_3px_6px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.6)]"
           )}
-          aria-hidden
-        />
-        <span className="font-mono text-[11px] font-extrabold tracking-[0.18em]">
-          {open ? "OPEN" : "CLOSED"}
+        >
+          {/* Sekrup kecil di sudut atas papan */}
+          <span className="absolute left-1 top-0.5 size-1 rounded-full bg-zinc-500/80 shadow-[inset_0_0.5px_1px_rgba(0,0,0,0.6)]" aria-hidden />
+          <span className="absolute right-1 top-0.5 size-1 rounded-full bg-zinc-500/80 shadow-[inset_0_0.5px_1px_rgba(0,0,0,0.6)]" aria-hidden />
+
+          <span
+            className={cn(
+              "size-1.5 rounded-full",
+              open ? "animate-pulse bg-emerald-500" : "bg-rose-500"
+            )}
+            aria-hidden
+          />
+          <span
+            className={cn(
+              "font-mono text-[11px] font-extrabold tracking-[0.18em]",
+              open ? "text-emerald-700" : "text-rose-700"
+            )}
+          >
+            {open ? "OPEN" : "CLOSED"}
+          </span>
         </span>
       </span>
     </button>
