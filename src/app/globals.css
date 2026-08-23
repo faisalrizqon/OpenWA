@@ -240,7 +240,11 @@
   --ring: oklch(0.25 0 0);
 }
 
-.theme-mono {
+/* Catatan: `filter` pada <body> membuat body jadi containing block untuk
+   elemen position:fixed, sehingga switcher tema (fixed) ikut "hilang".
+   Karena itu grayscale dipasang hanya pada konten (header/main/footer),
+   bukan pada body. */
+.theme-mono :is(header, main, footer) {
   filter: grayscale(0.85) contrast(1.1);
 }
 .theme-mono::before {
