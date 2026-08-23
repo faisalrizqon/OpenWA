@@ -10,7 +10,7 @@ import { BackLink } from "@/components/BackLink";
 import { ArrowLink } from "@/components/LinkButton";
 import { Label } from "@/components/ui/label";
 import { MidtransPayButton } from "@/components/MidtransPayButton";
-import { submitPaymentProof } from "../../actions/checkout";
+import { submitPaymentProof, changePaymentMethod } from "../../actions/checkout";
 import { SaveOrderToHistory } from "@/components/SaveOrderToHistory";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,7 @@ export default async function PaymentPage({
   const sp = await searchParams;
   const proof = Array.isArray(sp.proof) ? sp.proof[0] : sp.proof;
   const fileError = Array.isArray(sp.error) ? sp.error[0] : sp.error;
+  const methodChanged = (Array.isArray(sp.method) ? sp.method[0] : sp.method) === "changed";
 
   const order = await prisma.order.findUnique({
     where: { orderNumber },
@@ -40,6 +41,7 @@ export default async function PaymentPage({
   const method = order.paymentMethod ?? "cash";
   const proofUploaded = order.payments.some((p) => p.status === "pending" && p.proofPath);
   const confirmed = order.payments.some((p) => p.status === "confirmed");
+  const canChange = order.status === "booking" && order.paymentStatus !== "paid" && !confirmed;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8 md:px-8 md:py-12">
@@ -213,6 +215,53 @@ export default async function PaymentPage({
           </Card>
         )}
       </div>
+
+      {/* Ubah metode pembayaran — hanya selama order masih booking & belum ada pembayaran terkonfirmasi */}
+      {canChange && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CreditCard className="size-5 text-primary" aria-hidden />
+              Ubah Metode Pembayaran
+            </CardTitle>
+            <CardDescription>
+              Metode saat ini:{" "}
+              <span className="font-semibold text-foreground">
+                {method === "cash" ? "Cash" : method === "qris" ? "QRIS" : "Midtrans"}
+              </span>
+              . Pilih metode lain jika berubah pikiran — bukti bayar lama (jika ada) akan
+              dibatalkan.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {methodChanged && (
+              <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                Metode pembayaran berhasil diubah.
+              </p>
+            )}
+            <form action={changePaymentMethod} className="flex flex-wrap gap-2">
+              <input type="hidden" name="orderNumber" value={order.orderNumber} />
+              {[
+                { value: "cash", label: "Cash" },
+                { value: "qris", label: "QRIS" },
+                ...(midtransConfigured() ? [{ value: "midtrans", label: "Online (Midtrans)" }] : []),
+              ]
+                .filter((m) => m.value !== method)
+                .map((m) => (
+                  <button
+                    key={m.value}
+                    type="submit"
+                    name="method"
+                    value={m.value}
+                    className="inline-flex h-10 items-center justify-center rounded-xl border bg-background px-4 text-sm font-medium transition-colors hover:bg-accent"
+                  >
+                    Ganti ke {m.label}
+                  </button>
+                ))}
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Next steps */}
       <div className="mt-6 rounded-2xl border bg-card p-4 text-sm text-muted-foreground">

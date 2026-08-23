@@ -8,11 +8,13 @@ import { prisma } from "@/lib/db";
 import { countOverlapUnits } from "@/lib/availability";
 import { calcSubtotal, getTierPrice } from "@/lib/pricing";
 import { nextOrderNumber } from "@/lib/orderNumber";
+import { calcPromoDiscount, checkPromoEligibility } from "@/lib/promo";
 import {
   createMidtransTransaction,
   midtransConfigured,
   type PaymentMethod,
 } from "@/lib/payment";
+import { requireMitraOrAdmin } from "@/lib/permissions";
 
 interface CheckoutItemInput {
   productId: number;
@@ -54,6 +56,9 @@ export async function checkoutOrder(formData: FormData) {
   const note = String(formData.get("note") ?? "").trim();
   const deliveryMode = String(formData.get("deliveryMode") ?? "pickup") === "courier" ? "courier" : "pickup";
   const methodRaw = String(formData.get("paymentMethod") ?? "cash").trim();
+  const courierFee = Math.max(0, Number(formData.get("courierFee") ?? 0) || 0);
+  const tip = Math.max(0, Number(formData.get("tip") ?? 0) || 0);
+  const promoRaw = String(formData.get("promoCode") ?? "").trim().toUpperCase();
 
   const items = parseCheckoutItems(String(formData.get("items") ?? "[]"));
   const startDate = new Date(startDateRaw);
@@ -160,6 +165,8 @@ export async function checkoutOrder(formData: FormData) {
           noteOrder: note || null,
           deliveryMode,
           deliveryAddress: deliveryMode === "courier" ? address || null : null,
+          courierFee,
+          tipAmount: tip,
         },
       });
 
@@ -179,7 +186,26 @@ export async function checkoutOrder(formData: FormData) {
         });
       }
 
-      return { orderId: order.id, orderNumber, total };
+      // 5) Kode promo — validasi & terapkan potongan dari subtotal item
+      let payable = total;
+      if (promoRaw) {
+        const promo = await tx.promoCode.findUnique({ where: { code: promoRaw } });
+        if (!promo) throw new Error("Kode promo tidak ditemukan");
+        const problem = checkPromoEligibility(promo, total);
+        if (problem) throw new Error(problem);
+        const promoDiscount = calcPromoDiscount(promo, total);
+        await tx.order.update({
+          where: { id: order.id },
+          data: { promoCodeId: promo.id, promoDiscount },
+        });
+        await tx.promoCode.update({
+          where: { id: promo.id },
+          data: { usedCount: { increment: 1 } },
+        });
+        payable = total - promoDiscount;
+      }
+
+      return { orderId: order.id, orderNumber, total: payable };
     }));
   } catch (e) {
     if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
@@ -220,6 +246,64 @@ export async function checkoutOrder(formData: FormData) {
   }
 
   redirect(`/payment/${orderNumber}`);
+}
+
+/** Customer mengubah metode pembayaran sebelum lunas.
+ *  Syarat: order online, masih booking, belum ada pembayaran terkonfirmasi.
+ *  Bukti bayar lama (pending) ditandai gagal supaya tidak dihitung. */
+export async function changePaymentMethod(formData: FormData) {
+  const orderNumber = String(formData.get("orderNumber") ?? "").trim();
+  const back = `/payment/${orderNumber}`;
+  if (!orderNumber) redirect(back);
+
+  const method = String(formData.get("method") ?? "").trim();
+  const validMethods = ["cash", "qris", "midtrans"];
+  if (!validMethods.includes(method) || (method === "midtrans" && !midtransConfigured())) {
+    redirect(`${back}?error=method`);
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { orderNumber },
+    include: { payments: { orderBy: { paidAt: "asc" } } },
+  });
+  if (!order) redirect(back);
+
+  // Hanya boleh sebelum lunas & belum ada pembayaran terkonfirmasi
+  const hasConfirmed = order.payments.some((p) => p.status === "confirmed");
+  if (order.paymentStatus === "paid" || hasConfirmed) {
+    redirect(`${back}?error=locked`);
+  }
+  // Order harus masih booking — setelah aktif, pembayaran diurus admin
+  if (order.status !== "booking") {
+    redirect(`${back}?error=locked`);
+  }
+  if (order.paymentMethod === method) redirect(back);
+
+  const updates = [];
+  // Tandai bukti pembayaran lama yang masih pending sebagai gagal
+  for (const p of order.payments) {
+    if (p.status === "pending") {
+      updates.push(
+        prisma.payment.update({
+          where: { id: p.id },
+          data: { status: "failed", note: "Metode pembayaran diubah oleh customer" },
+        })
+      );
+    }
+  }
+  updates.push(
+    prisma.order.update({
+      where: { id: order.id },
+      data: { paymentMethod: method, paymentStatus: "unpaid" },
+    })
+  );
+
+  await prisma.$transaction(updates);
+
+  revalidatePath(`/payment/${orderNumber}`);
+  revalidatePath(`/order-status/${orderNumber}`);
+  revalidatePath("/admin/orders");
+  redirect(`${back}?method=changed`);
 }
 
 const PROOF_MIME_EXT: Record<string, string> = {
@@ -273,14 +357,15 @@ export async function submitPaymentProof(formData: FormData) {
   ]);
 
   revalidatePath(`/payment/${orderNumber}`);
-  revalidatePath(`/orders`);
+  revalidatePath(`/admin/orders`);
   redirect(`${back}?proof=uploaded`);
 }
 
 /** Admin: konfirmasi pembayaran online yang masih pending (bukti QRIS / Midtrans manual). */
 export async function confirmOnlinePayment(formData: FormData) {
+  const _user = await requireMitraOrAdmin();
   const orderId = String(formData.get("orderId") ?? "");
-  const back = `/orders/${orderId}`;
+  const back = `/admin/orders/${orderId}`;
   if (!orderId) redirect(back);
 
   await prisma.$transaction([
@@ -292,7 +377,63 @@ export async function confirmOnlinePayment(formData: FormData) {
   ]);
 
   revalidatePath(back);
-  revalidatePath("/orders");
-  revalidatePath("/");
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin");
   redirect(back);
+}
+
+const GUARANTEE_MIME_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+/** Customer upload dokumen jaminan untuk order tertentu (KTP/selfie/kartu pelajar). */
+export async function submitGuarantee(formData: FormData) {
+  const orderId = String(formData.get("orderId") ?? "");
+  const docType = String(formData.get("docType") ?? "other");
+  const file = formData.get("file");
+
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) redirect("/");
+  const back = `/order-status/${order.orderNumber}`;
+
+  if (!["ktp", "selfie_ktp", "kartu_pelajar", "other"].includes(docType)) redirect(`${back}?error=invalid`);
+  if (!(file instanceof File) || file.size === 0) redirect(`${back}?error=nofile`);
+  const ext = GUARANTEE_MIME_EXT[file.type];
+  if (!ext || file.size > 5 * 1024 * 1024) redirect(`${back}?error=file`);
+
+  const dir = path.join(process.cwd(), "public", "uploads", "guarantee");
+  await mkdir(dir, { recursive: true });
+  const fileName = `${order.orderNumber}-${docType}-${Date.now()}.${ext}`;
+  await writeFile(path.join(dir, fileName), Buffer.from(await file.arrayBuffer()));
+
+  await prisma.document.create({
+    data: {
+      customerId: order.customerId,
+      orderId: order.id,
+      docType,
+      filePath: `/uploads/guarantee/${fileName}`,
+    },
+  });
+
+  revalidatePath(back);
+  revalidatePath(`/admin/orders/${orderId}`);
+  redirect(`${back}?guarantee=uploaded`);
+}
+
+/** Admin simpan link Drive berisi foto hasil untuk customer. */
+export async function savePhotoLink(formData: FormData) {
+  const orderId = String(formData.get("orderId") ?? "");
+  const photoLink = String(formData.get("photoLink") ?? "").trim();
+  const back = `/admin/orders/${orderId}`;
+  if (!orderId) redirect("/admin/orders");
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { photoLink: photoLink || null },
+  });
+
+  revalidatePath(back);
+  redirect(`${back}?saved=1`);
 }
