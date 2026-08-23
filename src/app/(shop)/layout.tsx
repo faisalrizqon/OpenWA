@@ -13,32 +13,31 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
     <div className="flex min-h-screen flex-col">
       <ShopTheme />
       <header className="glass sticky top-0 z-30 border-b border-border/70">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
-          <Link href="/" className="flex items-center gap-2.5">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-3 md:px-8">
+          {/* Kiri: logo */}
+          <Link href="/" className="flex items-center gap-2.5 justify-self-start">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
               <Camera className="size-5" aria-hidden />
             </span>
             <span className="leading-tight">
-              <span className="block text-[15px] font-extrabold tracking-tight">
-                {shop.storeName}
-              </span>
+              <span className="block text-[15px] font-extrabold tracking-tight">{shop.storeName}</span>
               <span className="hidden text-xs text-muted-foreground sm:block">{shop.tagline}</span>
             </span>
           </Link>
 
-          <nav className="flex items-center gap-3">
+          {/* Tengah: papan gantung OPEN/CLOSED */}
+          <div className="pt-1.5">
+            <OpenClosedSign hours={shop.hours} />
+          </div>
+
+          {/* Kanan: nav */}
+          <nav className="flex items-center gap-3 justify-self-end">
             <Link
               href="/"
               className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               Katalog
             </Link>
-
-            {/* Papan gantung OPEN/CLOSED ala toko */}
-            <div className="hidden pt-1 sm:block">
-              <OpenClosedSign hours={shop.hours} />
-            </div>
-
             <a
               href={waLink(shop.whatsapp, generalMessage(shop.storeName))}
               target="_blank"
