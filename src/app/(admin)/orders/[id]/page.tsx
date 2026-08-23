@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   Ban,
   CheckCircle2,
-  MessageCircle,
   PlayCircle,
   Wallet,
 } from "lucide-react";
@@ -14,6 +13,7 @@ import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/pricing";
 import { formatBookingWA, waLink } from "@/lib/wa";
 import { StatusBadge } from "@/components/StatusBadge";
+import { BackLink } from "@/components/BackLink";
 import { ReturnForm } from "@/components/ReturnForm";
 import { SelectField } from "@/components/SelectField";
 import { updateOrderStatus, addPayment } from "@/actions/orders";
@@ -24,6 +24,7 @@ import {
 } from "@/components/OrderAdminActions";
 import { confirmOnlinePayment } from "@/app/(shop)/actions/checkout";
 import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, type PaymentMethod } from "@/lib/payment";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -134,11 +135,12 @@ export default async function OrderDetailPage({
           <hr className="my-2 border-border" />
           <p><strong>Edit/Hapus</strong> pembayaran bisa langsung lewat kolom Aksi per baris. Semua order bebas diubah statusnya kapan saja (tidak ada batasan workflow). Hapus order hanya jika benar-benar batal dan ingin data hilang permanen.</p>
           <div className="flex items-center gap-2 pt-1">
-            <Link href="/orders" className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-card border px-2.5 text-xs font-medium hover:bg-accent transition-colors">
-              ← Daftar Orders
-            </Link>
-            <Link href="/calendar" className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-card border px-2.5 text-xs font-medium hover:bg-accent transition-colors ml-auto">
-              Lihat Kalender ·
+            <BackLink href="/orders" label="Daftar Orders" />
+            <Link
+              href="/calendar"
+              className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Lihat Kalender →
             </Link>
           </div>
         </CardContent>
@@ -211,7 +213,7 @@ export default async function OrderDetailPage({
                 rel="noopener noreferrer"
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
               >
-                <MessageCircle className="size-4" aria-hidden />
+                <WhatsAppIcon aria-hidden />
                 Konfirmasi Booking
               </a>
               {sisa > 0 && (

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarClock, MapPin, MessageCircle, PackageCheck } from "lucide-react";
+import { CalendarClock, MapPin, PackageCheck } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/pricing";
 import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, type PaymentMethod } from "@/lib/payment";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { waLink } from "@/lib/shop";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -118,7 +119,7 @@ export default async function OrderStatusPage({ params }: PageProps<"/order-stat
         )}
         <a href={waLink(waText)} target="_blank" rel="noopener noreferrer">
           <Button variant="outline">
-            <MessageCircle className="size-4" aria-hidden />
+            <WhatsAppIcon className="text-emerald-500" aria-hidden />
             Tanya via WhatsApp
           </Button>
         </a>

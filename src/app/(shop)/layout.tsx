@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Camera, MessageCircle, MapPin, Clock } from "lucide-react";
+import { Camera, MapPin, Clock } from "lucide-react";
 import { SHOP, waLink, generalMessage } from "@/lib/shop";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 
 export default function ShopLayout({ children }: LayoutProps<"/">) {
   return (
@@ -30,7 +31,7 @@ export default function ShopLayout({ children }: LayoutProps<"/">) {
               rel="noopener noreferrer"
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
             >
-              <MessageCircle className="size-4" aria-hidden />
+              <WhatsAppIcon aria-hidden />
               <span className="hidden sm:inline">Hubungi</span> WhatsApp
             </a>
           </nav>
@@ -71,7 +72,7 @@ export default function ShopLayout({ children }: LayoutProps<"/">) {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 font-medium text-emerald-600 hover:underline"
             >
-              <MessageCircle className="size-4" aria-hidden />
+              <WhatsAppIcon className="text-emerald-500" aria-hidden />
               {SHOP.whatsapp}
             </a>
             <p className="text-muted-foreground">

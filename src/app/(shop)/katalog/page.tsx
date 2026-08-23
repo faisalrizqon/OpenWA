@@ -1,22 +1,17 @@
 import Link from "next/link";
 import {
   Camera,
-  MessageCircle,
   ShieldCheck,
   Clock,
   Wallet,
   ArrowRight,
   PackageCheck,
+  Star,
+  Play,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
-import {
-  SHOP,
-  formatRupiah,
-  lowestPrice,
-  dailyPrice,
-  waLink,
-  generalMessage,
-} from "@/lib/shop";
+import { SHOP, formatRupiah, lowestPrice, dailyPrice, waLink, generalMessage, TESTIMONIALS, VIDEO_CONTENT } from "@/lib/shop";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
@@ -74,7 +69,7 @@ export default async function KatalogPage() {
               rel="noopener noreferrer"
               className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
             >
-              <MessageCircle className="size-5" aria-hidden />
+              <WhatsAppIcon aria-hidden />
               Pesan via WhatsApp
             </a>
             <a
@@ -144,11 +139,21 @@ export default async function KatalogPage() {
                         href={`/katalog/${p.id}`}
                         className="group flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/5"
                       >
-                        <div className="relative flex aspect-[4/3] items-center justify-center bg-muted">
-                          <Camera
-                            className="size-14 text-muted-foreground/30 transition-transform group-hover:scale-110"
-                            aria-hidden
-                          />
+                        <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
+                          {p.imagePath ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={p.imagePath}
+                              alt={p.name}
+                              loading="lazy"
+                              className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <Camera
+                              className="size-14 text-muted-foreground/30 transition-transform group-hover:scale-110"
+                              aria-hidden
+                            />
+                          )}
                           <span
                             className={`absolute left-3 top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
                               available > 0
@@ -198,6 +203,53 @@ export default async function KatalogPage() {
         )}
       </section>
 
+      {/* Testimonials */}
+      <section className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Kata Mereka yang Sudah Sewa</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Sewa ribuan digicam dan kamera dari pelanggan lain</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {TESTIMONIALS.map((t) => (
+            <Card key={t.name} className="border bg-card/50">
+              <CardContent className="space-y-3 p-5">
+                <div className="flex items-center gap-2">
+                  {[...Array(t.rating)].map((_, i) => (
+                    <Star key={i} className="size-4 fill-primary text-primary" aria-hidden />
+                  ))}
+                </div>
+                <p className="text-base leading-relaxed">{t.text}</p>
+                <div className="flex items-baseline justify-between">
+                  <span className="font-semibold">{t.name}</span>
+                  <span className="text-xs text-muted-foreground">{t.context}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Video Content Section */}
+      <section className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Video & Tutorial</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Tips, review, dan cara booking MudahSewa</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {VIDEO_CONTENT.map((v) => (
+            <Link href={v.href} key={v.title} className="group block overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+              <div className="aspect-video flex items-center justify-center bg-muted/50 group-hover:bg-accent">
+                <Play className="size-12 text-muted-foreground transition-transform duration-300 group-hover:scale-110" aria-hidden />
+              </div>
+              <div className="space-y-2 p-4">
+                <h3 className="text-base font-semibold leading-tight group-hover:text-primary">{v.title}</h3>
+                <p className="text-sm text-muted-foreground">{v.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="mx-auto w-full max-w-6xl px-4 pb-4 md:px-8">
         <Card>
@@ -214,7 +266,7 @@ export default async function KatalogPage() {
               rel="noopener noreferrer"
               className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
             >
-              <MessageCircle className="size-5" aria-hidden />
+              <WhatsAppIcon aria-hidden />
               Tanya via WhatsApp
             </a>
           </CardContent>

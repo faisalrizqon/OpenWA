@@ -26,6 +26,7 @@ model Product {
   category     Category    @relation(fields: [categoryId], references: [id])
   name         String
   description  String?
+  imagePath    String?     // foto produk: /uploads/products/... (null = placeholder ikon)
   // Price tiers (flat per duration) — rupiah
   price6h      Float       @default(0)
   price12h     Float       @default(0)

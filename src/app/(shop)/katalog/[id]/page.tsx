@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import {
   Camera,
-  MessageCircle,
   PackageCheck,
-  ChevronLeft,
   ShieldCheck,
   Check,
 } from "lucide-react";
@@ -15,8 +13,9 @@ import {
   waLink,
   inquiryMessage,
 } from "@/lib/shop";
-import { Card, CardContent } from "@/components/ui/card";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { BookingWidget } from "@/components/BookingWidget";
+import { BackLink } from "@/components/BackLink";
 
 export default async function KatalogDetailPage({ params }: PageProps<"/katalog/[id]">) {
   const { id } = await params;
@@ -46,19 +45,23 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8 md:py-10">
-      <Link
-        href="/katalog"
-        className="mb-6 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ChevronLeft className="size-4" aria-hidden />
-        Kembali ke katalog
-      </Link>
+      <BackLink href="/katalog" label="Kembali ke Katalog" className="mb-6" />
+
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Gallery */}
         <div className="space-y-3">
-          <div className="flex aspect-[4/3] items-center justify-center rounded-2xl border bg-muted">
-            <Camera className="size-24 text-muted-foreground/25" aria-hidden />
+          <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl border bg-muted">
+            {product.imagePath ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={product.imagePath}
+                alt={product.name}
+                className="size-full object-cover"
+              />
+            ) : (
+              <Camera className="size-24 text-muted-foreground/25" aria-hidden />
+            )}
           </div>
           <div className="grid grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -159,7 +162,7 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:underline"
               >
-                <MessageCircle className="size-4" aria-hidden />
+                <WhatsAppIcon className="text-emerald-500" aria-hidden />
                 Atau pesan langsung via WhatsApp
               </a>
             </div>

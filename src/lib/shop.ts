@@ -67,4 +67,45 @@ export function generalMessage(): string {
   return `Halo ${SHOP.name}! Saya mau tanya-tanya soal sewa kamera 📷`;
 }
 
+/** Testimoni pelanggan untuk ditampilkan di storefront. */
+export const TESTIMONIALS = [
+  {
+    name: "Salsa",
+    context: "Sewa digicam untuk liburan ke Dieng",
+    text: "Prosesnya cepet banget! Chat WA langsung dibales, kameranya bersih dan hasilnya aesthetic. Next time sewa lagi 🥹",
+    rating: 5,
+  },
+  {
+    name: "Dimas",
+    context: "Konten TikTok untuk acara sekolah",
+    text: "Harga pelajar banget, adminnya ramah. Kameranya oke buat konten, baterai awet seharian.",
+    rating: 5,
+  },
+  {
+    name: "Alya & teman-teman",
+    context: "Sewa tripod + kamera buat foto wisuda",
+    text: "Booking online gampang, tinggal pilih tanggal. Pas ambil unit langsung dicek bareng. Recommended!",
+    rating: 5,
+  },
+];
+
+/** Konten video/galeri sosial media (placeholder — isi link video asli toko). */
+export const VIDEO_CONTENT = [
+  {
+    title: "Review Kodak Pixpro FZ55",
+    desc: "Hasil foto digicam viral ini — worth it buat liburan?",
+    href: "#",
+  },
+  {
+    title: "Cara Booking di MudahSewa",
+    desc: "Tutorial singkat booking online, bayar, sampai ambil unit.",
+    href: "#",
+  },
+  {
+    title: "Tips Foto Aesthetic Pakai Digicam",
+    desc: "Setting sederhana biar hasil fotamu makin vintage.",
+    href: "#",
+  },
+];
+
 export { formatRupiah };
