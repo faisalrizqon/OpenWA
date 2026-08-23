@@ -16,9 +16,8 @@ interface ShopHeroProps {
   products: HeroProduct[];
 }
 
-/** Tinggi hero kompak — tidak lagi satu layar penuh, supaya background
- *  tidak membentang sampai ujung bawah dan katalog mulai terlihat. */
-const HERO_MIN_H = "min-h-[58dvh]";
+/** Tinggi hero kompak — tidak satu layar penuh, katalog mulai terlihat. */
+const HERO_MIN_H = "min-h-[52dvh]";
 
 const PERKS = [
   { icon: Wallet, title: "Harga bersahabat", desc: "Tarif fleksibel 6/12/24/48 jam." },
@@ -26,20 +25,21 @@ const PERKS = [
   { icon: Clock, title: "Cepat & mudah", desc: "Booking langsung via WhatsApp." },
 ];
 
-/** Kartu keunggulan — overlay cards yang menggantung di tepi bawah hero
- *  (negative margin), bukan strip full-width di dasar layar. */
+/** Kartu keunggulan — flow normal tepat di bawah hero (tidak overlap),
+ *  muncul dengan animasi fade-up berurutan. */
 function HeroPerks() {
   return (
-    <div className="relative z-10 mx-auto -mt-6 w-full max-w-6xl px-4 md:px-8">
+    <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pt-8 md:px-8">
       <div className="grid gap-3 sm:grid-cols-3">
-        {PERKS.map((perk) => {
+        {PERKS.map((perk, i) => {
           const Icon = perk.icon;
           return (
             <div
               key={perk.title}
-              className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card/90 p-4 shadow-lg shadow-foreground/10 backdrop-blur-sm transition-transform hover:-translate-y-0.5"
+              className="group flex animate-fade-up items-center gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-md shadow-foreground/5 transition-all hover:-translate-y-1 hover:shadow-lg"
+              style={{ animationDelay: `${0.15 + i * 0.12}s` }}
             >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-105">
                 <Icon className="size-5" aria-hidden />
               </span>
               <div className="min-w-0 leading-tight">
@@ -102,7 +102,7 @@ function TrustChips() {
   );
 }
 
-/* ---------- Varian A: Polaroid Collage ---------- */
+/* ---------- Varian A: Polaroid Collage (foto melayang pelan) ---------- */
 function PolaroidHero({ products }: { products: HeroProduct[] }) {
   const rotations = ["-6deg", "4deg", "-3deg", "7deg"];
   const offsets = [
@@ -115,44 +115,56 @@ function PolaroidHero({ products }: { products: HeroProduct[] }) {
     <section className={cn("flex items-center overflow-hidden py-10", HERO_MIN_H)}>
       <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 md:grid-cols-2 md:px-8">
         <div className="space-y-5">
-          <span className="digicam-timestamp text-sm">
+          <span className="animate-fade-up digicam-timestamp text-sm">
             {"'"}26 · 08 · 23 &nbsp;AM 10:24
           </span>
-          <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
+          <h1
+            className="animate-fade-up text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl"
+            style={{ animationDelay: "0.08s" }}
+          >
             Sewa kamera{" "}
             <span className="font-display italic font-normal text-primary">impianmu</span>,
             tanpa ribet.
           </h1>
-          <p className="max-w-md text-base text-muted-foreground md:text-lg">
+          <p
+            className="animate-fade-up max-w-md text-base text-muted-foreground md:text-lg"
+            style={{ animationDelay: "0.16s" }}
+          >
             Digicam & kamera pilihan siap dipakai untuk liburan, konten, atau acara spesial.
             Booking cukup lewat WhatsApp — cepat dan gampang.
           </p>
-          <CtaButtons />
-          <TrustChips />
+          <div className="animate-fade-up" style={{ animationDelay: "0.24s" }}>
+            <CtaButtons />
+          </div>
+          <div className="animate-fade-up" style={{ animationDelay: "0.32s" }}>
+            <TrustChips />
+          </div>
         </div>
 
-        {/* Polaroid collage */}
+        {/* Polaroid collage — tiap foto melayang pelan dengan fase berbeda */}
         <div className="relative mx-auto hidden h-[420px] w-full max-w-md md:block">
           {products.slice(0, 4).map((p, i) => (
             <figure
               key={p.name}
-              className={cn("polaroid absolute w-48 rotate-0", offsets[i])}
-              style={{ transform: `rotate(${rotations[i]})` }}
+              className={cn("animate-fade-in polaroid absolute w-48", offsets[i])}
+              style={{
+                transform: `rotate(${rotations[i]})`,
+                animationDelay: `${0.2 + i * 0.15}s`,
+              }}
             >
-              <span
-                className="tape -top-2 left-1/2 -translate-x-1/2 -rotate-2"
-                aria-hidden
-              />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={p.image}
-                alt={p.name}
-                className="aspect-square w-full object-cover"
-              />
-              <figcaption className="mt-2 flex items-baseline justify-between px-1">
-                <span className="text-xs font-semibold">{p.name}</span>
-                <span className="digicam-timestamp text-[10px]">{p.timestamp}</span>
-              </figcaption>
+              <span className="tape -top-2 left-1/2 -translate-x-1/2 -rotate-2" aria-hidden />
+              <div className="animate-float" style={{ animationDelay: `${i * 0.7}s` }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.image}
+                  alt={p.name}
+                  className="aspect-square w-full object-cover"
+                />
+                <figcaption className="mt-2 flex items-baseline justify-between px-1">
+                  <span className="text-xs font-semibold">{p.name}</span>
+                  <span className="digicam-timestamp text-[10px]">{p.timestamp}</span>
+                </figcaption>
+              </div>
             </figure>
           ))}
         </div>
@@ -161,7 +173,7 @@ function PolaroidHero({ products }: { products: HeroProduct[] }) {
   );
 }
 
-/* ---------- Varian B: Produk besar + EXIF chips ---------- */
+/* ---------- Varian B: Produk besar + EXIF chips (zoom pelan) ---------- */
 function ExifHero({ products }: { products: HeroProduct[] }) {
   const featured = products[0];
   const chips = [
@@ -174,43 +186,54 @@ function ExifHero({ products }: { products: HeroProduct[] }) {
     <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 md:grid-cols-[1.1fr_0.9fr] md:px-8">
         <div className="space-y-5">
-          <span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+          <span className="animate-fade-up inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
             <Star className="size-3.5 fill-current" aria-hidden />
             Digicam paling dicari bulan ini
           </span>
-          <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
+          <h1
+            className="animate-fade-up text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl"
+            style={{ animationDelay: "0.08s" }}
+          >
             Hasil foto{" "}
             <span className="font-display italic font-normal text-primary">aesthetic</span>{" "}
             mulai Rp30 ribu.
           </h1>
-          <p className="max-w-md text-base text-muted-foreground md:text-lg">
+          <p
+            className="animate-fade-up max-w-md text-base text-muted-foreground md:text-lg"
+            style={{ animationDelay: "0.16s" }}
+          >
             Semua unit dicek & dibersihkan sebelum sewa. Pilih tanggal, durasi, dan metode
             bayar — sisanya biar kami yang urus.
           </p>
-          <CtaButtons />
-          <TrustChips />
+          <div className="animate-fade-up" style={{ animationDelay: "0.24s" }}>
+            <CtaButtons />
+          </div>
+          <div className="animate-fade-up" style={{ animationDelay: "0.32s" }}>
+            <TrustChips />
+          </div>
         </div>
 
-        <div className="relative mx-auto w-full max-w-sm">
+        <div className="animate-fade-in relative mx-auto w-full max-w-sm" style={{ animationDelay: "0.2s" }}>
           <div className="overflow-hidden rounded-3xl border bg-card shadow-xl shadow-foreground/10">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={featured.image}
               alt={featured.name}
-              className="aspect-[4/3] w-full object-cover"
+              className="animate-kenburns aspect-[4/3] w-full object-cover"
             />
             <div className="flex items-center justify-between px-4 py-3">
               <span className="text-sm font-semibold">{featured.name}</span>
               <span className="digicam-timestamp text-xs">{featured.timestamp}</span>
             </div>
           </div>
-          {chips.map((c) => (
+          {chips.map((c, i) => (
             <span
               key={c.label}
               className={cn(
-                "absolute rounded-full border bg-card px-3 py-1.5 font-mono text-xs font-bold shadow-md",
+                "animate-pop absolute rounded-full border bg-card px-3 py-1.5 font-mono text-xs font-bold shadow-md",
                 c.pos
               )}
+              style={{ animationDelay: `${0.4 + i * 0.12}s` }}
             >
               {c.label}
             </span>
@@ -226,20 +249,28 @@ function FilmStripHero({ products }: { products: HeroProduct[] }) {
   const frames = [...products, ...products]; // duplikasi untuk loop mulus
   return (
     <section className={cn("flex flex-col", HERO_MIN_H)}>
-      <div className="mx-auto w-full max-w-6xl flex-1 px-4 pt-10 pb-8 text-center md:px-8">
-        <span className="digicam-timestamp text-sm">▶ PLAY &nbsp;·&nbsp; RENT · ROLL · REPEAT</span>
-        <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-4 pb-8 pt-10 text-center md:px-8">
+        <span className="animate-fade-up digicam-timestamp text-sm">
+          ▶ PLAY &nbsp;·&nbsp; RENT · ROLL · REPEAT
+        </span>
+        <h1
+          className="animate-fade-up mx-auto mt-4 max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl"
+          style={{ animationDelay: "0.08s" }}
+        >
           Satu roll penuh{" "}
           <span className="font-display italic font-normal text-primary">kenangan</span>.
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground md:text-lg">
+        <p
+          className="animate-fade-up mx-auto mt-4 max-w-xl text-base text-muted-foreground md:text-lg"
+          style={{ animationDelay: "0.16s" }}
+        >
           Rental digicam harian harga pelajar. Booking online, ambil unit, jepret, kembalikan —
           semudah itu.
         </p>
-        <div className="mt-6 flex justify-center">
+        <div className="animate-fade-up mt-6 flex justify-center" style={{ animationDelay: "0.24s" }}>
           <CtaButtons size="md" />
         </div>
-        <div className="mt-4 flex justify-center">
+        <div className="animate-fade-up mt-4 flex justify-center" style={{ animationDelay: "0.32s" }}>
           <TrustChips />
         </div>
       </div>
@@ -268,49 +299,6 @@ function FilmStripHero({ products }: { products: HeroProduct[] }) {
   );
 }
 
-/* ---------- Varian G: Cute sticker wall ---------- */
-function StickerHero({ products }: { products: HeroProduct[] }) {
-  return (
-    <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
-      <div className="mx-auto w-full max-w-6xl px-4 text-center md:px-8">
-        <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
-          Pilih kamera,{" "}
-          <span className="font-display italic font-normal text-primary">
-            tempel stiker favoritmu
-          </span>{" "}
-          💖
-        </h1>
-        <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground">
-          Semua kamera kami siap pakai — tinggal pilih, booking, dan ambil. Simpel banget!
-        </p>
-
-        {/* Sticker wall grid */}
-        <div className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-4 lg:grid-cols-4">
-          {products.map((p, i) => (
-            <figure
-              key={p.name}
-              className="sticker-card relative overflow-hidden rounded-2xl border bg-card shadow-md"
-              style={{ transform: `rotate(${[-1.5, 1, -0.8, 1.2][i % 4]}deg)` }}
-            >
-              <span className="washi-tape" aria-hidden />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.image} alt={p.name} className="aspect-square w-full object-cover" />
-              <figcaption className="px-3 py-3">
-                <p className="text-sm font-semibold">{p.name}</p>
-                <p className="digicam-timestamp text-xs opacity-70">{p.timestamp}</p>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-
-        <div className="mt-8 flex justify-center">
-          <CtaButtons size="md" />
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ---------- Varian D: Timestamp banner ala viewfinder ---------- */
 function StampHero({ products }: { products: HeroProduct[] }) {
   const featured = products[0];
@@ -319,27 +307,37 @@ function StampHero({ products }: { products: HeroProduct[] }) {
       <div className="mx-auto w-full max-w-6xl px-4 md:px-8">
         <div className="grid items-center gap-10 md:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-5">
-            <div className="digicam-timestamp inline-flex items-center gap-2 rounded-lg border border-current/30 px-3 py-1.5 text-sm">
-              <span className="size-2 animate-pulse rounded-full bg-current" aria-hidden />
+            <div className="animate-fade-up digicam-timestamp inline-flex items-center gap-2 rounded-lg border border-current/30 px-3 py-1.5 text-sm">
+              <span className="animate-blink size-2 rounded-full bg-current" aria-hidden />
               REC &nbsp;·&nbsp; {"'"}26 08 23 10:24
             </div>
-            <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
+            <h1
+              className="animate-fade-up text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl"
+              style={{ animationDelay: "0.08s" }}
+            >
               Abadikan momen,{" "}
               <span className="font-display italic font-normal text-primary">
                 tanpa beli kamera
               </span>
               .
             </h1>
-            <p className="max-w-md text-base text-muted-foreground md:text-lg">
+            <p
+              className="animate-fade-up max-w-md text-base text-muted-foreground md:text-lg"
+              style={{ animationDelay: "0.16s" }}
+            >
               Rental harian mulai Rp30 ribu. Booking online, bayar fleksibel, ambil unit —
               semua beres dalam hitungan menit.
             </p>
-            <CtaButtons />
-            <TrustChips />
+            <div className="animate-fade-up" style={{ animationDelay: "0.24s" }}>
+              <CtaButtons />
+            </div>
+            <div className="animate-fade-up" style={{ animationDelay: "0.32s" }}>
+              <TrustChips />
+            </div>
           </div>
 
           {/* Viewfinder frame berisi foto produk */}
-          <div className="relative">
+          <div className="animate-fade-in relative" style={{ animationDelay: "0.2s" }}>
             <div className="group relative overflow-hidden rounded-3xl border-2 border-foreground/20 bg-foreground/5 p-4">
               <span className="viewfinder-corner left-2 top-2 border-l-2 border-t-2" />
               <span className="viewfinder-corner right-2 top-2 border-r-2 border-t-2" />
@@ -350,7 +348,7 @@ function StampHero({ products }: { products: HeroProduct[] }) {
                 <img
                   src={featured.image}
                   alt={featured.name}
-                  className="aspect-[4/3] w-full object-cover"
+                  className="animate-kenburns aspect-[4/3] w-full object-cover"
                 />
               </div>
               <div className="mt-3 flex items-center justify-between px-2">
@@ -370,17 +368,24 @@ function FlipHero({ products }: { products: HeroProduct[] }) {
   return (
     <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
       <div className="mx-auto w-full max-w-6xl px-4 text-center md:px-8">
-        <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
+        <h1 className="animate-fade-up mx-auto max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
           Sentuh untuk{" "}
           <span className="font-display italic font-normal text-primary">memilih</span> kameramu
         </h1>
-        <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground">
+        <p
+          className="animate-fade-up mx-auto mt-3 max-w-xl text-base text-muted-foreground"
+          style={{ animationDelay: "0.1s" }}
+        >
           Arahkan kursor ke kartu untuk melihat detail unit — semua siap sewa hari ini.
         </p>
 
         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {products.map((p, i) => (
-            <div key={p.name} className="flip-scene h-56 md:h-60">
+            <div
+              key={p.name}
+              className="animate-fade-in flip-scene h-56 md:h-60"
+              style={{ animationDelay: `${0.2 + i * 0.12}s` }}
+            >
               <div
                 className="flip-card h-full"
                 style={{ transform: `rotate(${[-1.5, 1, -0.8, 1.2][i % 4]}deg)` }}
@@ -410,7 +415,7 @@ function FlipHero({ products }: { products: HeroProduct[] }) {
           ))}
         </div>
 
-        <div className="mt-8 flex justify-center">
+        <div className="animate-fade-up mt-8 flex justify-center" style={{ animationDelay: "0.5s" }}>
           <CtaButtons size="md" />
         </div>
       </div>
@@ -430,10 +435,11 @@ function GridHero({ products }: { products: HeroProduct[] }) {
               <figure
                 key={`${p.name}-${i}`}
                 className={cn(
-                  "flash-hover group relative overflow-hidden rounded-xl border shadow-sm",
+                  "animate-fade-in flash-hover group relative overflow-hidden rounded-xl border shadow-sm",
                   i % 2 === 0 ? "rotate-[1.5deg]" : "-rotate-[1.5deg]",
                   i === 2 && "col-span-2 row-span-2"
                 )}
+                style={{ animationDelay: `${0.2 + i * 0.08}s` }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -453,24 +459,83 @@ function GridHero({ products }: { products: HeroProduct[] }) {
           </div>
 
           <div className="order-1 space-y-5 lg:order-2">
-            <span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+            <span className="animate-fade-up inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
               <Star className="size-3.5 fill-current" aria-hidden />
               {products.length}+ unit kamera siap pakai
             </span>
-            <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
+            <h1
+              className="animate-fade-up text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl"
+              style={{ animationDelay: "0.08s" }}
+            >
               Dinding kamera,{" "}
               <span className="font-display italic font-normal text-primary">
                 satu klik away
               </span>
               .
             </h1>
-            <p className="max-w-md text-base text-muted-foreground md:text-lg">
+            <p
+              className="animate-fade-up max-w-md text-base text-muted-foreground md:text-lg"
+              style={{ animationDelay: "0.16s" }}
+            >
               Semua unit kami rawat seperti milik sendiri. Scroll katalog, pilih favoritmu,
               dan booking sebelum keduluan yang lain.
             </p>
-            <CtaButtons />
-            <TrustChips />
+            <div className="animate-fade-up" style={{ animationDelay: "0.24s" }}>
+              <CtaButtons />
+            </div>
+            <div className="animate-fade-up" style={{ animationDelay: "0.32s" }}>
+              <TrustChips />
+            </div>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Varian G: Cute sticker wall ---------- */
+function StickerHero({ products }: { products: HeroProduct[] }) {
+  return (
+    <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
+      <div className="mx-auto w-full max-w-6xl px-4 text-center md:px-8">
+        <h1 className="animate-fade-up mx-auto max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
+          Pilih kamera,{" "}
+          <span className="font-display italic font-normal text-primary">
+            tempel stiker favoritmu
+          </span>{" "}
+          💖
+        </h1>
+        <p
+          className="animate-fade-up mx-auto mt-3 max-w-xl text-base text-muted-foreground"
+          style={{ animationDelay: "0.1s" }}
+        >
+          Semua kamera kami siap pakai — tinggal pilih, booking, dan ambil. Simpel banget!
+        </p>
+
+        {/* Sticker wall grid — tiap stiker goyang halus */}
+        <div className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-4 lg:grid-cols-4">
+          {products.map((p, i) => (
+            <figure
+              key={p.name}
+              className="animate-pop sticker-card relative overflow-hidden rounded-2xl border bg-card shadow-md"
+              style={{
+                transform: `rotate(${[-1.5, 1, -0.8, 1.2][i % 4]}deg)`,
+                animationDelay: `${0.2 + i * 0.12}s`,
+              }}
+            >
+              <span className="washi-tape" aria-hidden />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.image} alt={p.name} className="aspect-square w-full object-cover" />
+              <figcaption className="px-3 py-3">
+                <p className="text-sm font-semibold">{p.name}</p>
+                <p className="digicam-timestamp text-xs opacity-70">{p.timestamp}</p>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+
+        <div className="animate-fade-up mt-8 flex justify-center" style={{ animationDelay: "0.5s" }}>
+          <CtaButtons size="md" />
         </div>
       </div>
     </section>
@@ -490,7 +555,7 @@ export function ShopHero({ variant, products }: ShopHeroProps) {
   return (
     <div>
       {hero}
-      {/* Overlay cards: naik menggantung di tepi bawah hero */}
+      {/* Kartu keunggulan: flow normal di bawah hero, animasi fade-up berurutan */}
       <HeroPerks />
     </div>
   );
