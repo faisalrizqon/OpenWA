@@ -9,7 +9,6 @@ import {
   dailyPrice,
   waLink,
   generalMessage,
-  inquiryMessage,
   getStorefrontData,
 } from "@/lib/shop";
 import { HERO_VARIANTS } from "@/lib/content";
@@ -149,25 +148,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                             </div>
                           </div>
                         </Link>
-
-                        {/* Dua jalur booking: web (checkout) & WhatsApp */}
-                        <div className="mt-auto grid grid-cols-2 gap-2 border-t border-border/60 p-3">
+                        <div className="mt-auto border-t border-border/60 p-3">
                           <Link
                             href={`/checkout?productId=${p.id}`}
-                            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                            className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                           >
                             Booking Web
-                            <ArrowRight className="size-3.5" aria-hidden />
+                            <ArrowRight className="size-4" aria-hidden />
                           </Link>
-                          <a
-                            href={waLink(settings.whatsapp, inquiryMessage(settings.storeName, p.name, p.sku))}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
-                          >
-                            <WhatsAppIcon className="size-3.5" aria-hidden />
-                            WhatsApp
-                          </a>
                         </div>
                       </div>
                     </Reveal>

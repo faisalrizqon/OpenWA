@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { ArrowLeft, PackageCheck, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRight, PackageCheck, Tag } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getStoreSettings } from "@/lib/content";
-import { formatRupiah, waLink, inquiryMessage } from "@/lib/shop";
-import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import { formatRupiah } from "@/lib/shop";
 import {
   Table,
   TableBody,
@@ -141,15 +140,13 @@ export default async function PricelistPage() {
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
-                              <a
-                                href={waLink(shop.whatsapp, inquiryMessage(shop.storeName, p.name, p.sku))}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
+                              <Link
+                                href={`/checkout?productId=${p.id}`}
+                                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                               >
-                                <WhatsAppIcon className="size-3.5" aria-hidden />
-                                WA
-                              </a>
+                                Booking
+                                <ArrowRight className="size-3" aria-hidden />
+                              </Link>
                             </TableCell>
                           </TableRow>
                         );
