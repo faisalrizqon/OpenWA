@@ -1,6 +1,7 @@
-import { ArrowRight, Star, ShieldCheck, Clock } from "lucide-react";
+import { ArrowRight, Star, ShieldCheck, Clock, Wallet } from "lucide-react";
 import { SHOP, waLink, generalMessage } from "@/lib/shop";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export type HeroVariant = "polaroid" | "exif" | "filmstrip" | "stamp" | "flip" | "grid" | "sticker";
@@ -14,6 +15,42 @@ interface HeroProduct {
 interface ShopHeroProps {
   variant: HeroVariant;
   products: HeroProduct[];
+}
+
+/** Tinggi hero = viewport penuh dikurangi tinggi header (~4rem),
+ *  sehingga tampilan awal hanya menampilkan hero section. */
+const HERO_MIN_H = "min-h-[calc(100dvh-4rem)]";
+
+const PERKS = [
+  { icon: Wallet, title: "Harga bersahabat", desc: "Tarif fleksibel 6/12/24/48 jam." },
+  { icon: ShieldCheck, title: "Proses aman", desc: "Cukup jaminan KTP / kartu pelajar." },
+  { icon: Clock, title: "Cepat & mudah", desc: "Booking langsung via WhatsApp." },
+];
+
+/** Kartu keunggulan (Harga bersahabat, dll.) — tampil di dalam hero section. */
+function HeroPerks({ className }: { className?: string }) {
+  return (
+    <div className={cn("mx-auto w-full max-w-6xl px-4 pb-5 md:px-8", className)}>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {PERKS.map((perk) => {
+          const Icon = perk.icon;
+          return (
+            <Card key={perk.title} className="border-border/70 bg-card/80">
+              <CardContent className="flex items-start gap-3 p-3.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                  <Icon className="size-4.5" aria-hidden />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold">{perk.title}</p>
+                  <p className="text-xs text-muted-foreground">{perk.desc}</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function CtaButtons({ size = "lg" }: { size?: "lg" | "md" }) {
@@ -70,17 +107,17 @@ function PolaroidHero({ products }: { products: HeroProduct[] }) {
   const offsets = [
     "top-0 left-2 md:-left-4",
     "top-10 right-0 md:right-6",
-    "top-40 left-8 md:left-16",
-    "top-44 right-4 md:right-10",
+    "top-36 left-8 md:left-16",
+    "top-40 right-4 md:right-10",
   ];
   return (
-    <section className="overflow-hidden border-b border-border/70">
-      <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-14 md:grid-cols-2 md:px-8 md:py-20">
-        <div className="space-y-6">
+    <section className={cn("flex flex-col overflow-hidden border-b border-border/70", HERO_MIN_H)}>
+      <div className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 py-10 md:grid-cols-2 md:px-8">
+        <div className="space-y-5">
           <span className="digicam-timestamp text-sm">
             {"'"}26 · 08 · 23 &nbsp;AM 10:24
           </span>
-          <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight md:text-6xl">
+          <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
             Sewa kamera{" "}
             <span className="font-display italic font-normal text-primary">impianmu</span>,
             tanpa ribet.
@@ -94,11 +131,11 @@ function PolaroidHero({ products }: { products: HeroProduct[] }) {
         </div>
 
         {/* Polaroid collage */}
-        <div className="relative mx-auto hidden h-[480px] w-full max-w-md md:block">
+        <div className="relative mx-auto hidden h-[420px] w-full max-w-md md:block">
           {products.slice(0, 4).map((p, i) => (
             <figure
               key={p.name}
-              className={cn("polaroid absolute w-52 rotate-0", offsets[i])}
+              className={cn("polaroid absolute w-48 rotate-0", offsets[i])}
               style={{ transform: `rotate(${rotations[i]})` }}
             >
               <span
@@ -119,6 +156,7 @@ function PolaroidHero({ products }: { products: HeroProduct[] }) {
           ))}
         </div>
       </div>
+      <HeroPerks className="mt-auto" />
     </section>
   );
 }
@@ -133,14 +171,14 @@ function ExifHero({ products }: { products: HeroProduct[] }) {
     { label: "AUTO ⚡︎", pos: "-bottom-3 right-6" },
   ];
   return (
-    <section className="border-b border-border/70">
-      <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 py-14 md:grid-cols-[1.1fr_0.9fr] md:px-8 md:py-20">
-        <div className="space-y-6">
+    <section className={cn("flex flex-col border-b border-border/70", HERO_MIN_H)}>
+      <div className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-4 py-10 md:grid-cols-[1.1fr_0.9fr] md:px-8">
+        <div className="space-y-5">
           <span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
             <Star className="size-3.5 fill-current" aria-hidden />
             Digicam paling dicari bulan ini
           </span>
-          <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight md:text-6xl">
+          <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
             Hasil foto{" "}
             <span className="font-display italic font-normal text-primary">aesthetic</span>{" "}
             mulai Rp30 ribu.
@@ -179,6 +217,7 @@ function ExifHero({ products }: { products: HeroProduct[] }) {
           ))}
         </div>
       </div>
+      <HeroPerks className="mt-auto" />
     </section>
   );
 }
@@ -187,10 +226,10 @@ function ExifHero({ products }: { products: HeroProduct[] }) {
 function FilmStripHero({ products }: { products: HeroProduct[] }) {
   const frames = [...products, ...products]; // duplikasi untuk loop mulus
   return (
-    <section className="border-b border-border/70">
-      <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-14 text-center md:px-8 md:pt-20">
+    <section className={cn("flex flex-col border-b border-border/70", HERO_MIN_H)}>
+      <div className="mx-auto w-full max-w-6xl flex-1 px-4 pt-10 text-center md:px-8">
         <span className="digicam-timestamp text-sm">▶ PLAY &nbsp;·&nbsp; RENT · ROLL · REPEAT</span>
-        <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-6xl">
+        <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
           Satu roll penuh{" "}
           <span className="font-display italic font-normal text-primary">kenangan</span>.
         </h1>
@@ -198,13 +237,15 @@ function FilmStripHero({ products }: { products: HeroProduct[] }) {
           Rental digicam harian harga pelajar. Booking online, ambil unit, jepret, kembalikan —
           semudah itu.
         </p>
-        <div className="mt-7 flex justify-center">
+        <div className="mt-6 flex justify-center">
           <CtaButtons size="md" />
         </div>
-        <div className="mt-5 flex justify-center">
+        <div className="mt-4 flex justify-center">
           <TrustChips />
         </div>
       </div>
+
+      <HeroPerks className="mt-auto pt-6" />
 
       {/* Film strip marquee */}
       <div className="overflow-hidden bg-foreground py-3">
@@ -229,14 +270,14 @@ function FilmStripHero({ products }: { products: HeroProduct[] }) {
     </section>
   );
 }
+
 /* ---------- Varian G: Cute sticker wall ---------- */
 function StickerHero({ products }: { products: HeroProduct[] }) {
   return (
-    <section className="border-b border-border/70">
-      <div className="mx-auto w-full max-w-6xl px-4 py-14 text-center md:px-8 md:py-16">
+    <section className={cn("flex flex-col border-b border-border/70", HERO_MIN_H)}>
+      <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 text-center md:px-8">
         <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
-          Pilih kamera,
-          <br />
+          Pilih kamera,{" "}
           <span className="font-display italic font-normal text-primary">
             tempel stiker favoritmu
           </span>{" "}
@@ -247,7 +288,7 @@ function StickerHero({ products }: { products: HeroProduct[] }) {
         </p>
 
         {/* Sticker wall grid */}
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto mt-8 grid max-w-3xl gap-4 grid-cols-2 lg:grid-cols-4">
           {products.map((p, i) => (
             <figure
               key={p.name}
@@ -258,7 +299,7 @@ function StickerHero({ products }: { products: HeroProduct[] }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={p.image} alt={p.name} className="aspect-square w-full object-cover" />
               <figcaption className="px-3 py-3">
-                <p className="font-semibold">{p.name}</p>
+                <p className="text-sm font-semibold">{p.name}</p>
                 <p className="digicam-timestamp text-xs opacity-70">{p.timestamp}</p>
               </figcaption>
             </figure>
@@ -269,6 +310,7 @@ function StickerHero({ products }: { products: HeroProduct[] }) {
           <CtaButtons size="md" />
         </div>
       </div>
+      <HeroPerks className="mt-auto" />
     </section>
   );
 }
@@ -277,15 +319,15 @@ function StickerHero({ products }: { products: HeroProduct[] }) {
 function StampHero({ products }: { products: HeroProduct[] }) {
   const featured = products[0];
   return (
-    <section className="border-b border-border/70">
-      <div className="mx-auto w-full max-w-6xl px-4 py-14 md:px-8 md:py-20">
-        <div className="grid items-center gap-10 md:grid-cols-[1.05fr_0.95fr]">
-          <div className="space-y-6">
+    <section className={cn("flex flex-col border-b border-border/70", HERO_MIN_H)}>
+      <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 md:px-8">
+        <div className="grid h-full items-center gap-10 md:grid-cols-[1.05fr_0.95fr]">
+          <div className="space-y-5">
             <div className="digicam-timestamp inline-flex items-center gap-2 rounded-lg border border-current/30 px-3 py-1.5 text-sm">
               <span className="size-2 animate-pulse rounded-full bg-current" aria-hidden />
               REC &nbsp;·&nbsp; {"'"}26 08 23 10:24
             </div>
-            <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight md:text-6xl">
+            <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
               Abadikan momen,{" "}
               <span className="font-display italic font-normal text-primary">
                 tanpa beli kamera
@@ -323,6 +365,7 @@ function StampHero({ products }: { products: HeroProduct[] }) {
           </div>
         </div>
       </div>
+      <HeroPerks className="mt-auto" />
     </section>
   );
 }
@@ -330,8 +373,8 @@ function StampHero({ products }: { products: HeroProduct[] }) {
 /* ---------- Varian E: 3D flip cards ---------- */
 function FlipHero({ products }: { products: HeroProduct[] }) {
   return (
-    <section className="border-b border-border/70">
-      <div className="mx-auto w-full max-w-6xl px-4 py-14 text-center md:px-8 md:py-16">
+    <section className={cn("flex flex-col border-b border-border/70", HERO_MIN_H)}>
+      <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 text-center md:px-8">
         <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
           Sentuh untuk{" "}
           <span className="font-display italic font-normal text-primary">memilih</span> kameramu
@@ -340,9 +383,9 @@ function FlipHero({ products }: { products: HeroProduct[] }) {
           Arahkan kursor ke kartu untuk melihat detail unit — semua siap sewa hari ini.
         </p>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid gap-4 grid-cols-2 lg:grid-cols-4">
           {products.map((p, i) => (
-            <div key={p.name} className="flip-scene h-64">
+            <div key={p.name} className="flip-scene h-56 md:h-60">
               <div
                 className="flip-card h-full"
                 style={{ transform: `rotate(${[-1.5, 1, -0.8, 1.2][i % 4]}deg)` }}
@@ -376,6 +419,7 @@ function FlipHero({ products }: { products: HeroProduct[] }) {
           <CtaButtons size="md" />
         </div>
       </div>
+      <HeroPerks className="mt-auto" />
     </section>
   );
 }
@@ -384,10 +428,10 @@ function FlipHero({ products }: { products: HeroProduct[] }) {
 function GridHero({ products }: { products: HeroProduct[] }) {
   const wall = [...products, ...products.slice(0, 2)];
   return (
-    <section className="border-b border-border/70">
-      <div className="mx-auto w-full max-w-6xl px-4 py-14 md:px-8 md:py-20">
-        <div className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="order-2 lg:order-1 grid grid-cols-3 gap-3">
+    <section className={cn("flex flex-col border-b border-border/70", HERO_MIN_H)}>
+      <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 md:px-8">
+        <div className="grid h-full items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="order-2 grid grid-cols-3 gap-3 lg:order-1">
             {wall.map((p, i) => (
               <figure
                 key={`${p.name}-${i}`}
@@ -414,12 +458,12 @@ function GridHero({ products }: { products: HeroProduct[] }) {
             ))}
           </div>
 
-          <div className="order-1 space-y-6 lg:order-2">
+          <div className="order-1 space-y-5 lg:order-2">
             <span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
               <Star className="size-3.5 fill-current" aria-hidden />
               {products.length}+ unit kamera siap pakai
             </span>
-            <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight md:text-6xl">
+            <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
               Dinding kamera,{" "}
               <span className="font-display italic font-normal text-primary">
                 satu klik away
@@ -435,6 +479,7 @@ function GridHero({ products }: { products: HeroProduct[] }) {
           </div>
         </div>
       </div>
+      <HeroPerks className="mt-auto" />
     </section>
   );
 }

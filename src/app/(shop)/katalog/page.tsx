@@ -1,9 +1,6 @@
 import Link from "next/link";
 import {
   Camera,
-  ShieldCheck,
-  Clock,
-  Wallet,
   ArrowRight,
   PackageCheck,
   Play,
@@ -30,12 +27,6 @@ export const metadata = {
   title: "Katalog — MudahSewa",
   description: "Pilihan kamera & digicam siap sewa dengan harga harian bersahabat.",
 };
-
-const PERKS = [
-  { icon: Wallet, title: "Harga bersahabat", desc: "Tarif fleksibel 6/12/24/48 jam." },
-  { icon: ShieldCheck, title: "Proses aman", desc: "Cukup jaminan KTP / kartu pelajar." },
-  { icon: Clock, title: "Cepat & mudah", desc: "Booking langsung via WhatsApp." },
-];
 
 const HERO_PRODUCTS = [
   { name: "Kodak FZ55", image: "/images/products/kodak-pixpro-fz55.jpg", timestamp: "23 · 08 · 26" },
@@ -71,31 +62,8 @@ export default async function KatalogPage({ searchParams }: PageProps<"/katalog"
 
   return (
     <div>
-      {/* Hero (varian: polaroid | exif | filmstrip — via ?hero=) */}
+      {/* Hero + perks (varian: polaroid | exif | filmstrip | stamp | flip | grid | sticker — via ?hero=) */}
       <ShopHero variant={hero} products={HERO_PRODUCTS} />
-
-      {/* Perks */}
-      <section className="mx-auto w-full max-w-6xl px-4 pt-10 md:px-8">
-        <div className="grid gap-3 sm:grid-cols-3">
-          {PERKS.map((perk) => {
-            const Icon = perk.icon;
-            return (
-              <div
-                key={perk.title}
-                className="flex items-start gap-3 rounded-2xl border bg-card p-4"
-              >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                  <Icon className="size-5" aria-hidden />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold">{perk.title}</p>
-                  <p className="text-xs text-muted-foreground">{perk.desc}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
 
       {/* Katalog */}
       <section id="katalog" className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8">
