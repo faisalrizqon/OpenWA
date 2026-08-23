@@ -11,6 +11,7 @@ import { ArrowLink } from "@/components/LinkButton";
 import { Label } from "@/components/ui/label";
 import { MidtransPayButton } from "@/components/MidtransPayButton";
 import { submitPaymentProof } from "../../actions/checkout";
+import { SaveOrderToHistory } from "@/components/SaveOrderToHistory";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,7 @@ export default async function PaymentPage({
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8 md:px-8 md:py-12">
+      <SaveOrderToHistory orderNumber={order.orderNumber} />
       <div className="text-center">
         <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-emerald-100">
           <CheckCircle2 className="size-7 text-emerald-600" aria-hidden />
@@ -69,10 +71,22 @@ export default async function PaymentPage({
               <span className="font-medium tabular-nums">{formatRupiah(it.subtotal)}</span>
             </div>
           ))}
+          {order.courierFee > 0 && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">Ongkos antar</span>
+              <span className="font-medium tabular-nums">{formatRupiah(order.courierFee)}</span>
+            </div>
+          )}
+          {order.tipAmount > 0 && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">Tip</span>
+              <span className="font-medium tabular-nums">{formatRupiah(order.tipAmount)}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2 border-t pt-2">
             <span className="font-semibold">Total</span>
             <span className="text-lg font-bold tabular-nums text-emerald-700">
-              {formatRupiah(total)}
+              {formatRupiah(total + order.courierFee + order.tipAmount)}
             </span>
           </div>
         </CardContent>

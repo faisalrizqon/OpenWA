@@ -49,6 +49,12 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
             >
               Pricelist
             </Link>
+            <Link
+              href="/track"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              Lacak Order
+            </Link>
             <a
               href={waLink(shop.whatsapp, generalMessage(shop.storeName))}
               target="_blank"
