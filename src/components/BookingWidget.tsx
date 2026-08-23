@@ -6,6 +6,7 @@ import { Minus, Plus, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { SelectField } from "@/components/SelectField";
+import { DateTimePicker } from "@/components/DateTimePicker";
 import { formatRupiah, getTierPrice, type TieredProduct } from "@/lib/pricing";
 
 interface BookingWidgetProps {
@@ -14,6 +15,7 @@ interface BookingWidgetProps {
   prices: { label: string; hours: number; price: number }[];
 }
 
+/** Format lokal `YYYY-MM-DDTHH:mm` — sama dengan DateTimePicker. */
 function toLocalInputValue(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -106,13 +108,10 @@ export function BookingWidget({ productId, product, prices }: BookingWidgetProps
           <Label htmlFor="booking-start" className="mb-1.5 block text-sm">
             Tanggal & jam mulai sewa
           </Label>
-          <input
+          <DateTimePicker
             id="booking-start"
-            type="datetime-local"
             value={startDate}
-            min={toLocalInputValue(now)}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="h-9 w-full rounded-xl border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-primary"
+            onChange={setStartDate}
           />
           {validDate && (
             <p className="mt-1 text-xs text-muted-foreground">

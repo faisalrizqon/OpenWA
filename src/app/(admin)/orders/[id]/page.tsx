@@ -17,6 +17,11 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ReturnForm } from "@/components/ReturnForm";
 import { SelectField } from "@/components/SelectField";
 import { updateOrderStatus, addPayment } from "@/actions/orders";
+import {
+  StatusChangeForm,
+  DeleteOrderDialog,
+  PaymentRowActions,
+} from "@/components/OrderAdminActions";
 import { confirmOnlinePayment } from "@/app/(shop)/actions/checkout";
 import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, type PaymentMethod } from "@/lib/payment";
 import { Button } from "@/components/ui/button";
@@ -114,14 +119,33 @@ export default async function OrderDetailPage({
 
   return (
     <div className="space-y-6">
+      {/* Flow instructions */}
+      <Card className="bg-muted/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <span className="rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground">1</span>
+            Alur Order
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p><strong>Order baru</strong> dibuat otomatis sebagai <span className="font-medium text-foreground">Booking</span>. Admin mengklik tombol <strong>Aktifkan</strong> (atau ubah status via dropdown) saat barang diambil customer — unit akan ter-assign ke stok.</p>
+          <p>Setelah masa sewa habis, tandai <strong>Terlambat</strong> jika memang belum kembali. Klik selesaikan setelah item dikembalikan (tambah foto return & catatan kondisi).</p>
+          <p>Pembayaran dicatat: DP saat booking, pelunasan sebelum/sehabis sewa, atau denda kalau telat.</p>
+          <hr className="my-2 border-border" />
+          <p><strong>Edit/Hapus</strong> pembayaran bisa langsung lewat kolom Aksi per baris. Semua order bebas diubah statusnya kapan saja (tidak ada batasan workflow). Hapus order hanya jika benar-benar batal dan ingin data hilang permanen.</p>
+          <div className="flex items-center gap-2 pt-1">
+            <Link href="/orders" className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-card border px-2.5 text-xs font-medium hover:bg-accent transition-colors">
+              ← Daftar Orders
+            </Link>
+            <Link href="/calendar" className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-card border px-2.5 text-xs font-medium hover:bg-accent transition-colors ml-auto">
+              Lihat Kalender ·
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3">
-        <Link
-          href="/orders"
-          className="text-xs font-medium text-muted-foreground hover:text-foreground"
-        >
-          ← Orders
-        </Link>
         <h1 className="text-xl font-bold tracking-tight md:text-2xl">{order.orderNumber}</h1>
         <StatusBadge status={order.status} />
         <span className="text-sm text-muted-foreground">
@@ -136,6 +160,7 @@ export default async function OrderDetailPage({
         </p>
       )}
 
+      {/* Error banners */}
       {error === "payment" && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           Pembayaran tidak valid — jumlah harus lebih dari 0.
@@ -239,6 +264,12 @@ export default async function OrderDetailPage({
                   Order selesai
                 </span>
               )}
+            </div>
+
+            {/* Ubah status bebas (admin override) + hapus order */}
+            <div className="flex flex-wrap items-center gap-2 border-t pt-4">
+              <StatusChangeForm orderId={order.id} status={order.status} />
+              <DeleteOrderDialog orderId={order.id} orderNumber={order.orderNumber} />
             </div>
 
             {order.noteOrder && (
@@ -508,6 +539,7 @@ export default async function OrderDetailPage({
                     <TableHead>Metode</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Jumlah</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -546,6 +578,9 @@ export default async function OrderDetailPage({
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
                         {formatRupiah(p.amount)}
+                      </TableCell>
+                      <TableCell className="w-[90px]">
+                        <PaymentRowActions orderId={order.id} payment={{ id: Number(p.id), amount: p.amount, method: p.method, note: p.note, status: p.status }} />
                       </TableCell>
                     </TableRow>
                   ))}
