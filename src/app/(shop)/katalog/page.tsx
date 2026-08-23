@@ -66,7 +66,7 @@ export default async function KatalogPage({ searchParams }: PageProps<"/katalog"
       <ShopHero variant={hero} products={HERO_PRODUCTS} />
 
       {/* Katalog */}
-      <section id="katalog" className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8">
+      <section id="katalog" className="mx-auto w-full max-w-6xl px-4 pb-12 pt-16 md:px-8">
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="font-mono text-xs font-bold tracking-widest text-primary">
