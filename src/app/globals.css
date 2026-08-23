@@ -293,6 +293,125 @@
   --ring: oklch(0.25 0 0);
 }
 
+/* Ornamen khusus tema Coquette: hati di heading + wallpaper sparkle */
+.theme-coquette h1::after {
+  content: " ♡";
+  color: var(--primary);
+}
+.theme-coquette::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(circle 3px at 24px 32px, oklch(0.78 0.14 340 / 0.55) 99%, transparent),
+    radial-gradient(circle 2px at 130px 96px, oklch(0.82 0.11 300 / 0.5) 99%, transparent),
+    radial-gradient(circle 2.5px at 76px 168px, oklch(0.76 0.13 340 / 0.5) 99%, transparent),
+    radial-gradient(circle 2px at 168px 20px, oklch(0.82 0.11 300 / 0.45) 99%, transparent);
+  background-size: 190px 190px;
+}
+.theme-coquette .tape {
+  background: linear-gradient(to bottom, oklch(0.85 0.12 340 / 0.75), oklch(0.78 0.16 320 / 0.65));
+}
+
+/* H. Coquette Cute — pastel pink/lilac, stiker & glitter Gen Z */
+.theme-coquette {
+  --background: oklch(0.985 0.015 340);
+  --foreground: oklch(0.42 0.08 330);
+  --card: oklch(0.998 0.006 345);
+  --card-foreground: oklch(0.42 0.08 330);
+  --popover: oklch(0.998 0.006 345);
+  --popover-foreground: oklch(0.42 0.08 330);
+  --primary: oklch(0.72 0.18 345);
+  --primary-foreground: oklch(0.985 0.02 10);
+  --secondary: oklch(0.965 0.03 350);
+  --secondary-foreground: oklch(0.48 0.12 335);
+  --muted: oklch(0.955 0.025 345);
+  --muted-foreground: oklch(0.55 0.06 335);
+  --accent: oklch(0.935 0.045 340);
+  --accent-foreground: oklch(0.48 0.12 335);
+  --border: oklch(0.91 0.04 340);
+  --input: oklch(0.9 0.04 340);
+  --ring: oklch(0.72 0.18 345);
+}
+
+/* Sparkle ornament overlay */
+.sparkle-overlay::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  background-image: radial-gradient(circle at 15% 25%, var(--primary) 2px transparent, transparent),
+                    radial-gradient(circle at 85% 65%, var(--accent) 2px transparent, transparent),
+                    radial-gradient(circle at 45% 15%, var(--accent) 2px transparent, transparent),
+                    radial-gradient(circle at 25% 85%, var(--primary) 2px transparent, transparent);
+  background-size: 120px 120px;
+  opacity: 0.6;
+  animation: sparkle-float 8s ease-in-out infinite alternate;
+}
+@keyframes sparkle-float {
+  from { transform: scale(1); }
+  to { transform: scale(1.05); }
+}
+
+/* Sticker card shadow */
+.sticker-card {
+  box-shadow: 0 4px 12px -6px rgb(180 100 160 / 0.25), 0 0 0 1px color-mix(in oklch, var(--primary) 50%, transparent);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
+}
+.sticker-card:hover {
+  transform: translateY(-6px) rotate(0deg) !important;
+  box-shadow: 0 8px 20px -8px rgb(180 100 160 / 0.35), 0 0 0 1px var(--primary);
+}
+
+/* Washi tape accent */
+.washi-tape {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+  width: 4rem;
+  height: 1.2rem;
+  background: linear-gradient(to bottom, rgba(255, 180, 200, 0.7), rgba(255, 150, 220, 0.6));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(1px);
+  z-index: 2;
+}
+
+/* Film roll decorative element */
+.film-roll-icon {
+  width: 1rem;
+  height: 1rem;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm3 3a1 1 0 100 2h1a1 1 0 100-2H7zm8 0a1 1 0 100 2h1a1 1 0 100-2h-1zM7 10a1 1 0 100 2h1a1 1 0 100-2H7zm8 0a1 1 0 100 2h1a1 1 0 100-2h-1zM7 14a1 1 0 100 2h1a1 1 0 100-2H7zm8 0a1 1 0 100 2h1a1 1 0 100-2h-1z'/%3E%3C/svg%3E");
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm3 3a1 1 0 100 2h1a1 1 0 100-2H7zm8 0a1 1 0 100 2h1a1 1 0 100-2h-1zM7 10a1 1 0 100 2h1a1 1 0 100-2H7zm8 0a1 1 0 100 2h1a1 1 0 100-2h-1zM7 14a1 1 0 100 2h1a1 1 0 100-2H7zm8 0a1 1 0 100 2h1a1 1 0 100-2h-1z'/%3E%3C/svg%3E");
+  background: var(--primary);
+  display: inline-block;
+}
+
+/* Heart & star sticker hover effect */
+.sticker-hover::after {
+  content: "💖";
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  font-size: 1.2rem;
+  opacity: 0;
+  transform: rotate(-15deg);
+  transition: all 0.3s ease;
+}
+.sticker-hover:hover::after {
+  opacity: 1;
+  transform: rotate(15deg) scale(1.1);
+}
+
+/* Cute border pattern */
+.cute-border {
+  border: 2px dashed var(--primary);
+  border-radius: calc(var(--radius) * 1.2);
+}
+
 @layer utilities {
   .font-display {
     font-family: var(--font-display);

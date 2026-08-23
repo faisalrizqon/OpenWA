@@ -47,7 +47,7 @@ const HERO_PRODUCTS = [
 export default async function KatalogPage({ searchParams }: PageProps<"/katalog">) {
   const sp = await searchParams;
   const heroParam = Array.isArray(sp.hero) ? sp.hero[0] : sp.hero;
-  const hero: HeroVariant = ["polaroid", "exif", "filmstrip", "stamp", "flip", "grid"].includes(heroParam ?? "")
+  const hero: HeroVariant = ["polaroid", "exif", "filmstrip", "stamp", "flip", "grid", "sticker"].includes(heroParam ?? "")
     ? (heroParam as HeroVariant)
     : "polaroid";
 

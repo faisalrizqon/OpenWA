@@ -5,7 +5,7 @@ import { Palette, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-export type BgVariant = "kertas" | "y2k" | "darkroom" | "album" | "pastel" | "sunset" | "mono";
+export type BgVariant = "kertas" | "y2k" | "darkroom" | "album" | "pastel" | "sunset" | "mono" | "coquette";
 
 const BG_OPTIONS: { value: BgVariant; label: string; desc: string }[] = [
   { value: "kertas", label: "Kertas Foto", desc: "Cream hangat + grain" },
@@ -15,6 +15,7 @@ const BG_OPTIONS: { value: BgVariant; label: string; desc: string }[] = [
   { value: "pastel", label: "Pastel Soft", desc: "Mint/peach Gen Z" },
   { value: "sunset", label: "Sunset Warm", desc: "Peach-pink golden hour" },
   { value: "mono", label: "Monokrom", desc: "Hitam putih klasik" },
+  { value: "coquette", label: "Coquette Cute", desc: "Pink pastel + stiker 💖" },
 ];
 
 const HERO_OPTIONS: { value: string; label: string; desc: string }[] = [
@@ -24,6 +25,7 @@ const HERO_OPTIONS: { value: string; label: string; desc: string }[] = [
   { value: "stamp", label: "Timestamp Viewfinder", desc: "Banner timestamp oranye" },
   { value: "flip", label: "Flip Cards", desc: "3D flip interaktif" },
   { value: "grid", label: "Camera Wall Grid", desc: "Grid foto asimetris" },
+  { value: "sticker", label: "Sticker Wall", desc: "Kartu stiker cute + washi" },
 ];
 
 

@@ -3,7 +3,7 @@ import { SHOP, waLink, generalMessage } from "@/lib/shop";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { cn } from "@/lib/utils";
 
-export type HeroVariant = "polaroid" | "exif" | "filmstrip" | "stamp" | "flip" | "grid";
+export type HeroVariant = "polaroid" | "exif" | "filmstrip" | "stamp" | "flip" | "grid" | "sticker";
 
 interface HeroProduct {
   name: string;
@@ -229,6 +229,49 @@ function FilmStripHero({ products }: { products: HeroProduct[] }) {
     </section>
   );
 }
+/* ---------- Varian G: Cute sticker wall ---------- */
+function StickerHero({ products }: { products: HeroProduct[] }) {
+  return (
+    <section className="border-b border-border/70">
+      <div className="mx-auto w-full max-w-6xl px-4 py-14 text-center md:px-8 md:py-16">
+        <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
+          Pilih kamera,
+          <br />
+          <span className="font-display italic font-normal text-primary">
+            tempel stiker favoritmu
+          </span>{" "}
+          💖
+        </h1>
+        <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground">
+          Semua kamera kami siap pakai — tinggal pilih, booking, dan ambil. Simpel banget!
+        </p>
+
+        {/* Sticker wall grid */}
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {products.map((p, i) => (
+            <figure
+              key={p.name}
+              className="sticker-card relative overflow-hidden rounded-2xl border bg-card shadow-md"
+              style={{ transform: `rotate(${[-1.5, 1, -0.8, 1.2][i % 4]}deg)` }}
+            >
+              <span className="washi-tape" aria-hidden />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.image} alt={p.name} className="aspect-square w-full object-cover" />
+              <figcaption className="px-3 py-3">
+                <p className="font-semibold">{p.name}</p>
+                <p className="digicam-timestamp text-xs opacity-70">{p.timestamp}</p>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+
+        <div className="mt-8 flex justify-center">
+          <CtaButtons size="md" />
+        </div>
+      </div>
+    </section>
+  );
+}
 
 /* ---------- Varian D: Timestamp banner ala viewfinder ---------- */
 function StampHero({ products }: { products: HeroProduct[] }) {
@@ -402,5 +445,6 @@ export function ShopHero({ variant, products }: ShopHeroProps) {
   if (variant === "stamp") return <StampHero products={products} />;
   if (variant === "flip") return <FlipHero products={products} />;
   if (variant === "grid") return <GridHero products={products} />;
+  if (variant === "sticker") return <StickerHero products={products} />;
   return <PolaroidHero products={products} />;
 }
