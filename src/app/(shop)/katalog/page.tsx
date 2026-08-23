@@ -6,13 +6,23 @@ import {
   Wallet,
   ArrowRight,
   PackageCheck,
-  Star,
   Play,
+  Star,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { SHOP, formatRupiah, lowestPrice, dailyPrice, waLink, generalMessage, TESTIMONIALS, VIDEO_CONTENT } from "@/lib/shop";
+import {
+  SHOP,
+  formatRupiah,
+  lowestPrice,
+  dailyPrice,
+  waLink,
+  generalMessage,
+  TESTIMONIALS,
+  VIDEO_CONTENT,
+} from "@/lib/shop";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Card, CardContent } from "@/components/ui/card";
+import { ShopHero, type HeroVariant } from "@/components/ShopHero";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +37,20 @@ const PERKS = [
   { icon: Clock, title: "Cepat & mudah", desc: "Booking langsung via WhatsApp." },
 ];
 
-export default async function KatalogPage() {
+const HERO_PRODUCTS = [
+  { name: "Kodak FZ55", image: "/images/products/kodak-pixpro-fz55.jpg", timestamp: "23 · 08 · 26" },
+  { name: "Canon Ixus", image: "/images/products/canon-ixus.jpg", timestamp: "24 · 07 · 26" },
+  { name: "Sony W810", image: "/images/products/sony-cybershot-w810.jpg", timestamp: "22 · 09 · 26" },
+  { name: "Canon A4000", image: "/images/products/canon-powershot-a4000.jpg", timestamp: "25 · 06 · 26" },
+];
+
+export default async function KatalogPage({ searchParams }: PageProps<"/katalog">) {
+  const sp = await searchParams;
+  const heroParam = Array.isArray(sp.hero) ? sp.hero[0] : sp.hero;
+  const hero: HeroVariant = ["polaroid", "exif", "filmstrip"].includes(heroParam ?? "")
+    ? (heroParam as HeroVariant)
+    : "polaroid";
+
   const products = await prisma.product.findMany({
     where: { active: true },
     orderBy: [{ categoryId: "asc" }, { name: "asc" }],
@@ -48,58 +71,29 @@ export default async function KatalogPage() {
 
   return (
     <div>
-      {/* Hero */}
-      <section className="border-b border-border/70 bg-card">
-        <div className="mx-auto w-full max-w-6xl px-4 py-14 md:px-8 md:py-20">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-            <Camera className="size-3.5" aria-hidden />
-            {SHOP.tagline}
-          </span>
-          <h1 className="mt-4 max-w-2xl text-3xl font-extrabold tracking-tight md:text-5xl">
-            Sewa kamera impianmu, tanpa ribet.
-          </h1>
-          <p className="mt-4 max-w-xl text-base text-muted-foreground md:text-lg">
-            Digicam & kamera pilihan siap dipakai untuk liburan, konten, atau acara spesial.
-            Booking cukup lewat WhatsApp — cepat dan gampang.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <a
-              href={waLink(generalMessage())}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
-            >
-              <WhatsAppIcon aria-hidden />
-              Pesan via WhatsApp
-            </a>
-            <a
-              href="#katalog"
-              className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-background px-5 text-sm font-semibold transition-colors hover:bg-muted"
-            >
-              Lihat katalog
-              <ArrowRight className="size-4" aria-hidden />
-            </a>
-          </div>
+      {/* Hero (varian: polaroid | exif | filmstrip — via ?hero=) */}
+      <ShopHero variant={hero} products={HERO_PRODUCTS} />
 
-          <div className="mt-10 grid gap-3 sm:grid-cols-3">
-            {PERKS.map((perk) => {
-              const Icon = perk.icon;
-              return (
-                <div
-                  key={perk.title}
-                  className="flex items-start gap-3 rounded-2xl border bg-background p-4"
-                >
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                    <Icon className="size-5" aria-hidden />
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold">{perk.title}</p>
-                    <p className="text-xs text-muted-foreground">{perk.desc}</p>
-                  </div>
+      {/* Perks */}
+      <section className="mx-auto w-full max-w-6xl px-4 pt-10 md:px-8">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {PERKS.map((perk) => {
+            const Icon = perk.icon;
+            return (
+              <div
+                key={perk.title}
+                className="flex items-start gap-3 rounded-2xl border bg-card p-4"
+              >
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                  <Icon className="size-5" aria-hidden />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold">{perk.title}</p>
+                  <p className="text-xs text-muted-foreground">{perk.desc}</p>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -107,9 +101,14 @@ export default async function KatalogPage() {
       <section id="katalog" className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Katalog Kamera</h2>
+            <p className="font-mono text-xs font-bold tracking-widest text-primary">
+              01 — KATALOG
+            </p>
+            <h2 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">
+              Pilih kameramu
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {products.length} produk tersedia untuk disewa
+              {products.length} produk tersedia · harga tier per durasi
             </p>
           </div>
         </div>
@@ -137,8 +136,10 @@ export default async function KatalogPage() {
                       <Link
                         key={p.id}
                         href={`/katalog/${p.id}`}
-                        className="group flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/5"
+                        className="group flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/10"
                       >
+                        {/* Strip film di tepi atas kartu */}
+                        <div className="film-sprockets h-4 w-full bg-foreground/85" aria-hidden />
                         <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
                           {p.imagePath ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -177,12 +178,14 @@ export default async function KatalogPage() {
                           )}
                           <div className="mt-auto flex items-end justify-between pt-4">
                             <div>
-                              <p className="text-[11px] text-muted-foreground">Mulai dari</p>
+                              <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                                mulai dari
+                              </p>
                               <p className="text-lg font-bold tracking-tight tabular-nums">
                                 {from > 0 ? formatRupiah(from) : "Hubungi kami"}
                               </p>
                               {perDay > 0 && (
-                                <p className="text-[11px] text-muted-foreground">
+                                <p className="font-mono text-[10px] text-muted-foreground">
                                   {formatRupiah(perDay)} / 24 jam
                                 </p>
                               )}
@@ -203,46 +206,75 @@ export default async function KatalogPage() {
         )}
       </section>
 
-      {/* Testimonials */}
+      {/* Testimonials — gaya catatan polaroid */}
       <section className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Kata Mereka yang Sudah Sewa</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Sewa ribuan digicam dan kamera dari pelanggan lain</p>
+        <div className="mb-8 text-center">
+          <p className="font-mono text-xs font-bold tracking-widest text-primary">
+            02 — TESTIMONI
+          </p>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">
+            Kata mereka yang sudah sewa
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Review asli dari pelanggan kami
+          </p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {TESTIMONIALS.map((t) => (
-            <Card key={t.name} className="border bg-card/50">
-              <CardContent className="space-y-3 p-5">
-                <div className="flex items-center gap-2">
-                  {[...Array(t.rating)].map((_, i) => (
-                    <Star key={i} className="size-4 fill-primary text-primary" aria-hidden />
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {TESTIMONIALS.map((t, i) => (
+            <figure
+              key={t.name}
+              className="polaroid relative rounded-sm"
+              style={{ transform: `rotate(${[-2, 1.5, -1][i % 3]}deg)` }}
+            >
+              <span className="tape -top-2 left-1/2 -translate-x-1/2 rotate-1" aria-hidden />
+              <div className="space-y-3 px-2 py-3">
+                <div className="flex items-center gap-1">
+                  {[...Array(t.rating)].map((_, j) => (
+                    <Star key={j} className="size-4 fill-amber-400 text-amber-400" aria-hidden />
                   ))}
                 </div>
-                <p className="text-base leading-relaxed">{t.text}</p>
-                <div className="flex items-baseline justify-between">
-                  <span className="font-semibold">{t.name}</span>
+                <blockquote className="text-base leading-relaxed">{t.text}</blockquote>
+                <figcaption className="flex items-baseline justify-between border-t border-dashed pt-2">
+                  <span className="font-display text-lg italic">{t.name}</span>
                   <span className="text-xs text-muted-foreground">{t.context}</span>
-                </div>
-              </CardContent>
-            </Card>
+                </figcaption>
+              </div>
+            </figure>
           ))}
         </div>
       </section>
 
-      {/* Video Content Section */}
+      {/* Video & Tutorial */}
       <section className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Video & Tutorial</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Tips, review, dan cara booking MudahSewa</p>
+        <div className="mb-8 text-center">
+          <p className="font-mono text-xs font-bold tracking-widest text-primary">
+            03 — KONTEN
+          </p>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">
+            Video & tutorial
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Tips, review, dan cara booking di MudahSewa
+          </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {VIDEO_CONTENT.map((v) => (
-            <Link href={v.href} key={v.title} className="group block overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
-              <div className="aspect-video flex items-center justify-center bg-muted/50 group-hover:bg-accent">
-                <Play className="size-12 text-muted-foreground transition-transform duration-300 group-hover:scale-110" aria-hidden />
+            <Link
+              href={v.href}
+              key={v.title}
+              className="group block overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
+            >
+              <div className="relative flex aspect-video items-center justify-center bg-foreground/90">
+                <div className="film-sprockets absolute inset-x-0 top-0 h-3 opacity-60" aria-hidden />
+                <span className="btn-retro flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:scale-110">
+                  <Play className="size-6 fill-current" aria-hidden />
+                </span>
+                <div className="film-sprockets absolute inset-x-0 bottom-0 h-3 opacity-60" aria-hidden />
               </div>
               <div className="space-y-2 p-4">
-                <h3 className="text-base font-semibold leading-tight group-hover:text-primary">{v.title}</h3>
+                <h3 className="text-base font-semibold leading-tight group-hover:text-primary">
+                  {v.title}
+                </h3>
                 <p className="text-sm text-muted-foreground">{v.desc}</p>
               </div>
             </Link>
@@ -264,7 +296,7 @@ export default async function KatalogPage() {
               href={waLink(generalMessage())}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+              className="btn-retro inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
             >
               <WhatsAppIcon aria-hidden />
               Tanya via WhatsApp

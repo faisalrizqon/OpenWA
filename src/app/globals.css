@@ -7,6 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --font-display: var(--font-instrument), Georgia, serif;
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
@@ -141,7 +142,164 @@
   }
 }
 
+/* ============================================================
+   Varian tema storefront (dipilih via ?bg=... di halaman shop)
+   ============================================================ */
+
+/* A. Kertas Foto — cream hangat + golden hour (default storefront) */
+.theme-kertas {
+  --background: oklch(0.965 0.014 86);
+  --foreground: oklch(0.28 0.035 60);
+  --card: oklch(0.992 0.006 90);
+  --card-foreground: oklch(0.28 0.035 60);
+  --popover: oklch(0.992 0.006 90);
+  --popover-foreground: oklch(0.28 0.035 60);
+  --primary: oklch(0.62 0.17 52);
+  --primary-foreground: oklch(0.985 0.02 95);
+  --secondary: oklch(0.955 0.022 80);
+  --secondary-foreground: oklch(0.42 0.09 55);
+  --muted: oklch(0.945 0.02 82);
+  --muted-foreground: oklch(0.5 0.04 60);
+  --accent: oklch(0.94 0.035 75);
+  --accent-foreground: oklch(0.42 0.09 55);
+  --border: oklch(0.9 0.03 80);
+  --input: oklch(0.89 0.03 80);
+  --ring: oklch(0.62 0.17 52);
+}
+
+/* B. Y2K Chrome — lavender/silver futuristik */
+.theme-y2k {
+  --background: oklch(0.96 0.02 300);
+  --foreground: oklch(0.25 0.05 290);
+  --card: oklch(0.99 0.008 300);
+  --card-foreground: oklch(0.25 0.05 290);
+  --popover: oklch(0.99 0.008 300);
+  --popover-foreground: oklch(0.25 0.05 290);
+  --primary: oklch(0.55 0.2 275);
+  --primary-foreground: oklch(0.985 0.01 300);
+  --secondary: oklch(0.95 0.025 300);
+  --secondary-foreground: oklch(0.45 0.12 285);
+  --muted: oklch(0.94 0.02 300);
+  --muted-foreground: oklch(0.53 0.04 290);
+  --accent: oklch(0.93 0.04 305);
+  --accent-foreground: oklch(0.45 0.12 285);
+  --border: oklch(0.89 0.03 300);
+  --input: oklch(0.88 0.03 300);
+  --ring: oklch(0.55 0.2 275);
+}
+
+/* C. Darkroom — gelap hangat, aksen amber (foto pop) */
+.theme-darkroom {
+  --background: oklch(0.17 0.012 60);
+  --foreground: oklch(0.94 0.012 85);
+  --card: oklch(0.23 0.014 60);
+  --card-foreground: oklch(0.94 0.012 85);
+  --popover: oklch(0.23 0.014 60);
+  --popover-foreground: oklch(0.94 0.012 85);
+  --primary: oklch(0.75 0.15 70);
+  --primary-foreground: oklch(0.2 0.03 60);
+  --secondary: oklch(0.28 0.015 60);
+  --secondary-foreground: oklch(0.88 0.02 80);
+  --muted: oklch(0.27 0.015 60);
+  --muted-foreground: oklch(0.68 0.03 70);
+  --accent: oklch(0.3 0.03 65);
+  --accent-foreground: oklch(0.9 0.04 85);
+  --border: oklch(1 0.01 80 / 12%);
+  --input: oklch(1 0.01 80 / 16%);
+  --ring: oklch(0.75 0.15 70);
+}
+
 @layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  /* Grain noise ala foto digicam (overlay) */
+  .bg-grain {
+    position: relative;
+  }
+  .bg-grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+  }
+  .theme-darkroom.bg-grain::before {
+    opacity: 0.08;
+  }
+  /* Konten di atas grain */
+  .bg-grain > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Tombol retro: hard shadow + efek "melesak" saat ditekan */
+  .btn-retro {
+    box-shadow: 0 4px 0 0 color-mix(in oklch, var(--foreground) 22%, transparent);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .btn-retro:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 0 0 color-mix(in oklch, var(--foreground) 22%, transparent);
+  }
+  .btn-retro:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 0 color-mix(in oklch, var(--foreground) 22%, transparent);
+  }
+
+  /* Polaroid */
+  .polaroid {
+    background: oklch(0.99 0.005 90);
+    padding: 0.6rem 0.6rem 2rem;
+    box-shadow: 0 8px 24px -6px rgb(0 0 0 / 0.18), 0 2px 6px rgb(0 0 0 / 0.08);
+    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease;
+  }
+  .polaroid:hover {
+    transform: rotate(0deg) scale(1.04) !important;
+    box-shadow: 0 16px 40px -8px rgb(0 0 0 / 0.28);
+    z-index: 10;
+  }
+  .tape {
+    position: absolute;
+    width: 5rem;
+    height: 1.5rem;
+    background: color-mix(in oklch, #f5d67b 72%, transparent);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+    z-index: 3;
+  }
+
+  /* Timestamp ala digicam */
+  .digicam-timestamp {
+    font-family: var(--font-geist-mono), monospace;
+    color: oklch(0.72 0.18 55);
+    text-shadow: 0 0 8px color-mix(in oklch, oklch(0.72 0.18 55) 55%, transparent);
+    letter-spacing: 0.08em;
+  }
+
+  /* Marquee film strip */
+  @keyframes film-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  .film-strip-track {
+    display: flex;
+    width: max-content;
+    animation: film-scroll 32s linear infinite;
+  }
+  .film-strip-track:hover {
+    animation-play-state: paused;
+  }
+  .film-sprockets {
+    background-image: radial-gradient(circle, var(--background) 0 4px, transparent 4.5px);
+    background-size: 26px 100%;
+    background-repeat: repeat-x;
+    background-position: center;
+  }
+
   .glass {
     background: color-mix(in oklch, var(--card) 78%, transparent);
     backdrop-filter: blur(12px) saturate(140%);

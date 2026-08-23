@@ -2,10 +2,12 @@ import Link from "next/link";
 import { Camera, MapPin, Clock } from "lucide-react";
 import { SHOP, waLink, generalMessage } from "@/lib/shop";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import { ShopTheme } from "@/components/ShopTheme";
 
 export default function ShopLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="flex min-h-screen flex-col">
+      <ShopTheme />
       <header className="glass sticky top-0 z-30 border-b border-border/70">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <Link href="/katalog" className="flex items-center gap-2.5">
