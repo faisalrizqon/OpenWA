@@ -1,5 +1,18 @@
-import { ArrowRight, Star, ShieldCheck, Clock, Wallet } from "lucide-react";
-import { SHOP, waLink, generalMessage } from "@/lib/shop";
+import {
+  ArrowRight,
+  Star,
+  ShieldCheck,
+  Clock,
+  Wallet,
+  Camera,
+  Truck,
+  Heart,
+  Zap,
+  Package,
+  BadgeCheck,
+  type LucideIcon,
+} from "lucide-react";
+import { waLink, generalMessage, type StoreSettings, SHOP } from "@/lib/shop";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { cn } from "@/lib/utils";
 
@@ -11,31 +24,47 @@ interface HeroProduct {
   timestamp: string;
 }
 
+interface PerkItem {
+  icon: string;
+  title: string;
+  description: string;
+}
+
 interface ShopHeroProps {
   variant: HeroVariant;
   products: HeroProduct[];
+  settings: StoreSettings;
+  perks: PerkItem[];
 }
 
 /** Tinggi hero kompak — tidak satu layar penuh, katalog mulai terlihat. */
 const HERO_MIN_H = "min-h-[52dvh]";
 
-const PERKS = [
-  { icon: Wallet, title: "Harga bersahabat", desc: "Tarif fleksibel 6/12/24/48 jam." },
-  { icon: ShieldCheck, title: "Proses aman", desc: "Cukup jaminan KTP / kartu pelajar." },
-  { icon: Clock, title: "Cepat & mudah", desc: "Booking langsung via WhatsApp." },
-];
+/** Ikon kartu keunggulan yang bisa dipilih lewat admin. */
+const PERK_ICONS: Record<string, LucideIcon> = {
+  wallet: Wallet,
+  shield: ShieldCheck,
+  clock: Clock,
+  star: Star,
+  camera: Camera,
+  truck: Truck,
+  heart: Heart,
+  zap: Zap,
+  package: Package,
+  badge: BadgeCheck,
+};
 
-/** Kartu keunggulan — flow normal tepat di bawah hero (tidak overlap),
- *  muncul dengan animasi fade-up berurutan. */
-function HeroPerks() {
+/** Kartu keunggulan — flow normal tepat di bawah hero, animasi fade-up berurutan. */
+function HeroPerks({ perks }: { perks: PerkItem[] }) {
+  if (perks.length === 0) return null;
   return (
     <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pt-8 md:px-8">
       <div className="grid gap-3 sm:grid-cols-3">
-        {PERKS.map((perk, i) => {
-          const Icon = perk.icon;
+        {perks.map((perk, i) => {
+          const Icon = PERK_ICONS[perk.icon] ?? Camera;
           return (
             <div
-              key={perk.title}
+              key={perk.title + i}
               className="group flex animate-fade-up items-center gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-md shadow-foreground/5 transition-all hover:-translate-y-1 hover:shadow-lg"
               style={{ animationDelay: `${0.15 + i * 0.12}s` }}
             >
@@ -44,7 +73,7 @@ function HeroPerks() {
               </span>
               <div className="min-w-0 leading-tight">
                 <p className="text-sm font-bold">{perk.title}</p>
-                <p className="text-xs text-muted-foreground">{perk.desc}</p>
+                <p className="text-xs text-muted-foreground">{perk.description}</p>
               </div>
             </div>
           );
@@ -54,11 +83,11 @@ function HeroPerks() {
   );
 }
 
-function CtaButtons({ size = "lg" }: { size?: "lg" | "md" }) {
+function CtaButtons({ settings, size = "lg" }: { settings: StoreSettings; size?: "lg" | "md" }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <a
-        href={waLink(generalMessage())}
+        href={waLink(settings.whatsapp, generalMessage(settings.storeName))}
         target="_blank"
         rel="noopener noreferrer"
         className={cn(
@@ -83,27 +112,59 @@ function CtaButtons({ size = "lg" }: { size?: "lg" | "md" }) {
   );
 }
 
-function TrustChips() {
+function TrustChips({ settings }: { settings?: StoreSettings }) {
   return (
     <div className="flex flex-wrap gap-4 text-xs font-medium text-muted-foreground">
       <span className="inline-flex items-center gap-1.5">
         <ShieldCheck className="size-3.5 text-emerald-600" aria-hidden />
-        Jaminan KTP / kartu pelajar
+        {settings?.trustBadge1 ?? "Jaminan KTP / kartu pelajar"}
       </span>
       <span className="inline-flex items-center gap-1.5">
         <Clock className="size-3.5 text-emerald-600" aria-hidden />
-        {SHOP.hours}
+        {settings?.trustBadge2 ?? "Setiap hari · 08.00 – 21.00"}
       </span>
       <span className="inline-flex items-center gap-1.5">
         <Star className="size-3.5 fill-amber-500 text-amber-500" aria-hidden />
-        Dipercaya pelajar Weleri
+        {settings?.trustBadge3 ?? "Dipercaya pelajar Weleri"}
       </span>
     </div>
   );
 }
 
+/** Judul hero dengan kata aksen — teks dikontrol dari admin. */
+function HeroTitle({ settings, className }: { settings: StoreSettings; className?: string }) {
+  return (
+    <h1
+      className={cn(
+        "animate-fade-up text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl",
+        className
+      )}
+      style={{ animationDelay: "0.08s" }}
+    >
+      {settings.heroTitleBefore}{" "}
+      <span className="font-display italic font-normal text-primary">{settings.heroAccent}</span>
+      {settings.heroTitleAfter}
+    </h1>
+  );
+}
+
+/** Subjudul hero — teks dikontrol dari admin. */
+function HeroSubtitle({ settings, className }: { settings: StoreSettings; className?: string }) {
+  return (
+    <p
+      className={cn(
+        "animate-fade-up max-w-md text-base text-muted-foreground md:text-lg",
+        className
+      )}
+      style={{ animationDelay: "0.16s" }}
+    >
+      {settings.heroSubtitle}
+    </p>
+  );
+}
+
 /* ---------- Varian A: Polaroid Collage (foto melayang pelan) ---------- */
-function PolaroidHero({ products }: { products: HeroProduct[] }) {
+function PolaroidHero({ products, settings }: { products: HeroProduct[]; settings: StoreSettings }) {
   const rotations = ["-6deg", "4deg", "-3deg", "7deg"];
   const offsets = [
     "top-0 left-2 md:-left-4",
@@ -118,26 +179,13 @@ function PolaroidHero({ products }: { products: HeroProduct[] }) {
           <span className="animate-fade-up digicam-timestamp text-sm">
             {"'"}26 · 08 · 23 &nbsp;AM 10:24
           </span>
-          <h1
-            className="animate-fade-up text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl"
-            style={{ animationDelay: "0.08s" }}
-          >
-            Sewa kamera{" "}
-            <span className="font-display italic font-normal text-primary">impianmu</span>,
-            tanpa ribet.
-          </h1>
-          <p
-            className="animate-fade-up max-w-md text-base text-muted-foreground md:text-lg"
-            style={{ animationDelay: "0.16s" }}
-          >
-            Digicam & kamera pilihan siap dipakai untuk liburan, konten, atau acara spesial.
-            Booking cukup lewat WhatsApp — cepat dan gampang.
-          </p>
+          <HeroTitle settings={settings} />
+          <HeroSubtitle settings={settings} />
           <div className="animate-fade-up" style={{ animationDelay: "0.24s" }}>
-            <CtaButtons />
+            <CtaButtons settings={settings} />
           </div>
           <div className="animate-fade-up" style={{ animationDelay: "0.32s" }}>
-            <TrustChips />
+            <TrustChips settings={settings} />
           </div>
         </div>
 
@@ -155,11 +203,7 @@ function PolaroidHero({ products }: { products: HeroProduct[] }) {
               <span className="tape -top-2 left-1/2 -translate-x-1/2 -rotate-2" aria-hidden />
               <div className="animate-float" style={{ animationDelay: `${i * 0.7}s` }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={p.image}
-                  alt={p.name}
-                  className="aspect-square w-full object-cover"
-                />
+                <img src={p.image} alt={p.name} className="aspect-square w-full object-cover" />
                 <figcaption className="mt-2 flex items-baseline justify-between px-1">
                   <span className="text-xs font-semibold">{p.name}</span>
                   <span className="digicam-timestamp text-[10px]">{p.timestamp}</span>
@@ -174,7 +218,7 @@ function PolaroidHero({ products }: { products: HeroProduct[] }) {
 }
 
 /* ---------- Varian B: Produk besar + EXIF chips (zoom pelan) ---------- */
-function ExifHero({ products }: { products: HeroProduct[] }) {
+function ExifHero({ products, settings }: { products: HeroProduct[]; settings: StoreSettings }) {
   const featured = products[0];
   const chips = [
     { label: "ISO 400", pos: "top-6 -left-2 md:-left-6" },
@@ -190,26 +234,13 @@ function ExifHero({ products }: { products: HeroProduct[] }) {
             <Star className="size-3.5 fill-current" aria-hidden />
             Digicam paling dicari bulan ini
           </span>
-          <h1
-            className="animate-fade-up text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl"
-            style={{ animationDelay: "0.08s" }}
-          >
-            Hasil foto{" "}
-            <span className="font-display italic font-normal text-primary">aesthetic</span>{" "}
-            mulai Rp30 ribu.
-          </h1>
-          <p
-            className="animate-fade-up max-w-md text-base text-muted-foreground md:text-lg"
-            style={{ animationDelay: "0.16s" }}
-          >
-            Semua unit dicek & dibersihkan sebelum sewa. Pilih tanggal, durasi, dan metode
-            bayar — sisanya biar kami yang urus.
-          </p>
+          <HeroTitle settings={settings} />
+          <HeroSubtitle settings={settings} />
           <div className="animate-fade-up" style={{ animationDelay: "0.24s" }}>
-            <CtaButtons />
+            <CtaButtons settings={settings} />
           </div>
           <div className="animate-fade-up" style={{ animationDelay: "0.32s" }}>
-            <TrustChips />
+            <TrustChips settings={settings} />
           </div>
         </div>
 
@@ -245,7 +276,7 @@ function ExifHero({ products }: { products: HeroProduct[] }) {
 }
 
 /* ---------- Varian C: Minimalis + film strip marquee ---------- */
-function FilmStripHero({ products }: { products: HeroProduct[] }) {
+function FilmStripHero({ products, settings }: { products: HeroProduct[]; settings: StoreSettings }) {
   const frames = [...products, ...products]; // duplikasi untuk loop mulus
   return (
     <section className={cn("flex flex-col", HERO_MIN_H)}>
@@ -253,25 +284,13 @@ function FilmStripHero({ products }: { products: HeroProduct[] }) {
         <span className="animate-fade-up digicam-timestamp text-sm">
           ▶ PLAY &nbsp;·&nbsp; RENT · ROLL · REPEAT
         </span>
-        <h1
-          className="animate-fade-up mx-auto mt-4 max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl"
-          style={{ animationDelay: "0.08s" }}
-        >
-          Satu roll penuh{" "}
-          <span className="font-display italic font-normal text-primary">kenangan</span>.
-        </h1>
-        <p
-          className="animate-fade-up mx-auto mt-4 max-w-xl text-base text-muted-foreground md:text-lg"
-          style={{ animationDelay: "0.16s" }}
-        >
-          Rental digicam harian harga pelajar. Booking online, ambil unit, jepret, kembalikan —
-          semudah itu.
-        </p>
+        <HeroTitle settings={settings} className="mx-auto mt-4 max-w-3xl" />
+        <HeroSubtitle settings={settings} className="mx-auto mt-4 max-w-xl" />
         <div className="animate-fade-up mt-6 flex justify-center" style={{ animationDelay: "0.24s" }}>
-          <CtaButtons size="md" />
+          <CtaButtons size="md" settings={settings} />
         </div>
         <div className="animate-fade-up mt-4 flex justify-center" style={{ animationDelay: "0.32s" }}>
-          <TrustChips />
+          <TrustChips settings={settings} />
         </div>
       </div>
 
@@ -300,7 +319,7 @@ function FilmStripHero({ products }: { products: HeroProduct[] }) {
 }
 
 /* ---------- Varian D: Timestamp banner ala viewfinder ---------- */
-function StampHero({ products }: { products: HeroProduct[] }) {
+function StampHero({ products, settings }: { products: HeroProduct[]; settings: StoreSettings }) {
   const featured = products[0];
   return (
     <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
@@ -311,28 +330,13 @@ function StampHero({ products }: { products: HeroProduct[] }) {
               <span className="animate-blink size-2 rounded-full bg-current" aria-hidden />
               REC &nbsp;·&nbsp; {"'"}26 08 23 10:24
             </div>
-            <h1
-              className="animate-fade-up text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl"
-              style={{ animationDelay: "0.08s" }}
-            >
-              Abadikan momen,{" "}
-              <span className="font-display italic font-normal text-primary">
-                tanpa beli kamera
-              </span>
-              .
-            </h1>
-            <p
-              className="animate-fade-up max-w-md text-base text-muted-foreground md:text-lg"
-              style={{ animationDelay: "0.16s" }}
-            >
-              Rental harian mulai Rp30 ribu. Booking online, bayar fleksibel, ambil unit —
-              semua beres dalam hitungan menit.
-            </p>
+            <HeroTitle settings={settings} />
+            <HeroSubtitle settings={settings} />
             <div className="animate-fade-up" style={{ animationDelay: "0.24s" }}>
-              <CtaButtons />
+              <CtaButtons settings={settings} />
             </div>
             <div className="animate-fade-up" style={{ animationDelay: "0.32s" }}>
-              <TrustChips />
+              <TrustChips settings={settings} />
             </div>
           </div>
 
@@ -364,20 +368,12 @@ function StampHero({ products }: { products: HeroProduct[] }) {
 }
 
 /* ---------- Varian E: 3D flip cards ---------- */
-function FlipHero({ products }: { products: HeroProduct[] }) {
+function FlipHero({ products, settings }: { products: HeroProduct[]; settings: StoreSettings }) {
   return (
     <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
       <div className="mx-auto w-full max-w-6xl px-4 text-center md:px-8">
-        <h1 className="animate-fade-up mx-auto max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
-          Sentuh untuk{" "}
-          <span className="font-display italic font-normal text-primary">memilih</span> kameramu
-        </h1>
-        <p
-          className="animate-fade-up mx-auto mt-3 max-w-xl text-base text-muted-foreground"
-          style={{ animationDelay: "0.1s" }}
-        >
-          Arahkan kursor ke kartu untuk melihat detail unit — semua siap sewa hari ini.
-        </p>
+        <HeroTitle settings={settings} className="mx-auto max-w-2xl" />
+        <HeroSubtitle settings={settings} className="mx-auto mt-3 max-w-xl" />
 
         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {products.map((p, i) => (
@@ -416,7 +412,7 @@ function FlipHero({ products }: { products: HeroProduct[] }) {
         </div>
 
         <div className="animate-fade-up mt-8 flex justify-center" style={{ animationDelay: "0.5s" }}>
-          <CtaButtons size="md" />
+          <CtaButtons size="md" settings={settings} />
         </div>
       </div>
     </section>
@@ -424,7 +420,7 @@ function FlipHero({ products }: { products: HeroProduct[] }) {
 }
 
 /* ---------- Varian F: Camera wall grid ---------- */
-function GridHero({ products }: { products: HeroProduct[] }) {
+function GridHero({ products, settings }: { products: HeroProduct[]; settings: StoreSettings }) {
   const wall = [...products, ...products.slice(0, 2)];
   return (
     <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
@@ -463,28 +459,13 @@ function GridHero({ products }: { products: HeroProduct[] }) {
               <Star className="size-3.5 fill-current" aria-hidden />
               {products.length}+ unit kamera siap pakai
             </span>
-            <h1
-              className="animate-fade-up text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl"
-              style={{ animationDelay: "0.08s" }}
-            >
-              Dinding kamera,{" "}
-              <span className="font-display italic font-normal text-primary">
-                satu klik away
-              </span>
-              .
-            </h1>
-            <p
-              className="animate-fade-up max-w-md text-base text-muted-foreground md:text-lg"
-              style={{ animationDelay: "0.16s" }}
-            >
-              Semua unit kami rawat seperti milik sendiri. Scroll katalog, pilih favoritmu,
-              dan booking sebelum keduluan yang lain.
-            </p>
+            <HeroTitle settings={settings} />
+            <HeroSubtitle settings={settings} />
             <div className="animate-fade-up" style={{ animationDelay: "0.24s" }}>
-              <CtaButtons />
+              <CtaButtons settings={settings} />
             </div>
             <div className="animate-fade-up" style={{ animationDelay: "0.32s" }}>
-              <TrustChips />
+              <TrustChips settings={settings} />
             </div>
           </div>
         </div>
@@ -494,23 +475,12 @@ function GridHero({ products }: { products: HeroProduct[] }) {
 }
 
 /* ---------- Varian G: Cute sticker wall ---------- */
-function StickerHero({ products }: { products: HeroProduct[] }) {
+function StickerHero({ products, settings }: { products: HeroProduct[]; settings: StoreSettings }) {
   return (
     <section className={cn("flex flex-col justify-center py-10", HERO_MIN_H)}>
       <div className="mx-auto w-full max-w-6xl px-4 text-center md:px-8">
-        <h1 className="animate-fade-up mx-auto max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
-          Pilih kamera,{" "}
-          <span className="font-display italic font-normal text-primary">
-            tempel stiker favoritmu
-          </span>{" "}
-          💖
-        </h1>
-        <p
-          className="animate-fade-up mx-auto mt-3 max-w-xl text-base text-muted-foreground"
-          style={{ animationDelay: "0.1s" }}
-        >
-          Semua kamera kami siap pakai — tinggal pilih, booking, dan ambil. Simpel banget!
-        </p>
+        <HeroTitle settings={settings} className="mx-auto max-w-2xl" />
+        <HeroSubtitle settings={settings} className="mx-auto mt-3 max-w-xl" />
 
         {/* Sticker wall grid — tiap stiker goyang halus */}
         <div className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-4 lg:grid-cols-4">
@@ -535,28 +505,28 @@ function StickerHero({ products }: { products: HeroProduct[] }) {
         </div>
 
         <div className="animate-fade-up mt-8 flex justify-center" style={{ animationDelay: "0.5s" }}>
-          <CtaButtons size="md" />
+          <CtaButtons size="md" settings={settings} />
         </div>
       </div>
     </section>
   );
 }
 
-export function ShopHero({ variant, products }: ShopHeroProps) {
+export function ShopHero({ variant, products, settings, perks }: ShopHeroProps) {
   let hero: React.ReactNode;
-  if (variant === "exif") hero = <ExifHero products={products} />;
-  else if (variant === "filmstrip") hero = <FilmStripHero products={products} />;
-  else if (variant === "stamp") hero = <StampHero products={products} />;
-  else if (variant === "flip") hero = <FlipHero products={products} />;
-  else if (variant === "grid") hero = <GridHero products={products} />;
-  else if (variant === "sticker") hero = <StickerHero products={products} />;
-  else hero = <PolaroidHero products={products} />;
+  if (variant === "exif") hero = <ExifHero products={products} settings={settings} />;
+  else if (variant === "filmstrip") hero = <FilmStripHero products={products} settings={settings} />;
+  else if (variant === "stamp") hero = <StampHero products={products} settings={settings} />;
+  else if (variant === "flip") hero = <FlipHero products={products} settings={settings} />;
+  else if (variant === "grid") hero = <GridHero products={products} settings={settings} />;
+  else if (variant === "sticker") hero = <StickerHero products={products} settings={settings} />;
+  else hero = <PolaroidHero products={products} settings={settings} />;
 
   return (
     <div>
       {hero}
       {/* Kartu keunggulan: flow normal di bawah hero, animasi fade-up berurutan */}
-      <HeroPerks />
+      <HeroPerks perks={perks} />
     </div>
   );
 }

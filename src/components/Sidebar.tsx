@@ -9,17 +9,19 @@ import {
   Users,
   CalendarDays,
   BarChart3,
+  Megaphone,
   Store,
   type LucideIcon,
 } from "lucide-react";
 
-const navItems: { label: string; href: "/" | "/orders" | "/products" | "/customers" | "/calendar" | "/reports"; icon: LucideIcon }[] = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Orders", href: "/orders", icon: ClipboardList },
-  { label: "Produk", href: "/products", icon: Camera },
-  { label: "Pelanggan", href: "/customers", icon: Users },
-  { label: "Kalender", href: "/calendar", icon: CalendarDays },
-  { label: "Laporan", href: "/reports", icon: BarChart3 },
+const navItems: { label: string; href: "/admin" | "/admin/orders" | "/admin/products" | "/admin/customers" | "/admin/calendar" | "/admin/reports" | "/admin/content"; icon: LucideIcon }[] = [
+  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "Orders", href: "/admin/orders", icon: ClipboardList },
+  { label: "Produk", href: "/admin/products", icon: Camera },
+  { label: "Pelanggan", href: "/admin/customers", icon: Users },
+  { label: "Kalender", href: "/admin/calendar", icon: CalendarDays },
+  { label: "Laporan", href: "/admin/reports", icon: BarChart3 },
+  { label: "Konten Toko", href: "/admin/content", icon: Megaphone },
 ];
 
 export function Sidebar() {
@@ -41,7 +43,7 @@ export function Sidebar() {
       </p>
       <nav className="flex flex-row gap-1 overflow-x-auto px-3 pb-2 md:flex-col md:px-3 md:pb-4">
         {navItems.map((item) => {
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
           const Icon = item.icon;
           return (
             <Link
@@ -67,7 +69,7 @@ export function Sidebar() {
       </nav>
       <div className="mt-auto space-y-2 px-3 pb-4 pt-2">
         <Link
-          href="/katalog"
+          href="/"
           target="_blank"
           className="flex items-center gap-2.5 rounded-xl border border-border/70 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         >

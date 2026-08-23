@@ -1,12 +1,13 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Banknote, QrCode, CreditCard, CheckCircle2, Clock3 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/pricing";
-import { QRIS, SHOP } from "@/lib/shop";
+import { getStoreSettings } from "@/lib/content";
 import { midtransConfigured, PAYMENT_STATUS_LABELS } from "@/lib/payment";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BackLink } from "@/components/BackLink";
+import { ArrowLink } from "@/components/LinkButton";
 import { Label } from "@/components/ui/label";
 import { MidtransPayButton } from "@/components/MidtransPayButton";
 import { submitPaymentProof } from "../../actions/checkout";
@@ -30,6 +31,8 @@ export default async function PaymentPage({
     },
   });
   if (!order) notFound();
+
+  const shop = await getStoreSettings();
 
   const total = order.items.reduce((s, it) => s + it.subtotal, 0);
   const statusLabel = PAYMENT_STATUS_LABELS[order.paymentStatus] ?? order.paymentStatus;
@@ -119,13 +122,13 @@ export default async function PaymentPage({
                   <div className="rounded-2xl border bg-white p-3 shadow-sm">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={QRIS.imagePath}
-                      alt={`QRIS ${QRIS.merchantName}`}
+                      src={shop.qrisImagePath}
+                      alt={`QRIS ${shop.qrisMerchantName}`}
                       className="size-56 object-contain"
                     />
                   </div>
                   <p className="text-center text-xs text-muted-foreground">
-                    a.n. <span className="font-medium">{QRIS.merchantName}</span> — bayar sebesar{" "}
+                    a.n. <span className="font-medium">{shop.qrisMerchantName}</span> — bayar sebesar{" "}
                     <span className="font-semibold text-foreground">{formatRupiah(total)}</span>
                   </p>
 
@@ -201,17 +204,16 @@ export default async function PaymentPage({
       <div className="mt-6 rounded-2xl border bg-card p-4 text-sm text-muted-foreground">
         <p className="flex items-start gap-2">
           <Clock3 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-          Admin akan mengonfirmasi pesanan Anda via WhatsApp pada jam operasional ({SHOP.hours}).
+          Admin akan mengonfirmasi pesanan Anda via WhatsApp pada jam operasional ({shop.hours}).
         </p>
       </div>
 
-      <div className="mt-6 flex justify-center gap-3">
-        <Link href="/katalog">
-          <Button variant="outline">Kembali ke Katalog</Button>
-        </Link>
-        <Link href={`/order-status/${order.orderNumber}`}>
-          <Button>Cek Status Pesanan</Button>
-        </Link>
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+        <BackLink href="/" label="Kembali ke Katalog" />
+        <ArrowLink
+          href={`/order-status/${order.orderNumber}`}
+          label="Cek Status Pesanan"
+        />
       </div>
     </div>
   );

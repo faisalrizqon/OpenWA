@@ -1,10 +1,19 @@
 import { formatRupiah, getTierPrice, type TieredProduct } from "@/lib/pricing";
+import { getStoreSettings, getStorefrontContent, type StoreSettings } from "@/lib/content";
 
-/** Info bisnis untuk storefront customer. */
+export { getStoreSettings };
+export type { StoreSettings };
+
+/** Semua data yang dibutuhkan halaman storefront, sekali ambil dari database. */
+export async function getStorefrontData() {
+  const [settings, content] = await Promise.all([getStoreSettings(), getStorefrontContent()]);
+  return { settings, ...content };
+}
+
+/** Info bisnis untuk storefront customer — statis agar tetap dipakai layout/payment page */
 export const SHOP = {
   name: "MudahSewa",
   tagline: "Sewa Kamera & Digicam Harian",
-  /** Nomor WhatsApp admin (format 08xx). Ganti sesuai nomor asli. */
   whatsapp: "081234567890",
   location: "Weleri, Kendal",
   hours: "Setiap hari · 08.00 – 21.00",
@@ -13,11 +22,50 @@ export const SHOP = {
 /** Konfigurasi QRIS statis (fallback bila Midtrans tidak dikonfigurasi).
  *  Ganti file public/qris.png dengan QRIS toko yang asli. */
 export const QRIS = {
-  /** Path gambar QRIS di folder public. */
   imagePath: process.env.QRIS_IMAGE || "/qris.png",
-  /** Nama merchant yang tampil di halaman pembayaran. */
-  merchantName: process.env.QRIS_MERCHANT_NAME || SHOP.name,
+  merchantName: process.env.QRIS_MERCHANT_NAME || "MudahSewa",
 };
+
+/** Testimoni pelanggan (default statis; versi DB ada di model Testimonial). */
+export const TESTIMONIALS = [
+  {
+    name: "Salsa",
+    context: "Sewa digicam untuk liburan ke Dieng",
+    text: "Prosesnya cepet banget! Chat WA langsung dibales, kameranya bersih dan hasilnya aesthetic. Next time sewa lagi 🥹",
+    rating: 5,
+  },
+  {
+    name: "Dimas",
+    context: "Konten TikTok untuk acara sekolah",
+    text: "Harga pelajar banget, adminnya ramah. Kameranya oke buat konten, baterai awet seharian.",
+    rating: 5,
+  },
+  {
+    name: "Alya & teman-teman",
+    context: "Sewa tripod + kamera buat foto wisuda",
+    text: "Booking online gampang, tinggal pilih tanggal. Pas ambil unit langsung dicek bareng. Recommended!",
+    rating: 5,
+  },
+];
+
+/** Konten video/galeri sosial media (default statis; versi DB ada di model VideoContent). */
+export const VIDEO_CONTENT = [
+  {
+    title: "Review Kodak Pixpro FZ55",
+    desc: "Hasil foto digicam viral ini — worth it buat liburan?",
+    href: "#",
+  },
+  {
+    title: "Cara Booking di MudahSewa",
+    desc: "Tutorial singkat booking online, bayar, sampai ambil unit.",
+    href: "#",
+  },
+  {
+    title: "Tips Foto Aesthetic Pakai Digicam",
+    desc: "Setting sederhana biar hasil fotomu makin vintage.",
+    href: "#",
+  },
+];
 
 /** Tier harga yang ditampilkan di katalog. */
 export const PRICE_TIERS: { key: keyof TieredProduct; label: string; hours: number }[] = [
@@ -43,17 +91,36 @@ export function dailyPrice(p: TieredProduct): number {
   }
 }
 
-export function waLink(text: string): string {
-  return `https://wa.me/62${SHOP.whatsapp.replace(/^0/, "")}?text=${encodeURIComponent(text)}`;
+/** Link WhatsApp ke nomor toko (format 08xx).
+ *  Signature lama waLink(text) tetap bekerja — memakai SHOP.whatsapp. */
+export function waLink(whatsappOrText: string, text?: string): string {
+  if (text !== undefined) {
+    return `https://wa.me/62${whatsappOrText.replace(/^0/, "")}?text=${encodeURIComponent(text)}`;
+  }
+  return `https://wa.me/62${SHOP.whatsapp.replace(/^0/, "")}?text=${encodeURIComponent(whatsappOrText)}`;
 }
 
-/** Pesan WA untuk menanyakan/booking sebuah produk. */
-export function inquiryMessage(productName: string, sku: string): string {
+/** Pesan WA untuk menanyakan/booking sebuah produk.
+ *  Signature lama inquiryMessage(productName, sku) tetap bekerja. */
+export function inquiryMessage(storeNameOrProduct: string, productNameOrSku: string, sku?: string): string {
+  if (sku !== undefined) {
+    return [
+      `Halo ${storeNameOrProduct}! 📷`,
+      "",
+      `Saya mau tanya ketersediaan & sewa:`,
+      `*${productNameOrSku}* (${sku})`,
+      "",
+      `Rencana tanggal pakai: `,
+      `Durasi: `,
+      "",
+      `Terima kasih!`,
+    ].join("\n");
+  }
   return [
     `Halo ${SHOP.name}! 📷`,
     "",
     `Saya mau tanya ketersediaan & sewa:`,
-    `*${productName}* (${sku})`,
+    `*${storeNameOrProduct}* (${productNameOrSku})`,
     "",
     `Rencana tanggal pakai: `,
     `Durasi: `,
@@ -62,50 +129,10 @@ export function inquiryMessage(productName: string, sku: string): string {
   ].join("\n");
 }
 
-/** Pesan WA umum (tanpa produk spesifik). */
-export function generalMessage(): string {
-  return `Halo ${SHOP.name}! Saya mau tanya-tanya soal sewa kamera 📷`;
+/** Pesan WA umum (tanpa produk spesifik).
+ *  Signature lama generalMessage() tetap bekerja. */
+export function generalMessage(storeName?: string): string {
+  return `Halo ${storeName ?? SHOP.name}! Saya mau tanya-tanya soal sewa kamera 📷`;
 }
-
-/** Testimoni pelanggan untuk ditampilkan di storefront. */
-export const TESTIMONIALS = [
-  {
-    name: "Salsa",
-    context: "Sewa digicam untuk liburan ke Dieng",
-    text: "Prosesnya cepet banget! Chat WA langsung dibales, kameranya bersih dan hasilnya aesthetic. Next time sewa lagi 🥹",
-    rating: 5,
-  },
-  {
-    name: "Dimas",
-    context: "Konten TikTok untuk acara sekolah",
-    text: "Harga pelajar banget, adminnya ramah. Kameranya oke buat konten, baterai awet seharian.",
-    rating: 5,
-  },
-  {
-    name: "Alya & teman-teman",
-    context: "Sewa tripod + kamera buat foto wisuda",
-    text: "Booking online gampang, tinggal pilih tanggal. Pas ambil unit langsung dicek bareng. Recommended!",
-    rating: 5,
-  },
-];
-
-/** Konten video/galeri sosial media (placeholder — isi link video asli toko). */
-export const VIDEO_CONTENT = [
-  {
-    title: "Review Kodak Pixpro FZ55",
-    desc: "Hasil foto digicam viral ini — worth it buat liburan?",
-    href: "#",
-  },
-  {
-    title: "Cara Booking di MudahSewa",
-    desc: "Tutorial singkat booking online, bayar, sampai ambil unit.",
-    href: "#",
-  },
-  {
-    title: "Tips Foto Aesthetic Pakai Digicam",
-    desc: "Setting sederhana biar hasil fotamu makin vintage.",
-    href: "#",
-  },
-];
 
 export { formatRupiah };

@@ -1,18 +1,16 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Palette, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { THEMES, type BgVariant } from "@/lib/theme";
 
-export type BgVariant = "y2k" | "album" | "mono" | "coquette";
-
-const BG_OPTIONS: { value: BgVariant; label: string; desc: string }[] = [
-  { value: "y2k", label: "Y2K Chrome", desc: "Lavender futuristik ✦" },
-  { value: "album", label: "Album Kayu", desc: "Kulit kayu natural 🪵" },
-  { value: "mono", label: "Monokrom Film", desc: "Hitam putih klasik 🎞️" },
-  { value: "coquette", label: "Coquette Cute", desc: "Pink pastel & pita 🎀" },
-];
+const BG_OPTIONS: Record<BgVariant, { label: string; desc: string }> = {
+  y2k: { label: "Y2K Chrome", desc: "Lavender futuristik ✦" },
+  album: { label: "Album Kayu", desc: "Kulit kayu natural 🪵" },
+  mono: { label: "Monokrom Film", desc: "Hitam putih klasik 🎞️" },
+  coquette: { label: "Coquette Cute", desc: "Pink pastel & pita 🎀" },
+};
 
 const HERO_OPTIONS: { value: string; label: string; desc: string }[] = [
   { value: "polaroid", label: "Polaroid", desc: "Kolase foto tersebar" },
@@ -24,29 +22,24 @@ const HERO_OPTIONS: { value: string; label: string; desc: string }[] = [
   { value: "sticker", label: "Sticker Wall", desc: "Kartu stiker cute + washi" },
 ];
 
+interface VariantSwitcherProps {
+  theme: BgVariant;
+  hero: string;
+  onSelectTheme: (t: BgVariant) => void;
+  onSelectHero: (h: string) => void;
+}
 
-/** Panel preview untuk mencoba varian bg & hero lewat URL (?bg=&hero=). */
-export function VariantSwitcher() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+/** Panel pilihan tema & hero. Pilihan langsung disimpan permanen
+ *  (localStorage) oleh parent — berlaku di tab/halaman mana pun. */
+export function VariantSwitcher({ theme, hero, onSelectTheme, onSelectHero }: VariantSwitcherProps) {
   const [open, setOpen] = useState(true);
-
-  const bg = (searchParams.get("bg") ?? "kertas") as BgVariant;
-  const hero = searchParams.get("hero") ?? "polaroid";
-
-  const setVariant = (key: "bg" | "hero", value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set(key, value);
-    router.replace(`${pathname}?${params.toString()}`);
-  };
 
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
         className="btn-retro fixed bottom-4 right-4 z-50 flex size-11 items-center justify-center rounded-full bg-card shadow-lg"
-        aria-label="Buka panel preview tema"
+        aria-label="Buka panel pilihan tema"
       >
         <Palette className="size-5" aria-hidden />
       </button>
@@ -70,34 +63,39 @@ export function VariantSwitcher() {
       </div>
 
       <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        Background
+        Background · tersimpan otomatis
       </p>
       <div className="mb-3 grid gap-1.5">
-        {BG_OPTIONS.map((o) => (
-          <button
-            key={o.value}
-            onClick={() => setVariant("bg", o.value)}
-            className={cn(
-              "flex items-baseline justify-between rounded-lg border px-2.5 py-1.5 text-left text-xs transition-colors",
-              bg === o.value
-                ? "border-primary bg-accent font-semibold"
-                : "hover:bg-muted"
-            )}
-          >
-            {o.label}
-            <span className="text-[10px] font-normal text-muted-foreground">{o.desc}</span>
-          </button>
-        ))}
+        {THEMES.map((value) => {
+          const o = BG_OPTIONS[value];
+          return (
+            <button
+              key={value}
+              onClick={() => onSelectTheme(value)}
+              aria-pressed={theme === value}
+              className={cn(
+                "flex items-baseline justify-between rounded-lg border px-2.5 py-1.5 text-left text-xs transition-colors",
+                theme === value
+                  ? "border-primary bg-accent font-semibold"
+                  : "hover:bg-muted"
+              )}
+            >
+              {o.label}
+              <span className="text-[10px] font-normal text-muted-foreground">{o.desc}</span>
+            </button>
+          );
+        })}
       </div>
 
       <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        Hero Section
+        Hero Section · tersimpan otomatis
       </p>
       <div className="grid gap-1.5">
         {HERO_OPTIONS.map((o) => (
           <button
             key={o.value}
-            onClick={() => setVariant("hero", o.value)}
+            onClick={() => onSelectHero(o.value)}
+            aria-pressed={hero === o.value}
             className={cn(
               "flex items-baseline justify-between rounded-lg border px-2.5 py-1.5 text-left text-xs transition-colors",
               hero === o.value
@@ -110,6 +108,11 @@ export function VariantSwitcher() {
           </button>
         ))}
       </div>
+
+      <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
+        Pilihanmu disimpan di perangkat ini — tetap berlaku saat buka tab atau halaman lain,
+        sampai kamu ganti lagi.
+      </p>
     </div>
   );
 }
