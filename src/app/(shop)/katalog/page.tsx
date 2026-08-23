@@ -47,7 +47,7 @@ const HERO_PRODUCTS = [
 export default async function KatalogPage({ searchParams }: PageProps<"/katalog">) {
   const sp = await searchParams;
   const heroParam = Array.isArray(sp.hero) ? sp.hero[0] : sp.hero;
-  const hero: HeroVariant = ["polaroid", "exif", "filmstrip"].includes(heroParam ?? "")
+  const hero: HeroVariant = ["polaroid", "exif", "filmstrip", "stamp", "flip", "grid"].includes(heroParam ?? "")
     ? (heroParam as HeroVariant)
     : "polaroid";
 
@@ -136,7 +136,7 @@ export default async function KatalogPage({ searchParams }: PageProps<"/katalog"
                       <Link
                         key={p.id}
                         href={`/katalog/${p.id}`}
-                        className="group flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/10"
+                        className="group film-frame-hover flash-hover flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/10"
                       >
                         {/* Strip film di tepi atas kartu */}
                         <div className="film-sprockets h-4 w-full bg-foreground/85" aria-hidden />
@@ -223,7 +223,7 @@ export default async function KatalogPage({ searchParams }: PageProps<"/katalog"
           {TESTIMONIALS.map((t, i) => (
             <figure
               key={t.name}
-              className="polaroid relative rounded-sm"
+              className="note-card polaroid relative rounded-sm"
               style={{ transform: `rotate(${[-2, 1.5, -1][i % 3]}deg)` }}
             >
               <span className="tape -top-2 left-1/2 -translate-x-1/2 rotate-1" aria-hidden />

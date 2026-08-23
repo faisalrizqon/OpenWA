@@ -5,19 +5,27 @@ import { Palette, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-export type BgVariant = "kertas" | "y2k" | "darkroom";
+export type BgVariant = "kertas" | "y2k" | "darkroom" | "album" | "pastel" | "sunset" | "mono";
 
 const BG_OPTIONS: { value: BgVariant; label: string; desc: string }[] = [
   { value: "kertas", label: "Kertas Foto", desc: "Cream hangat + grain" },
   { value: "y2k", label: "Y2K Chrome", desc: "Lavender futuristik" },
   { value: "darkroom", label: "Darkroom", desc: "Gelap + amber" },
+  { value: "album", label: "Album Kayu", desc: "Coklat natural, scrapbook" },
+  { value: "pastel", label: "Pastel Soft", desc: "Mint/peach Gen Z" },
+  { value: "sunset", label: "Sunset Warm", desc: "Peach-pink golden hour" },
+  { value: "mono", label: "Monokrom", desc: "Hitam putih klasik" },
 ];
 
 const HERO_OPTIONS: { value: string; label: string; desc: string }[] = [
   { value: "polaroid", label: "Polaroid", desc: "Kolase foto tersebar" },
   { value: "exif", label: "EXIF Chips", desc: "Produk besar + chips" },
   { value: "filmstrip", label: "Film Strip", desc: "Marquee film berjalan" },
+  { value: "stamp", label: "Timestamp Viewfinder", desc: "Banner timestamp oranye" },
+  { value: "flip", label: "Flip Cards", desc: "3D flip interaktif" },
+  { value: "grid", label: "Camera Wall Grid", desc: "Grid foto asimetris" },
 ];
+
 
 /** Panel preview untuk mencoba varian bg & hero lewat URL (?bg=&hero=). */
 export function VariantSwitcher() {

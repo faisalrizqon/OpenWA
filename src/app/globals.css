@@ -209,6 +209,90 @@
   --ring: oklch(0.75 0.15 70);
 }
 
+/* D. Album Foto — coklat kayu natural, kesan scrapbook */
+.theme-album {
+  --background: oklch(0.93 0.03 70);
+  --foreground: oklch(0.32 0.06 50);
+  --card: oklch(0.975 0.02 75);
+  --card-foreground: oklch(0.32 0.06 50);
+  --popover: oklch(0.975 0.02 75);
+  --popover-foreground: oklch(0.32 0.06 50);
+  --primary: oklch(0.48 0.11 45);
+  --primary-foreground: oklch(0.97 0.02 80);
+  --secondary: oklch(0.92 0.035 68);
+  --secondary-foreground: oklch(0.42 0.08 50);
+  --muted: oklch(0.9 0.035 68);
+  --muted-foreground: oklch(0.48 0.05 55);
+  --accent: oklch(0.89 0.05 65);
+  --accent-foreground: oklch(0.42 0.08 50);
+  --border: oklch(0.85 0.045 65);
+  --input: oklch(0.84 0.045 65);
+  --ring: oklch(0.48 0.11 45);
+}
+
+/* E. Pastel — mint/peach lembut, Gen Z friendly */
+.theme-pastel {
+  --background: oklch(0.97 0.015 160);
+  --foreground: oklch(0.32 0.04 200);
+  --card: oklch(0.995 0.006 120);
+  --card-foreground: oklch(0.32 0.04 200);
+  --popover: oklch(0.995 0.006 120);
+  --popover-foreground: oklch(0.32 0.04 200);
+  --primary: oklch(0.68 0.15 25);
+  --primary-foreground: oklch(0.985 0.01 60);
+  --secondary: oklch(0.96 0.02 150);
+  --secondary-foreground: oklch(0.45 0.08 190);
+  --muted: oklch(0.95 0.018 155);
+  --muted-foreground: oklch(0.52 0.04 200);
+  --accent: oklch(0.94 0.035 20);
+  --accent-foreground: oklch(0.5 0.1 25);
+  --border: oklch(0.91 0.025 150);
+  --input: oklch(0.9 0.025 150);
+  --ring: oklch(0.68 0.15 25);
+}
+
+/* F. Sunset — warm peach-pink, golden hour vibe */
+.theme-sunset {
+  --background: oklch(0.955 0.03 60);
+  --foreground: oklch(0.3 0.07 35);
+  --card: oklch(0.985 0.02 70);
+  --card-foreground: oklch(0.3 0.07 35);
+  --popover: oklch(0.985 0.02 70);
+  --popover-foreground: oklch(0.3 0.07 35);
+  --primary: oklch(0.6 0.2 30);
+  --primary-foreground: oklch(0.985 0.02 80);
+  --secondary: oklch(0.945 0.035 55);
+  --secondary-foreground: oklch(0.45 0.1 35);
+  --muted: oklch(0.935 0.035 55);
+  --muted-foreground: oklch(0.5 0.05 40);
+  --accent: oklch(0.93 0.05 45);
+  --accent-foreground: oklch(0.45 0.1 35);
+  --border: oklch(0.89 0.045 50);
+  --input: oklch(0.88 0.045 50);
+  --ring: oklch(0.6 0.2 30);
+}
+
+/* G. Monokrom Film — hitam putih klasik, high contrast */
+.theme-mono {
+  --background: oklch(0.97 0 0);
+  --foreground: oklch(0.18 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0 0);
+  --primary: oklch(0.25 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.95 0 0);
+  --secondary-foreground: oklch(0.35 0 0);
+  --muted: oklch(0.94 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --accent: oklch(0.92 0 0);
+  --accent-foreground: oklch(0.35 0 0);
+  --border: oklch(0.88 0 0);
+  --input: oklch(0.87 0 0);
+  --ring: oklch(0.25 0 0);
+}
+
 @layer utilities {
   .font-display {
     font-family: var(--font-display);
@@ -304,5 +388,96 @@
     background: color-mix(in oklch, var(--card) 78%, transparent);
     backdrop-filter: blur(12px) saturate(140%);
     -webkit-backdrop-filter: blur(12px) saturate(140%);
+  }
+
+  /* Flash kamera saat hover (efek jepret) */
+  .flash-hover {
+    position: relative;
+    overflow: hidden;
+  }
+  .flash-hover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .flash-hover:hover::after {
+    animation: camera-flash 0.45s ease-out;
+  }
+  @keyframes camera-flash {
+    0% { opacity: 0; }
+    25% { opacity: 0.85; }
+    100% { opacity: 0; }
+  }
+
+  /* Note card ala sticky note (untuk testimoni) */
+  .note-card {
+    background: var(--card);
+    box-shadow: 0 10px 30px -8px rgb(0 0 0 / 0.14);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .note-card:hover {
+    transform: translateY(-4px) rotate(0deg) !important;
+    box-shadow: 0 18px 44px -10px rgb(0 0 0 / 0.22);
+  }
+
+  /* 3D flip card */
+  .flip-scene {
+    perspective: 1100px;
+  }
+  .flip-card {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.65s cubic-bezier(0.3, 0.9, 0.3, 1);
+  }
+  .flip-scene:hover .flip-card {
+    transform: rotateY(180deg);
+  }
+  .flip-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .flip-back {
+    transform: rotateY(180deg);
+  }
+
+  /* Border frame film saat hover kartu */
+  .film-frame-hover {
+    position: relative;
+  }
+  .film-frame-hover::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border: 2px dashed color-mix(in oklch, var(--primary) 55%, transparent);
+    border-radius: calc(var(--radius) * 0.8);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .film-frame-hover:hover::before {
+    opacity: 1;
+  }
+
+  /* Badge viewfinder ala kamera */
+  .viewfinder-corner {
+    position: absolute;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-color: color-mix(in oklch, var(--foreground) 45%, transparent);
+    border-style: solid;
+    border-width: 0;
+    z-index: 3;
+    pointer-events: none;
+    transition: border-color 0.25s ease;
+  }
+  .group:hover .viewfinder-corner {
+    border-color: var(--primary);
   }
 }
