@@ -5,17 +5,13 @@ import { Palette, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-export type BgVariant = "kertas" | "y2k" | "darkroom" | "album" | "pastel" | "sunset" | "mono" | "coquette";
+export type BgVariant = "y2k" | "album" | "mono" | "coquette";
 
 const BG_OPTIONS: { value: BgVariant; label: string; desc: string }[] = [
-  { value: "kertas", label: "Kertas Foto", desc: "Cream hangat + grain" },
-  { value: "y2k", label: "Y2K Chrome", desc: "Lavender futuristik" },
-  { value: "darkroom", label: "Darkroom", desc: "Gelap + amber" },
-  { value: "album", label: "Album Kayu", desc: "Coklat natural, scrapbook" },
-  { value: "pastel", label: "Pastel Soft", desc: "Mint/peach Gen Z" },
-  { value: "sunset", label: "Sunset Warm", desc: "Peach-pink golden hour" },
-  { value: "mono", label: "Monokrom", desc: "Hitam putih klasik" },
-  { value: "coquette", label: "Coquette Cute", desc: "Pink pastel + stiker 💖" },
+  { value: "y2k", label: "Y2K Chrome", desc: "Lavender futuristik ✦" },
+  { value: "album", label: "Album Kayu", desc: "Kulit kayu natural 🪵" },
+  { value: "mono", label: "Monokrom Film", desc: "Hitam putih klasik 🎞️" },
+  { value: "coquette", label: "Coquette Cute", desc: "Pink pastel & pita 🎀" },
 ];
 
 const HERO_OPTIONS: { value: string; label: string; desc: string }[] = [

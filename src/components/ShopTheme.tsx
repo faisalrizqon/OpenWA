@@ -4,21 +4,21 @@ import { useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { VariantSwitcher } from "@/components/VariantSwitcher";
 
-const BG_CLASSES = ["theme-kertas", "theme-y2k", "theme-darkroom", "theme-album", "theme-pastel", "theme-sunset", "theme-mono", "theme-coquette"];
+const BG_CLASSES = ["theme-y2k", "theme-album", "theme-mono", "theme-coquette"];
+const VALID = ["y2k", "album", "mono", "coquette"];
 
 /** Terapkan tema background (dari ?bg=) ke body + tampilkan switcher preview. */
 function ShopThemeInner() {
   const searchParams = useSearchParams();
-  const bg = searchParams.get("bg") ?? "kertas";
+  const bg = searchParams.get("bg") ?? "y2k";
 
   useEffect(() => {
-    const cls = `theme-${bg} bg-grain`;
-    document.body.classList.remove(...BG_CLASSES, "bg-grain");
-    if (["kertas", "y2k", "darkroom", "album", "pastel", "sunset", "mono", "coquette"].includes(bg)) {
-      document.body.classList.add(...cls.split(" "));
+    document.body.classList.remove(...BG_CLASSES);
+    if (VALID.includes(bg)) {
+      document.body.classList.add(`theme-${bg}`);
     }
     return () => {
-      document.body.classList.remove(...BG_CLASSES, "bg-grain");
+      document.body.classList.remove(...BG_CLASSES);
     };
   }, [bg]);
 

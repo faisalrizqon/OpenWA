@@ -143,31 +143,10 @@
 }
 
 /* ============================================================
-   Varian tema storefront (dipilih via ?bg=... di halaman shop)
+   Tema storefront yang aktif (via ?bg=... di halaman shop)
    ============================================================ */
 
-/* A. Kertas Foto — cream hangat + golden hour (default storefront) */
-.theme-kertas {
-  --background: oklch(0.965 0.014 86);
-  --foreground: oklch(0.28 0.035 60);
-  --card: oklch(0.992 0.006 90);
-  --card-foreground: oklch(0.28 0.035 60);
-  --popover: oklch(0.992 0.006 90);
-  --popover-foreground: oklch(0.28 0.035 60);
-  --primary: oklch(0.62 0.17 52);
-  --primary-foreground: oklch(0.985 0.02 95);
-  --secondary: oklch(0.955 0.022 80);
-  --secondary-foreground: oklch(0.42 0.09 55);
-  --muted: oklch(0.945 0.02 82);
-  --muted-foreground: oklch(0.5 0.04 60);
-  --accent: oklch(0.94 0.035 75);
-  --accent-foreground: oklch(0.42 0.09 55);
-  --border: oklch(0.9 0.03 80);
-  --input: oklch(0.89 0.03 80);
-  --ring: oklch(0.62 0.17 52);
-}
-
-/* B. Y2K Chrome — lavender/silver futuristik */
+/* A. Y2K Chrome — lavender/silver futuristik, kilau chrome beranimasi */
 .theme-y2k {
   --background: oklch(0.96 0.02 300);
   --foreground: oklch(0.25 0.05 290);
@@ -188,28 +167,24 @@
   --ring: oklch(0.55 0.2 275);
 }
 
-/* C. Darkroom — gelap hangat, aksen amber (foto pop) */
-.theme-darkroom {
-  --background: oklch(0.17 0.012 60);
-  --foreground: oklch(0.94 0.012 85);
-  --card: oklch(0.23 0.014 60);
-  --card-foreground: oklch(0.94 0.012 85);
-  --popover: oklch(0.23 0.014 60);
-  --popover-foreground: oklch(0.94 0.012 85);
-  --primary: oklch(0.75 0.15 70);
-  --primary-foreground: oklch(0.2 0.03 60);
-  --secondary: oklch(0.28 0.015 60);
-  --secondary-foreground: oklch(0.88 0.02 80);
-  --muted: oklch(0.27 0.015 60);
-  --muted-foreground: oklch(0.68 0.03 70);
-  --accent: oklch(0.3 0.03 65);
-  --accent-foreground: oklch(0.9 0.04 85);
-  --border: oklch(1 0.01 80 / 12%);
-  --input: oklch(1 0.01 80 / 16%);
-  --ring: oklch(0.75 0.15 70);
+.theme-y2k::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(135deg, transparent 50%, rgba(200, 150, 255, 0.1) 50%);
+  background-size: 2px 2px, 60px 60px;
+  animation: y2k-shimmer 8s ease-in-out infinite alternate;
+}
+@keyframes y2k-shimmer {
+  0% { filter: hue-rotate(0deg) brightness(1.1); }
+  100% { filter: hue-rotate(-30deg) brightness(0.9); }
+}
+.theme-y2k h1 {
+  text-shadow: 0 0 10px rgba(200, 150, 255, 0.3), 0 0 20px rgba(100, 100, 255, 0.2);
 }
 
-/* D. Album Foto — coklat kayu natural, kesan scrapbook */
+/* B. Album Kayu — coklat kayu natural, tekstur serat, nuansa sepia vintage */
 .theme-album {
   --background: oklch(0.93 0.03 70);
   --foreground: oklch(0.32 0.06 50);
@@ -230,49 +205,21 @@
   --ring: oklch(0.48 0.11 45);
 }
 
-/* E. Pastel — mint/peach lembut, Gen Z friendly */
-.theme-pastel {
-  --background: oklch(0.97 0.015 160);
-  --foreground: oklch(0.32 0.04 200);
-  --card: oklch(0.995 0.006 120);
-  --card-foreground: oklch(0.32 0.04 200);
-  --popover: oklch(0.995 0.006 120);
-  --popover-foreground: oklch(0.32 0.04 200);
-  --primary: oklch(0.68 0.15 25);
-  --primary-foreground: oklch(0.985 0.01 60);
-  --secondary: oklch(0.96 0.02 150);
-  --secondary-foreground: oklch(0.45 0.08 190);
-  --muted: oklch(0.95 0.018 155);
-  --muted-foreground: oklch(0.52 0.04 200);
-  --accent: oklch(0.94 0.035 20);
-  --accent-foreground: oklch(0.5 0.1 25);
-  --border: oklch(0.91 0.025 150);
-  --input: oklch(0.9 0.025 150);
-  --ring: oklch(0.68 0.15 25);
+.theme-album {
+  background-image: 
+    linear-gradient(rgba(200, 180, 150, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 180, 150, 0.05) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+.theme-album .tape {
+  background: rgba(180, 150, 120, 0.6);
+  box-shadow: 0 1px 2px rgba(100, 80, 50, 0.15);
+}
+.theme-album img, .theme-album .flash-hover::after {
+  filter: sepia(0.35) contrast(1.05) brightness(0.95);
 }
 
-/* F. Sunset — warm peach-pink, golden hour vibe */
-.theme-sunset {
-  --background: oklch(0.955 0.03 60);
-  --foreground: oklch(0.3 0.07 35);
-  --card: oklch(0.985 0.02 70);
-  --card-foreground: oklch(0.3 0.07 35);
-  --popover: oklch(0.985 0.02 70);
-  --popover-foreground: oklch(0.3 0.07 35);
-  --primary: oklch(0.6 0.2 30);
-  --primary-foreground: oklch(0.985 0.02 80);
-  --secondary: oklch(0.945 0.035 55);
-  --secondary-foreground: oklch(0.45 0.1 35);
-  --muted: oklch(0.935 0.035 55);
-  --muted-foreground: oklch(0.5 0.05 40);
-  --accent: oklch(0.93 0.05 45);
-  --accent-foreground: oklch(0.45 0.1 35);
-  --border: oklch(0.89 0.045 50);
-  --input: oklch(0.88 0.045 50);
-  --ring: oklch(0.6 0.2 30);
-}
-
-/* G. Monokrom Film — hitam putih klasik, high contrast */
+/* C. Monokrom Film — hitam putih klasik, grain berat, vignette noir */
 .theme-mono {
   --background: oklch(0.97 0 0);
   --foreground: oklch(0.18 0 0);
@@ -293,30 +240,26 @@
   --ring: oklch(0.25 0 0);
 }
 
-/* Ornamen khusus tema Coquette: hati di heading + wallpaper sparkle */
-.theme-coquette h1::after {
-  content: " ♡";
-  color: var(--primary);
+.theme-mono {
+  filter: grayscale(0.85) contrast(1.1);
 }
-.theme-coquette::after {
+.theme-mono::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
-  opacity: 0.55;
-  background-image:
-    radial-gradient(circle 3px at 24px 32px, oklch(0.78 0.14 340 / 0.55) 99%, transparent),
-    radial-gradient(circle 2px at 130px 96px, oklch(0.82 0.11 300 / 0.5) 99%, transparent),
-    radial-gradient(circle 2.5px at 76px 168px, oklch(0.76 0.13 340 / 0.5) 99%, transparent),
-    radial-gradient(circle 2px at 168px 20px, oklch(0.82 0.11 300 / 0.45) 99%, transparent);
-  background-size: 190px 190px;
+  z-index: 50;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)' opacity='0.15'/%3E%3C/svg%3E");
+  opacity: 0.35;
 }
-.theme-coquette .tape {
-  background: linear-gradient(to bottom, oklch(0.85 0.12 340 / 0.75), oklch(0.78 0.16 320 / 0.65));
+.theme-mono img, .theme-mono .flash-hover::after {
+  filter: grayscale(1) sepia(0.2) brightness(0.9) contrast(1.1);
+}
+.theme-mono .viewfinder-corner {
+  border-color: #333;
 }
 
-/* H. Coquette Cute — pastel pink/lilac, stiker & glitter Gen Z */
+/* D. Coquette Cute — pastel pink/lilac, pita 🎀 & sparkle */
 .theme-coquette {
   --background: oklch(0.985 0.015 340);
   --foreground: oklch(0.42 0.08 330);
@@ -337,36 +280,48 @@
   --ring: oklch(0.72 0.18 345);
 }
 
-/* Sparkle ornament overlay */
-.sparkle-overlay::before {
+.theme-coquette h1::after {
+  content: " ♡";
+  color: var(--primary);
+  animation: heart-bounce 2s ease-in-out infinite;
+}
+.theme-coquette::before {
   content: "";
-  position: absolute;
-  inset: -4px;
-  z-index: -1;
-  background-image: radial-gradient(circle at 15% 25%, var(--primary) 2px transparent, transparent),
-                    radial-gradient(circle at 85% 65%, var(--accent) 2px transparent, transparent),
-                    radial-gradient(circle at 45% 15%, var(--accent) 2px transparent, transparent),
-                    radial-gradient(circle at 25% 85%, var(--primary) 2px transparent, transparent);
-  background-size: 120px 120px;
-  opacity: 0.6;
-  animation: sparkle-float 8s ease-in-out infinite alternate;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: 
+    radial-gradient(circle 2px at 20px 30px, var(--primary) 99%, transparent),
+    radial-gradient(circle 2px at 120px 80px, var(--accent) 99%, transparent),
+    radial-gradient(circle 3px at 70px 150px, var(--primary) 99%, transparent),
+    radial-gradient(circle 2px at 160px 20px, var(--accent) 99%, transparent);
+  background-size: 200px 200px;
+  animation: sparkle-float 10s ease-in-out infinite alternate;
 }
-@keyframes sparkle-float {
-  from { transform: scale(1); }
-  to { transform: scale(1.05); }
+.theme-coquette .washi-tape {
+  background: linear-gradient(to bottom, oklch(0.85 0.12 340 / 0.8), oklch(0.78 0.16 320 / 0.7));
+}
+.theme-coquette .tape {
+  background: linear-gradient(to bottom, oklch(0.88 0.1 345 / 0.8), oklch(0.8 0.14 330 / 0.7));
+}
+.theme-coquette .sticker-card:hover {
+  transform: translateY(-6px) rotate(0deg) scale(1.02) !important;
+  box-shadow: 0 12px 28px -8px rgb(200 100 160 / 0.4), 0 0 0 2px var(--primary) !important;
+}
+.theme-coquette h2::after {
+  content: " 🎀";
+  color: var(--primary);
+  animation: ribbon-sway 3s ease-in-out infinite alternate;
+  display: inline-block;
 }
 
-/* Sticker card shadow */
-.sticker-card {
-  box-shadow: 0 4px 12px -6px rgb(180 100 160 / 0.25), 0 0 0 1px color-mix(in oklch, var(--primary) 50%, transparent);
-  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
-}
-.sticker-card:hover {
-  transform: translateY(-6px) rotate(0deg) !important;
-  box-shadow: 0 8px 20px -8px rgb(180 100 160 / 0.35), 0 0 0 1px var(--primary);
+@keyframes ribbon-sway {
+  0% { transform: rotate(-3deg); }
+  100% { transform: rotate(3deg); }
 }
 
-/* Washi tape accent */
+/* Base washi tape (positioning) — warna diatur per-tema */
 .washi-tape {
   position: absolute;
   top: -12px;
