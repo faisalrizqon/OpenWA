@@ -13,9 +13,11 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
     <div className="flex min-h-screen flex-col">
       <ShopTheme />
       <header className="glass sticky top-0 z-30 border-b border-border/70">
-        <div className="mx-auto grid w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-3 md:px-8">
+        {/* Top bar ramping: logo kiri, nav kanan.
+            Papan OPEN/CLOSED menggantung di tengah, melewati batas bawah top bar. */}
+        <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-2 md:px-8">
           {/* Kiri: logo */}
-          <Link href="/" className="flex items-center gap-2.5 justify-self-start">
+          <Link href="/" className="flex items-center gap-2.5">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
               <Camera className="size-5" aria-hidden />
             </span>
@@ -25,18 +27,27 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
             </span>
           </Link>
 
-          {/* Tengah: papan gantung OPEN/CLOSED */}
-          <div className="pt-1.5">
-            <OpenClosedSign hours={shop.hours} />
+          {/* Tengah: papan gantung — absolute supaya tidak menambah tinggi top bar,
+              sengaja menjuntai melewati tepi bawah header. */}
+          <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2">
+            <div className="pointer-events-auto pt-1">
+              <OpenClosedSign hours={shop.hours} />
+            </div>
           </div>
 
           {/* Kanan: nav */}
-          <nav className="flex items-center gap-3 justify-self-end">
+          <nav className="flex items-center gap-2">
             <Link
               href="/"
               className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               Katalog
+            </Link>
+            <Link
+              href="/pricelist"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              Pricelist
             </Link>
             <a
               href={waLink(shop.whatsapp, generalMessage(shop.storeName))}
