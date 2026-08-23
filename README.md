@@ -1,6 +1,6 @@
 # MudahSewa — Sistem Manajemen Rental
 
-Aplikasi internal untuk mengelola rental digicam (siap multi-kategori): stok per unit fisik, order dengan harga tier durasi, siklus booking → aktif → selesai, pembayaran, kalender ketersediaan, dan laporan keuangan dengan ekspor Excel.
+Aplikasi internal untuk mengelola rental digicam (siap multi-kategori): stok per unit fisik, order dengan harga tier durasi, siklus booking → aktif → selesai, pembayaran, kalender ketersediaan, dan laporan keuangan dengan ekspor Excel. Dilengkapi **katalog publik** (`/katalog`) tempat pelanggan bisa booking sendiri dengan pilihan pembayaran **Cash, QRIS, atau Midtrans (online)**.
 
 Dibangun dengan Next.js 16 (App Router) + TypeScript + Tailwind v4 + shadcn/ui + Prisma 6 (SQLite). Fase 1 tanpa login — dipakai di jaringan LAN yang dipercaya.
 
@@ -52,11 +52,23 @@ Harga tier diambil dari tier terkecil yang ≥ durasi; di atas 48 jam dihitung k
 
 ## FAQ
 
-**Bagaimana mengubah harga produk?**
-Buat ulang produk lewat halaman Produk (fase 1 belum ada edit). Order lama tidak berubah — harga terkunci saat order dibuat.
+**Bagaimana pelanggan melakukan pemesanan dari HP sendiri?**
+Buka `/katalog` di browser (langsung atau share link LAN). Pilih produk, klik **Booking Sekarang**, isi tanggal/durasi/jumlah → lanjut ke **Checkout**. Isi data diri + pilih metode pembayaran (**Cash/Bayar di Tempat**, **QRIS—scan lalu upload bukti**, atau **Midtrans**—jika API key sudah dikonfigurasi). Pesanan masuk dashboard admin dengan status Booking untuk dikonfirmasi. Admin verifikasi → kirim detail via WA; pelunasan/DP dicatat manual.
 
-**Bagaimana mencatat denda keterlambatan?**
-Di detail order → panel Pembayaran → jenis **Denda**. Nomor WA pelanggan ada tombol **Ingatkan Pelunasan**.
+**Apa perbedaan metode pembayaran?**
+- **Cash**: bayar saat pengambilan/pengantaran unit. Admin set status lunas setelah terima uang di panel Pembayaran.
+- **QRIS**: customer scan QRIS statis toko (file `public/qris.png`) → transfer → upload screenshot sebagai bukti di halaman pembayaran. Status *Menunggu verifikasi*; admin konfirmasi via detail order.
+- **Midtrans**: pembayaran online penuh (QRIS dinamis, e-wallet, VA, kartu kredit) lewat Snap. Konfigurasi di env vars (`MIDTRANS_SERVER_KEY`, `CLIENT_KEY`). Order langsung redirect ke popup Midtrans; webhook otomatis sinkronkan status.
+
+**Bagaimana cara mengaktifkan pembayaran Midtrans?**
+Isi `.env`:
+```
+MIDTRANS_SERVER_KEY="SB-Mid-serverkey..."
+MIDTRANS_CLIENT_KEY="SB-Mid-clientkey..."
+MIDTRANS_IS_PRODUCTION="false"
+```
+
+Sandbox dulu — ganti `false` jadi `true` saat production. URL webhook: `<base-url>/api/payments/notify` (verifikasi signature otomatis).
 
 **Backup data?**
 Cukup salin folder `data/` (berisi `mudahsewa.db`) dan folder `public/uploads/` (foto KTP & return).

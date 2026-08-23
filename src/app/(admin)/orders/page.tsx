@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { HeaderLink } from "@/components/HeaderLink";
 import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -109,7 +110,7 @@ export default async function OrdersPage({
                 {orders.map((o) => {
                   const total = o.items.reduce((s, it) => s + it.subtotal, 0);
                   const paid = o.payments
-                    .filter((p) => ["dp", "pelunasan", "denda"].includes(p.paymentType))
+                    .filter((p) => ["dp", "pelunasan", "denda"].includes(p.paymentType) && p.status !== "pending")
                     .reduce((s, p) => s + p.amount, 0);
                   const sisa = total - paid;
                   const itemSummary = o.items
@@ -118,8 +119,11 @@ export default async function OrdersPage({
                   return (
                     <TableRow key={o.id}>
                       <TableCell>
-                        <Link href={`/orders/${o.id}`} className="font-medium text-primary hover:underline">
+                        <Link href={`/orders/${o.id}`} className="flex items-center gap-2 font-medium text-primary hover:underline">
                           {o.orderNumber}
+                          {o.source === "online" && (
+                            <Badge variant="secondary" className="h-5 text-[10px]">Online</Badge>
+                          )}
                         </Link>
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">

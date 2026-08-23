@@ -16,6 +16,7 @@ import {
   inquiryMessage,
 } from "@/lib/shop";
 import { Card, CardContent } from "@/components/ui/card";
+import { BookingWidget } from "@/components/BookingWidget";
 
 export default async function KatalogDetailPage({ params }: PageProps<"/katalog/[id]">) {
   const { id } = await params;
@@ -135,20 +136,36 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
             ))}
           </ul>
 
-          {/* CTA */}
+          {/* Booking widget */}
           <div className="mt-auto pt-8">
-            <a
-              href={waLink(message)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 text-base font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 sm:w-auto"
-            >
-              <MessageCircle className="size-5" aria-hidden />
-              Pesan / Tanya via WhatsApp
-            </a>
-            <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <BookingWidget
+              productId={product.id}
+              product={{
+                price6h: product.price6h,
+                price12h: product.price12h,
+                price24h: product.price24h,
+                price48h: product.price48h,
+              }}
+              prices={PRICE_TIERS.map((t) => ({
+                label: t.label,
+                hours: t.hours,
+                price: product[t.key] as number,
+              }))}
+            />
+            <div className="mt-3 text-center">
+              <a
+                href={waLink(message)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:underline"
+              >
+                <MessageCircle className="size-4" aria-hidden />
+                Atau pesan langsung via WhatsApp
+              </a>
+            </div>
+            <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
               <ShieldCheck className="size-3.5" aria-hidden />
-              Balasan cepat pada jam operasional.
+              Konfirmasi booking oleh admin pada jam operasional.
             </p>
           </div>
         </div>

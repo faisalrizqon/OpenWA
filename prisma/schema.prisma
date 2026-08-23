@@ -88,11 +88,26 @@ model Order {
   courier      String?      // delivery service (optional phase 2)
   shippingCost Float        @default(0)
   handledBy    String?      // staff name (phase 2 fee tracking)
-  
+  courierFee   Float        @default(0) // Gaji Transport (Rp) dari Notion
+
   status       String       @default("booking") // booking | active | late | completed | cancelled
   startDate    DateTime
   endDate      DateTime
-  noteOrder    String?
+  noteOrder    String?      // sisa catatan bebas dari Notion (Catatan)
+  // --- Field hasil normalisasi kolom Catatan Notion ---
+  guaranteeType   String?   // ktp | kartu_pelajar | lainnya (Jaminan: KTP)
+  guaranteeNumber String?   // nomor identitas jaminan
+  deliveryMode    String    @default("pickup") // pickup | courier (COD: Weleri / antar kurir)
+  deliveryAddress String?   // alamat antar/pickup
+  rescheduledFrom DateTime? // order di-reschedule dari tanggal ini (Reschedule dari ...)
+  returnedAt      DateTime? // tanggal aktual pengembalian (kolom Returned Notion)
+
+  // --- Customer self-checkout / payment gateway ---
+  source        String    @default("admin")  // admin | online (checkout dari katalog)
+  paymentMethod String?    // cash | qris | midtrans
+  paymentStatus String    @default("unpaid") // unpaid | pending | paid | partial | refunded
+  paymentRef    String?    // midtrans order_id / referensi gateway
+
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   
@@ -126,7 +141,10 @@ model Payment {
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   amount      Float
   paymentType String   // dp | pelunasan | denda | deposit_refund
-  method      String?  // cash | transfer_bca | transfer_mandiri | etc
+  method      String?  // cash | qris | midtrans | transfer_bca | transfer_mandiri | etc
+  status      String   @default("confirmed") // pending | confirmed | failed (pending = menunggu verifikasi admin/gateway)
+  proofPath   String?  // bukti transfer / QRIS upload dari customer
+  gatewayRef  String?  // midtrans transaction_id / order_id
   note        String?
   paidAt      DateTime @default(now())
 }

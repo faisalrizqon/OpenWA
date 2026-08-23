@@ -10,6 +10,15 @@ export const SHOP = {
   hours: "Setiap hari · 08.00 – 21.00",
 } as const;
 
+/** Konfigurasi QRIS statis (fallback bila Midtrans tidak dikonfigurasi).
+ *  Ganti file public/qris.png dengan QRIS toko yang asli. */
+export const QRIS = {
+  /** Path gambar QRIS di folder public. */
+  imagePath: process.env.QRIS_IMAGE || "/qris.png",
+  /** Nama merchant yang tampil di halaman pembayaran. */
+  merchantName: process.env.QRIS_MERCHANT_NAME || SHOP.name,
+};
+
 /** Tier harga yang ditampilkan di katalog. */
 export const PRICE_TIERS: { key: keyof TieredProduct; label: string; hours: number }[] = [
   { key: "price6h", label: "6 jam", hours: 6 },

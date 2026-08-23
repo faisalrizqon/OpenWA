@@ -17,6 +17,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ReturnForm } from "@/components/ReturnForm";
 import { SelectField } from "@/components/SelectField";
 import { updateOrderStatus, addPayment } from "@/actions/orders";
+import { confirmOnlinePayment } from "@/app/(shop)/actions/checkout";
+import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, type PaymentMethod } from "@/lib/payment";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -38,6 +40,7 @@ const PAYMENT_TYPES: Record<string, string> = {
 
 const GUARANTEE_TYPES: Record<string, string> = {
   ktp: "KTP",
+  sim: "SIM",
   kartu_pelajar: "Kartu Pelajar",
   lainnya: "Lainnya",
 };
@@ -45,6 +48,8 @@ const GUARANTEE_TYPES: Record<string, string> = {
 const METHODS: Record<string, string> = {
   "": "—",
   cash: "Cash",
+  qris: "QRIS",
+  midtrans: "Midtrans",
   transfer_bca: "Transfer BCA",
   transfer_mandiri: "Transfer Mandiri",
   transfer_lain: "Transfer Lain",
@@ -72,12 +77,17 @@ export default async function OrderDetailPage({
   if (!order) notFound();
 
   const total = order.items.reduce((s, it) => s + it.subtotal, 0);
+  // Hanya pembayaran confirmed yang dihitung lunas; pending (bukti belum diverifikasi) tidak ikut
   const paid = order.payments
-    .filter((p) => ["dp", "pelunasan", "denda"].includes(p.paymentType))
+    .filter((p) => ["dp", "pelunasan", "denda"].includes(p.paymentType) && p.status !== "pending")
     .reduce((s, p) => s + p.amount, 0);
   const sisa = total - paid;
   const overdue = order.status === "active" && order.endDate < new Date();
   const active = order.status === "active" || order.status === "late";
+
+  const isOnline = order.source === "online";
+  const pendingProof = order.payments.find((p) => p.status === "pending" && p.proofPath);
+  const hasPendingPayment = order.payments.some((p) => p.status === "pending");
 
   const bookingWA = formatBookingWA({
     orderNumber: order.orderNumber,
@@ -309,6 +319,64 @@ export default async function OrderDetailPage({
                 {formatRupiah(sisa)}
               </span>
             </div>
+
+            {isOnline && (
+              <div className="space-y-2 border-t pt-3">
+                <dl className="space-y-1 text-sm">
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted-foreground">Sumber order</dt>
+                    <dd className="font-medium">Checkout website (customer)</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted-foreground">Metode pembayaran</dt>
+                    <dd className="font-medium">
+                      {order.paymentMethod
+                        ? PAYMENT_METHOD_LABELS[order.paymentMethod as PaymentMethod] ?? order.paymentMethod
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted-foreground">Status pembayaran</dt>
+                    <dd className="font-medium">{PAYMENT_STATUS_LABELS[order.paymentStatus] ?? order.paymentStatus}</dd>
+                  </div>
+                  {order.paymentRef && order.paymentMethod === "midtrans" && (
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-muted-foreground">Ref Midtrans</dt>
+                      <dd className="truncate font-mono text-xs">{order.paymentRef.slice(0, 40)}</dd>
+                    </div>
+                  )}
+                </dl>
+
+                {pendingProof && (
+                  <div className="space-y-2 rounded-xl border bg-muted/40 p-3">
+                    <p className="text-xs font-semibold">Bukti transfer customer (perlu verifikasi)</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <a href={pendingProof.proofPath!} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={pendingProof.proofPath!}
+                        alt="Bukti pembayaran"
+                        className="h-32 rounded-lg border object-cover"
+                      />
+                    </a>
+                    <form action={confirmOnlinePayment}>
+                      <input type="hidden" name="orderId" value={order.id} />
+                      <Button type="submit" size="sm" className="w-full gap-1.5">
+                        <CheckCircle2 className="size-4" aria-hidden />
+                        Konfirmasi Pembayaran Ini
+                      </Button>
+                    </form>
+                  </div>
+                )}
+                {!pendingProof && hasPendingPayment && (
+                  <form action={confirmOnlinePayment}>
+                    <input type="hidden" name="orderId" value={order.id} />
+                    <Button type="submit" variant="secondary" size="sm">
+                      Konfirmasi pembayaran pending
+                    </Button>
+                  </form>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -438,6 +506,7 @@ export default async function OrderDetailPage({
                     <TableHead>Tanggal</TableHead>
                     <TableHead>Jenis</TableHead>
                     <TableHead>Metode</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Jumlah</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -450,6 +519,30 @@ export default async function OrderDetailPage({
                       <TableCell>{PAYMENT_TYPES[p.paymentType] ?? p.paymentType}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {p.method ? (METHODS[p.method] ?? p.method) : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
+                            p.status === "confirmed"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : p.status === "pending"
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-red-100 text-red-700"
+                          )}
+                        >
+                          {p.status === "confirmed" ? "Terverifikasi" : p.status === "pending" ? "Menunggu" : "Gagal"}
+                        </span>
+                        {p.proofPath && (
+                          <a
+                            href={p.proofPath}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 block text-xs text-primary underline underline-offset-2"
+                          >
+                            Lihat bukti
+                          </a>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
                         {formatRupiah(p.amount)}
