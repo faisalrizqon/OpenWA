@@ -1,9 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Package, Plus, Trash2, User, CalendarClock, ListPlus, ShieldCheck } from "lucide-react";
+import { format } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+import {
+  Package,
+  Plus,
+  Trash2,
+  User,
+  Phone,
+  CalendarClock,
+  ListPlus,
+  ShieldCheck,
+  ClipboardPaste,
+  Wand2,
+} from "lucide-react";
 import { createOrder } from "@/actions/orders";
 import { getTierPrice, calcSubtotal, formatRupiah } from "@/lib/pricing";
+import { parseBookingMessage, matchProduct, type ParsedBooking } from "@/lib/parseBooking";
 import { SelectField } from "@/components/SelectField";
 import { DateTimePicker, DatePicker } from "@/components/DateTimePicker";
 import { Button } from "@/components/ui/button";
@@ -65,6 +79,10 @@ export function OrderForm({
   const [rescheduledFrom, setRescheduledFrom] = useState("");
   const [guaranteeType, setGuaranteeType] = useState("");
   const [deliveryMode, setDeliveryMode] = useState("pickup");
+  const [guaranteeNumber, setGuaranteeNumber] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [waMessage, setWaMessage] = useState("");
+  const [waParsed, setWaParsed] = useState<ParsedBooking | null>(null);
   const [items, setItems] = useState<ItemDraft[]>(() =>
     products.length > 0
       ? [
@@ -192,6 +210,46 @@ export function OrderForm({
     setItems((prev) => prev.filter((it) => it.key !== key));
   }
 
+  /** Isi form otomatis dari pesan booking WA yang ditempel. */
+  function applyBookingMessage() {
+    const parsed = parseBookingMessage(waMessage);
+    setWaParsed(parsed);
+
+    if (parsed.nama) {
+      // cocokkan pelanggan existing (case-insensitive) atau siapkan pelanggan baru
+      const existing = customers.find(
+        (c) => c.name.toLowerCase() === parsed.nama!.toLowerCase()
+      );
+      if (existing) {
+        setCustomerId(String(existing.id));
+      } else {
+        setCustomerId("new");
+        setNewName(parsed.nama);
+      }
+    }
+
+    if (parsed.kamera) {
+      const productId = matchProduct(parsed.kamera, products);
+      if (productId) {
+        setItems((prev) => prev.map((it) => ({ ...it, productId })));
+      }
+    }
+
+    if (parsed.durasiJam) {
+      const dur = DURATIONS.includes(parsed.durasiJam)
+        ? parsed.durasiJam
+        : DURATIONS.find((d) => d >= parsed.durasiJam!) ?? 96;
+      setItems((prev) => prev.map((it) => ({ ...it, durationHours: dur })));
+    }
+
+    if (parsed.jaminan) setGuaranteeType(parsed.jaminan);
+    if (parsed.lokasiCod) {
+      setDeliveryMode("courier");
+      setDeliveryAddress(parsed.lokasiCod);
+    }
+    if (parsed.tanggal) setStartDate(toLocalInputValue(parsed.tanggal));
+  }
+
   return (
     <form action={createOrder} className="space-y-6">
       <input
@@ -210,6 +268,42 @@ export function OrderForm({
         )}
       />
 
+      {/* Import pesan WA */}
+      <section className="space-y-3 rounded-xl border bg-card p-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <span className="flex size-6 items-center justify-center rounded-md bg-accent text-accent-foreground">
+            <ClipboardPaste className="size-3.5" aria-hidden />
+          </span>
+          Import Pesan Booking WA (opsional)
+        </h2>
+        <textarea
+          value={waMessage}
+          onChange={(e) => setWaMessage(e.target.value)}
+          placeholder={`Tempel pesan booking di sini, mis:\nNama Penyewa : maya okta\nJenis Kamera : canon ps a4000\nDurasi (berapa hari) : 6jam\nJaminan (KTP/SIM) : ktp\nLokasi COD : Weleri\nTanggal Booking/Sewa : 23 agustus 2026,minggu`}
+          className="min-h-28 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={applyBookingMessage}
+            disabled={waMessage.trim().length === 0}
+            className="gap-1.5"
+          >
+            <Wand2 className="size-4" aria-hidden />
+            Isi Otomatis
+          </Button>
+          {waParsed && (
+            <p className="text-xs text-muted-foreground">
+              ✓ Terbaca: {waParsed.nama ?? "—"} · {waParsed.kamera ?? "—"} ·{" "}
+              {waParsed.durasiJam ? `${waParsed.durasiJam} jam` : "—"} ·{" "}
+              {waParsed.tanggal
+                ? format(waParsed.tanggal, "dd MMM yyyy", { locale: localeId })
+                : "—"}
+            </p>
+          )}
+        </div>
+      </section>
       {/* Customer */}
       <section className="space-y-4 rounded-xl border bg-card p-4">
         <h2 className="flex items-center gap-2 text-sm font-semibold">
@@ -234,6 +328,14 @@ export function OrderForm({
                 { label: "+ Pelanggan baru", value: "new" },
               ]}
             />
+            {/* Nomor HP pelanggan terpilih — selalu terlihat jelas */}
+            {customerId !== "new" && selectedCustomer && (
+              <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm">
+                <Phone className="size-3.5 text-muted-foreground" aria-hidden />
+                <span className="font-medium">{selectedCustomer.name}</span>
+                <span className="font-mono text-muted-foreground">{selectedCustomer.phone}</span>
+              </div>
+            )}
           </div>
           {customerId === "new" && (
             <>
@@ -325,6 +427,7 @@ export function OrderForm({
               options={[
                 { label: "— tanpa jaminan —", value: "" },
                 { label: "KTP", value: "ktp" },
+                { label: "SIM", value: "sim" },
                 { label: "Kartu Pelajar", value: "kartu_pelajar" },
                 { label: "Lainnya", value: "lainnya" },
               ]}
@@ -335,7 +438,9 @@ export function OrderForm({
             <Input
               id="guaranteeNumber"
               name="guaranteeNumber"
-              placeholder="mis. no. KTP"
+              value={guaranteeNumber}
+              onChange={(e) => setGuaranteeNumber(e.target.value)}
+              placeholder="mis. no. KTP / SIM"
             />
           </div>
           <div className="space-y-2">
@@ -357,6 +462,8 @@ export function OrderForm({
               <Input
                 id="deliveryAddress"
                 name="deliveryAddress"
+                value={deliveryAddress}
+                onChange={(e) => setDeliveryAddress(e.target.value)}
                 placeholder="mis. Weleri"
               />
             </div>
