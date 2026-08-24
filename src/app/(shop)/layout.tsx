@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Camera, MapPin, Clock } from "lucide-react";
+import { Camera, MapPin, Clock, UserRound } from "lucide-react";
 import { getStoreSettings } from "@/lib/content";
 import { waLink, generalMessage } from "@/lib/shop";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
@@ -57,9 +57,15 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
             </Link>
             <Link
               href="/portal/login"
-              className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="relative inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 ring-2 ring-primary/40 transition-all hover:bg-primary/90 hover:ring-primary/60"
             >
+              <UserRound className="size-4" aria-hidden />
               Login Member
+              {/* Titik notifikasi — biar mencolok */}
+              <span className="absolute -right-1 -top-1 flex size-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500"></span>
+              </span>
             </Link>
             <a
               href={waLink(shop.whatsapp, generalMessage(shop.storeName))}
