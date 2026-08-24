@@ -44,8 +44,9 @@ export default async function PaymentPage({
   const canChange = order.status === "booking" && order.paymentStatus !== "paid" && !confirmed;
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8 md:px-8 md:py-12">
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-12">
       <SaveOrderToHistory orderNumber={order.orderNumber} />
+      <div className="mx-auto w-full max-w-2xl">
       <div className="text-center">
         <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-emerald-100">
           <CheckCircle2 className="size-7 text-emerald-600" aria-hidden />
@@ -187,6 +188,7 @@ export default async function PaymentPage({
           </Card>
         )}
 
+
         {method === "midtrans" && midtransConfigured() && (
           <Card>
             <CardHeader>
@@ -214,8 +216,85 @@ export default async function PaymentPage({
             </CardContent>
           </Card>
         )}
+        
+        {method === "transfer" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Banknote className="size-5 text-primary" aria-hidden />
+                Transfer Bank
+              </CardTitle>
+              <CardDescription>
+                Kirim pembayaran ke rekening berikut, lalu upload bukti transfer untuk verifikasi.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {shop.transferEnabled === "true" && shop.transferAccountNumber ? (
+                <>
+                  <div className="grid gap-4 rounded-xl border bg-muted/30 p-4">
+                    <dl className="grid gap-3 sm:grid-cols-[auto_auto]">
+                      <dt className="text-sm font-medium">Bank</dt>
+                      <dd className="font-semibold">{shop.transferBankName}</dd>
+                      <dt className="text-sm font-medium">Nomor Rekening</dt>
+                      <dd className="font-mono font-semibold tracking-widest">{shop.transferAccountNumber}</dd>
+                      <dt className="text-sm font-medium">Atas Nama</dt>
+                      <dd>{shop.transferAccountHolder}</dd>
+                    </dl>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Total yang harus dikirim:{" "}
+                      <span className="font-semibold tabular-nums">{formatRupiah(total + order.courierFee + order.tipAmount)}</span>
+                    </p>
+                  </div>
+                  {proofUploaded || confirmed ? (
+                    <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                      {confirmed
+                        ? "Pembayaran telah dikonfirmasi oleh admin. Terima kasih!"
+                        : "Bukti transfer sudah diterima. Menunggu verifikasi admin."}
+                    </div>
+                  ) : (
+                    <form action={submitPaymentProof} className="w-full space-y-3">
+                      <input type="hidden" name="orderNumber" value={order.orderNumber} />
+                      {fileError === "nofile" && (
+                        <p className="text-sm font-medium text-rose-600">
+                          Pilih file bukti transfer terlebih dahulu.
+                        </p>
+                      )}
+                      {fileError === "file" && (
+                        <p className="text-sm font-medium text-rose-600">
+                          File tidak valid — hanya JPG/PNG/WebP maksimal 5MB.
+                        </p>
+                      )}
+                      {proof === "uploaded" && (
+                        <p className="text-sm font-medium text-emerald-700">
+                          Bukti transfer berhasil diupload. Menunggu verifikasi admin.
+                        </p>
+                      )}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="proof">Upload Bukti Transfer (screenshot/foto)</Label>
+                        <input
+                          id="proof"
+                          name="proof"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          required
+                          className="w-full rounded-xl border bg-background px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
+                        />
+                      </div>
+                      <Button type="submit" className="h-11 w-full">
+                        Kirim Bukti Transfer
+                      </Button>
+                    </form>
+                  )}
+                </>
+              ) : (
+                <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                  Pembayaran transfer belum dikonfigurasi. Silakan hubungi admin untuk bantuan.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
-
       {/* Ubah metode pembayaran — hanya selama order masih booking & belum ada pembayaran terkonfirmasi */}
       {canChange && (
         <Card className="mt-4">
@@ -227,7 +306,7 @@ export default async function PaymentPage({
             <CardDescription>
               Metode saat ini:{" "}
               <span className="font-semibold text-foreground">
-                {method === "cash" ? "Cash" : method === "qris" ? "QRIS" : "Midtrans"}
+                {method === "cash" ? "Cash" : method === "qris" ? "QRIS" : method === "transfer" ? "Transfer Bank" : "Midtrans"}
               </span>
               . Pilih metode lain jika berubah pikiran — bukti bayar lama (jika ada) akan
               dibatalkan.
@@ -244,6 +323,7 @@ export default async function PaymentPage({
               {[
                 { value: "cash", label: "Cash" },
                 { value: "qris", label: "QRIS" },
+                ...(shop.transferEnabled === "true" ? [{ value: "transfer", label: "Transfer Bank" }] : []),
                 ...(midtransConfigured() ? [{ value: "midtrans", label: "Online (Midtrans)" }] : []),
               ]
                 .filter((m) => m.value !== method)
@@ -277,6 +357,7 @@ export default async function PaymentPage({
           href={`/order-status/${order.orderNumber}`}
           label="Cek Status Pesanan"
         />
+      </div>
       </div>
     </div>
   );
