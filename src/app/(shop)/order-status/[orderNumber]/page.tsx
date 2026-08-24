@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarClock, MapPin, PackageCheck } from "lucide-react";
+import { CalendarClock, Image, PackageCheck, ShieldCheck } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/pricing";
 import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, type PaymentMethod } from "@/lib/payment";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import { ExternalLink } from "@/components/LinkButton";
 import { waLink } from "@/lib/shop";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getStoreSettings } from "@/lib/content";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
+import { GuaranteeUpload } from "@/components/GuaranteeUpload";
+import { submitGuarantee } from "../../actions/checkout";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +24,12 @@ export default async function OrderStatusPage({ params }: PageProps<"/order-stat
       customer: true,
       items: { include: { product: { select: { name: true } } } },
       payments: { orderBy: { paidAt: "desc" } },
+      documents: { orderBy: { uploadedAt: "desc" } },
     },
   });
   if (!order) notFound();
+
+  const shop = await getStoreSettings();
 
   const total = order.items.reduce((s, it) => s + it.subtotal, 0);
   const methodLabel = order.paymentMethod
@@ -32,7 +39,8 @@ export default async function OrderStatusPage({ params }: PageProps<"/order-stat
   const waText = `Halo, saya mau cek pesanan *${order.orderNumber}* a.n. ${order.customer.name}. Terima kasih!`;
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8 md:px-8 md:py-12">
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-12">
+      <div className="mx-auto w-full max-w-2xl">
       <h1 className="text-xl font-bold tracking-tight md:text-2xl">Status Pesanan</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Nomor pesanan <span className="font-semibold text-foreground">{order.orderNumber}</span>
@@ -54,6 +62,10 @@ export default async function OrderStatusPage({ params }: PageProps<"/order-stat
             <div className="flex justify-between gap-2">
               <dt className="text-muted-foreground">Pelanggan</dt>
               <dd className="font-medium">{order.customer.name}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-muted-foreground">No. WhatsApp</dt>
+              <dd className="font-mono font-medium tabular-nums">{order.customer.phone}</dd>
             </div>
             <div className="flex justify-between gap-2">
               <dt className="text-muted-foreground">Metode bayar</dt>
@@ -101,11 +113,63 @@ export default async function OrderStatusPage({ params }: PageProps<"/order-stat
           </div>
         </CardContent>
       </Card>
+      {/* Jaminan: upload KTP/selfie + dokumen terupload */}
+      <Card className="mt-5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="size-4 text-emerald-600" aria-hidden />
+            Jaminan
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {order.documents.length > 0 ? (
+            <div className="grid grid-cols-3 gap-3">
+              {order.documents.map((d) => (
+                <a key={d.id} href={d.filePath} target="_blank" rel="noopener noreferrer" className="group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={d.filePath}
+                    alt={d.docType}
+                    className="h-24 w-full rounded-lg border object-cover transition-opacity group-hover:opacity-80"
+                  />
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
+                    {d.docType === "ktp" ? "KTP" : d.docType === "selfie_ktp" ? "Selfie KTP" : d.docType === "kartu_pelajar" ? "Kartu Pelajar" : "Lainnya"}
+                  </p>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-lg bg-muted/60 px-3 py-2.5 text-xs text-muted-foreground">
+              Belum ada jaminan terupload. Setelah barang diambil, upload foto KTP / selfie + KTP sebagai bukti.
+            </p>
+          )}
+          <GuaranteeUpload orderId={order.id} action={submitGuarantee} />
+        </CardContent>
+      </Card>
 
-      {order.noteOrder && (
-        <p className="mt-4 rounded-lg bg-muted px-4 py-3 text-sm">
-          Catatan: {order.noteOrder}
-        </p>
+      {/* Link Drive foto hasil */}
+      {order.photoLink && (
+        <Card className="mt-5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Image className="size-4 text-primary" aria-hidden />
+              Foto Hasil
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Link Drive berisi foto hasil dari kamera yang disewa:
+            </p>
+            <a
+              href={order.photoLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1.5 break-all rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/20"
+            >
+              Buka Drive
+            </a>
+          </CardContent>
+        </Card>
       )}
 
       <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -117,12 +181,13 @@ export default async function OrderStatusPage({ params }: PageProps<"/order-stat
             </Button>
           </Link>
         )}
-        <a href={waLink(waText)} target="_blank" rel="noopener noreferrer">
-          <Button variant="outline">
-            <WhatsAppIcon className="text-emerald-500" aria-hidden />
-            Tanya via WhatsApp
-          </Button>
-        </a>
+        <ExternalLink
+          href={waLink(shop.whatsapp, waText)}
+          label="Tanya via WhatsApp"
+          tone="neutral"
+          icon={<WhatsAppIcon aria-hidden />}
+        />
+      </div>
       </div>
     </div>
   );
