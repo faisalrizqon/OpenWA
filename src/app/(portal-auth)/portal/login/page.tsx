@@ -1,23 +1,35 @@
 import Link from "next/link";
-import { Camera } from "lucide-react";
+import { Camera, ChevronLeft } from "lucide-react";
 import { getStoreSettings } from "@/lib/content";
 import { PortalLoginForm } from "@/components/PortalLoginForm";
 
 /** Login portal customer — berdiri di luar layout (portal) sehingga tidak
- *  ada top bar; tema mengikuti storefront via script anti-FOUC root layout. */
+ *  ada top bar; tema mengikuti pilihan landing page (theme-* di-root via
+ *  script anti-FOUC yang membaca localStorage storefront). */
 export default async function PortalLoginPage() {
   const shop = await getStoreSettings();
 
   return (
     <div className="flex min-h-screen flex-col">
+      {/* Baris atas: link kembali (kiri), sama seperti header storefront */}
+      <div className="mx-auto w-full max-w-md px-4 pt-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ChevronLeft className="size-4" aria-hidden />
+          Kembali ke Katalog
+        </Link>
+      </div>
+
       {/* Logo toko — klik kembali ke landing page */}
-      <header className="mx-auto w-full max-w-md px-4 pt-10">
+      <header className="mx-auto w-full max-w-md px-4 pt-4">
         <Link href="/" className="flex items-center justify-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <Camera className="size-5" aria-hidden />
           </span>
           <span className="leading-tight">
-            <span className="block text-[15px] font-extrabold tracking-tight">
+            <span className="block text-base font-extrabold tracking-tight">
               {shop.storeName}
             </span>
             <span className="text-xs text-muted-foreground">{shop.tagline}</span>
