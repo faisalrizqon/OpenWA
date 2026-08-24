@@ -15,7 +15,7 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
       <header className="glass sticky top-0 z-30 border-b border-border/70">
         {/* Top bar ramping: logo kiri, nav kanan.
             Papan OPEN/CLOSED menggantung di tengah, melewati batas bawah top bar. */}
-        <div className="relative mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-2 md:px-8">
+        <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-2 md:px-8">
           {/* Kiri: logo */}
           <Link href="/" className="flex items-center gap-2.5">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
@@ -39,21 +39,27 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
           <nav className="flex items-center gap-2">
             <Link
               href="/"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               Katalog
             </Link>
             <Link
               href="/pricelist"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               Pricelist
             </Link>
             <Link
               href="/track"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               Lacak Order
+            </Link>
+            <Link
+              href="/portal/login"
+              className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              Login Member
             </Link>
             <a
               href={waLink(shop.whatsapp, generalMessage(shop.storeName))}
@@ -71,7 +77,7 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
       <main className="flex-1">{children}</main>
 
       <footer className="mt-16 border-t border-border/70 bg-card">
-        <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 md:grid-cols-3 md:px-8">
+        <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-10 md:grid-cols-3 md:px-8">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
