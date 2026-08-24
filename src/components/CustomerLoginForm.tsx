@@ -31,8 +31,8 @@ export function CustomerLoginForm() {
   return (
     <>
       {error && (
-        <div className="mb-4 flex items-start gap-2 rounded-xl bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700">
-          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700">
+          <AlertCircle className="size-4 shrink-0" aria-hidden />
           {error}
         </div>
       )}
@@ -52,7 +52,7 @@ export function CustomerLoginForm() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="08xxxxxxxxxx"
-            className="h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm transition-colors placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none disabled:opacity-60"
           />
         </div>
         <div className="space-y-1.5">
@@ -68,21 +68,21 @@ export function CustomerLoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm transition-colors placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none disabled:opacity-60"
           />
         </div>
 
         <button
           type="submit"
           disabled={pending || !phone || !password}
-          className="btn-retro inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:pointer-events-none disabled:opacity-50"
+          className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80 disabled:pointer-events-none disabled:opacity-50"
         >
           {pending ? (
             <Loader2 className="size-4 animate-spin" aria-hidden />
           ) : (
             <LogIn className="size-4" aria-hidden />
           )}
-          {pending ? "Masuk…" : "Masuk"}
+          {pending ? "Memproses…" : "Masuk"}
         </button>
       </form>
 

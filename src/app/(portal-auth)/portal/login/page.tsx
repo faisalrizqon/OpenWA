@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Camera, Lock } from "lucide-react";
+import { Camera } from "lucide-react";
 import { getStoreSettings } from "@/lib/content";
 import { CustomerLoginForm } from "@/components/CustomerLoginForm";
 
@@ -28,11 +28,8 @@ export default async function PortalLoginPage() {
 
         {/* Card login — glassmorphism seperti admin login */}
         <div className="glass rounded-2xl border border-border/70 p-6 shadow-sm sm:p-8">
-          <div className="mb-6 text-center">
-            <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-              <Lock className="size-7" aria-hidden />
-            </span>
-            <h1 className="mt-3 text-xl font-bold tracking-tight">Portal Pelanggan</h1>
+          <div className="mb-5 text-center">
+            <h1 className="text-lg font-bold tracking-tight">Portal Pelanggan</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Masuk untuk lihat riwayat sewa dan review pesanan
             </p>
