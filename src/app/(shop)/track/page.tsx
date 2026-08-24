@@ -21,6 +21,7 @@ interface TrackedOrder {
   endDate: Date;
   total: number;
   customerName: string;
+  customerPhone: string;
   productNames: string[];
 }
 
@@ -44,7 +45,7 @@ export default async function TrackPage({ searchParams }: PageProps<"/track">) {
       const order = await prisma.order.findUnique({
         where: { orderNumber: q.toUpperCase() },
         include: {
-          customer: { select: { name: true } },
+          customer: { select: { name: true, phone: true } },
           items: { include: { product: { select: { name: true } } } },
         },
       });
@@ -57,6 +58,7 @@ export default async function TrackPage({ searchParams }: PageProps<"/track">) {
             endDate: order.endDate,
             total: order.items.reduce((s, it) => s + it.subtotal, 0),
             customerName: order.customer.name,
+            customerPhone: order.customer.phone,
             productNames: order.items.map((it) => it.product.name),
           },
         ];
@@ -84,6 +86,7 @@ export default async function TrackPage({ searchParams }: PageProps<"/track">) {
             endDate: o.endDate,
             total: o.items.reduce((s, it) => s + it.subtotal, 0),
             customerName: c.name,
+            customerPhone: c.phone,
             productNames: o.items.map((it) => it.product.name),
           }))
         );
@@ -132,9 +135,12 @@ export default async function TrackPage({ searchParams }: PageProps<"/track">) {
             </div>
           ) : (
             <>
-              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <p className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
                 <Phone className="size-3.5" aria-hidden />
                 Ditemukan {orders.length} pesanan
+                {orders[0]?.customerPhone && (
+                  <span className="font-mono tabular-nums">a.n. {orders[0].customerName} ({orders[0].customerPhone})</span>
+                )}
               </p>
               {orders.map((o) => (
                 <Card key={o.orderNumber}>
@@ -146,6 +152,14 @@ export default async function TrackPage({ searchParams }: PageProps<"/track">) {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <dl className="space-y-1.5 text-sm">
+                      <div className="flex justify-between gap-2">
+                        <dt className="text-muted-foreground">Pemesan</dt>
+                        <dd className="text-right font-medium">{o.customerName}</dd>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <dt className="text-muted-foreground">No. WhatsApp</dt>
+                        <dd className="font-mono font-medium tabular-nums">{o.customerPhone}</dd>
+                      </div>
                       <div className="flex justify-between gap-2">
                         <dt className="text-muted-foreground">Produk</dt>
                         <dd className="text-right font-medium">
