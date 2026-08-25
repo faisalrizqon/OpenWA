@@ -27,9 +27,9 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
             </span>
           </Link>
 
-          {/* Tengah: papan gantung — absolute supaya tidak menambah tinggi top bar,
-              sengaja menjuntai melewati tepi bawah header. */}
-          <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2">
+          {/* Agak kiri dari tengah header: papan gantung — absolute supaya tidak menambah
+              tinggi top bar, sengaja menjuntai melewati tepi bawah header. */}
+          <div className="pointer-events-none absolute left-[44%] top-0 -translate-x-1/2">
             <div className="pointer-events-auto pt-1">
               <OpenClosedSign hours={shop.hours} />
             </div>

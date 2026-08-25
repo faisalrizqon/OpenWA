@@ -28,7 +28,7 @@ function computeOpen(hours: string): boolean {
 /** Papan gantung OPEN/CLOSED ala toko.
  *
  *  - Papan kayu dengan serat kayu multi-lapis + knot kayu + bingkai ukir dalam.
- *  - Tali anyam serat hemp/jute (gradient 3D + twist marks) dengan kait logam.
+ *  - SATU tali anyam tengah (serat hemp/jute, gradient 3D + twist marks + ring logam).
  *  - Teks serif natural (Instrument Serif) dengan efek terukir.
  *  - Status mengikuti jam operasional otomatis (dicek tiap menit).
  *  - Diklik -> berayun besar bolak-balik, lalu kembali tenang;
@@ -74,43 +74,30 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
           swinging ? "animate-sign-swing" : "animate-sign-sway"
         )}
       >
-        {/* TALI ANYAM — serat hemp/jute twisted + kait logam (lebar 200px, kait pas di sudut papan) */}
-        <svg width="200" height="44" viewBox="0 0 200 44" aria-hidden className="block rope-fluid">
+        {/* SATU TALI TENGAH — serat hemp/jute twisted + ring logam penghubung */}
+        <svg width="24" height="38" viewBox="0 0 24 38" aria-hidden className="block rope-fluid">
           <defs>
-            <linearGradient id="ropeShade" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#e0cda0" />
-              <stop offset="50%" stopColor="#c4a76a" />
+            <linearGradient id="ropeShade" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#8e7544" />
+              <stop offset="45%" stopColor="#e0cda0" />
               <stop offset="100%" stopColor="#8e7544" />
             </linearGradient>
           </defs>
-          {/* Tali kiri — cubic bezier catenary dari paku ke sudut kiri papan */}
-          <path d="M100,1 C74,13 42,28 16,44" stroke="url(#ropeShade)" strokeWidth="4.5" fill="none" strokeLinecap="round" />
-          {/* Tali kanan — cubic bezier catenary ke sudut kanan papan */}
-          <path d="M100,1 C126,13 158,28 184,44" stroke="url(#ropeShade)" strokeWidth="4.5" fill="none" strokeLinecap="round" />
-          {/* Highlight 3D — sisi atas tali */}
-          <path d="M100,0.8 C74,12.5 42,27.5 16,43.8" stroke="#f0e0b8" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.55" />
-          <path d="M100,0.8 C126,12.5 158,27.5 184,43.8" stroke="#f0e0b8" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.55" />
-          {/* Twist marks kiri — mengikuti kelengkungan tali */}
-          <g className="flex-group">
-            <line x1="87" y1="7" x2="93" y2="11" transform="rotate(-30 90 9)" className="twist-mark" />
-            <line x1="75" y1="14" x2="81" y2="18" transform="rotate(-28 78 16)" className="twist-mark" />
-            <line x1="61" y1="21" x2="67" y2="25" transform="rotate(-25 64 23)" className="twist-mark" />
-            <line x1="47" y1="28" x2="53" y2="32" transform="rotate(-22 50 30)" className="twist-mark" />
-            <line x1="33" y1="35" x2="39" y2="39" transform="rotate(-18 36 37)" className="twist-mark" />
+          {/* Tali utama — vertikal dengan sedikit lengkung S natural */}
+          <path d="M12,1 Q10,12 12,20 Q14,27 12,33" stroke="url(#ropeShade)" strokeWidth="4.5" fill="none" strokeLinecap="round" />
+          {/* Highlight 3D — sisi kiri tali */}
+          <path d="M11,1 Q9,12 11,20 Q13,27 11,33" stroke="#f0e0b8" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.5" />
+          {/* Twist marks — serat anyaman melintang */}
+          <g className="flex-group" stroke="#6e5a2e" strokeWidth="0.9" strokeLinecap="round" opacity="0.5">
+            <line x1="9.5" y1="6" x2="14.5" y2="5" />
+            <line x1="9.5" y1="11" x2="14.5" y2="10" />
+            <line x1="9.5" y1="16" x2="14.5" y2="15" />
+            <line x1="9.5" y1="21" x2="14.5" y2="20" />
+            <line x1="9.5" y1="26" x2="14.5" y2="25" />
           </g>
-          {/* Twist marks kanan — simetris */}
-          <g className="flex-group">
-            <line x1="113" y1="7" x2="107" y2="11" transform="rotate(30 110 9)" className="twist-mark" />
-            <line x1="125" y1="14" x2="119" y2="18" transform="rotate(28 122 16)" className="twist-mark" />
-            <line x1="139" y1="21" x2="133" y2="25" transform="rotate(25 136 23)" className="twist-mark" />
-            <line x1="153" y1="28" x2="147" y2="32" transform="rotate(22 150 30)" className="twist-mark" />
-            <line x1="167" y1="35" x2="161" y2="39" transform="rotate(18 164 37)" className="twist-mark" />
-          </g>
-          {/* Mata kait logam di sudut atas papan */}
-          <circle cx="16" cy="44" r="2.8" fill="#a8a29e" stroke="#57534e" strokeWidth="0.7" />
-          <circle cx="184" cy="44" r="2.8" fill="#a8a29e" stroke="#57534e" strokeWidth="0.7" />
-          <circle cx="16" cy="44" r="1" fill="#44403c" />
-          <circle cx="184" cy="44" r="1" fill="#44403c" />
+          {/* Ring logam penghubung tali ke papan */}
+          <circle cx="12" cy="34" r="3" fill="none" stroke="#57534e" strokeWidth="1.4" />
+          <circle cx="12" cy="34" r="3" fill="none" stroke="#a8a29e" strokeWidth="0.8" />
         </svg>
         <style>{`
           @keyframes rope-wiggle {
@@ -137,6 +124,8 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
             "border-[#5a3a1e]"
           )}
           style={{
+            transform: "rotate(-2deg)",
+            transformOrigin: "50% 0%",
             backgroundImage: open
               ? "radial-gradient(ellipse at 30% 20%, #d4a06e 0%, #b8845a 55%, #9c6e42 100%)"
               : "radial-gradient(ellipse at 30% 20%, #c0905e 0%, #a8744a 55%, #8e5e36 100%)",
