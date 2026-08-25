@@ -220,30 +220,36 @@ export function DatePicker({
   const [open, setOpen] = React.useState(false);
   const date = value ? new Date(`${value}T00:00`) : null;
   const valid = date != null && !isNaN(date.getTime());
+  // Root <div> wajib: saat popover terbuka Base UI menginjeksi elemen helper
+  // di root Popover. Tanpa wrapper, elemen itu menjadi saudara trigger di
+  // dalam kontainer `space-y-*` pemakai → trigger tak lagi :last-child →
+  // dapat margin tambahan → layout bergeser 4px saat open/close.
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        id={id}
-        className={cn(
-          "flex h-9 items-center gap-2 rounded-xl border border-input bg-transparent px-3 text-sm outline-none transition-colors hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[popup-open]:border-ring",
-          className
-        )}
-      >
-        <CalendarDays className="size-4 text-muted-foreground" aria-hidden />
-        <span className={cn(!valid && "text-muted-foreground")}>
-          {valid ? format(date!, "dd MMM yyyy", { locale: localeId }) : placeholder}
-        </span>
-      </PopoverTrigger>
-      <PopoverContent>
-        <Calendar
-          selected={valid ? date : null}
-          month={valid ? date! : undefined}
-          onSelect={(d) => {
-            onChange(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
-            setOpen(false);
-          }}
-        />
-      </PopoverContent>
-    </Popover>
+    <div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          id={id}
+          className={cn(
+            "flex h-9 items-center gap-2 rounded-xl border border-input bg-transparent px-3 text-sm outline-none transition-colors hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[popup-open]:border-ring",
+            className
+          )}
+        >
+          <CalendarDays className="size-4 text-muted-foreground" aria-hidden />
+          <span className={cn(!valid && "text-muted-foreground")}>
+            {valid ? format(date!, "dd MMM yyyy", { locale: localeId }) : placeholder}
+          </span>
+        </PopoverTrigger>
+        <PopoverContent>
+          <Calendar
+            selected={valid ? date : null}
+            month={valid ? date! : undefined}
+            onSelect={(d) => {
+              onChange(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+              setOpen(false);
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
