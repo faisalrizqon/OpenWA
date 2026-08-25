@@ -14,7 +14,7 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
       <ShopTheme />
       <header className="glass sticky top-0 z-30 border-b border-border/70">
         {/* Top bar ramping: logo kiri, nav kanan.
-            Papan OPEN/CLOSED menggantung tepat setelah link Katalog, melewati batas bawah top bar. */}
+            Papan OPEN/CLOSED menggantung di kiri link Katalog (hanya md+), melewati batas bawah top bar. */}
         <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-2 md:px-8">
           {/* Kiri: logo */}
           <Link href="/" className="flex items-center gap-2.5">
@@ -27,39 +27,38 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
             </span>
           </Link>
 
-          {/* Kanan: nav */}
-          <nav className="flex items-center gap-2">
-            {/* Slot papan gantung — di kiri link Katalog; paku turun sedikit di bawah
-                garis tengah teks "Katalog", geser kiri via -ml-[24px]. */}
-            <div className="relative -ml-[24px] h-10 w-12">
+          {/* Kanan: nav — kompak di mobile (icon-only, papan gantung disembunyikan) */}
+          <nav className="flex items-center gap-1 sm:gap-2">
+            {/* Slot papan gantung — hanya tampil di md+; di kiri link Katalog */}
+            <div className="relative -ml-[24px] hidden h-10 w-12 md:block">
               <div className="absolute left-1/2 top-[16px] -translate-x-1/2">
                 <OpenClosedSign hours={shop.hours} />
               </div>
             </div>
             <Link
               href="/"
-              className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="inline-flex h-9 items-center rounded-lg px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:px-3 sm:text-sm"
             >
               Katalog
             </Link>
             <Link
               href="/pricelist"
-              className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="inline-flex h-9 items-center rounded-lg px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:px-3 sm:text-sm"
             >
               Pricelist
             </Link>
             <Link
               href="/track"
-              className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="inline-flex h-9 items-center rounded-lg px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:px-3 sm:text-sm"
             >
               Lacak Order
             </Link>
             <Link
               href="/portal/login"
-              className="relative inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 ring-2 ring-primary/40 transition-all hover:bg-primary/90 hover:ring-primary/60"
+              className="relative inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/30 ring-2 ring-primary/40 transition-all hover:bg-primary/90 hover:ring-primary/60 sm:px-3.5 sm:text-sm"
             >
               <UserRound className="size-4" aria-hidden />
-              Login Member
+              <span className="hidden sm:inline">Login Member</span>
               {/* Titik notifikasi — biar mencolok */}
               <span className="absolute -right-1 -top-1 flex size-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
@@ -70,10 +69,10 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
               href={waLink(shop.whatsapp, generalMessage(shop.storeName))}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 sm:px-3 sm:text-sm"
             >
               <WhatsAppIcon aria-hidden />
-              <span className="hidden sm:inline">Hubungi</span> WhatsApp
+              <span className="hidden sm:inline">Hubungi</span><span className="hidden sm:inline">&nbsp;</span><span className="hidden md:inline">WhatsApp</span>
             </a>
           </nav>
         </div>
