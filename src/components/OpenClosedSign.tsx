@@ -67,16 +67,15 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
         aria-hidden
       />
 
-      {/* Kelompok ayun: tali + papan (poros di paku) */}
       <span
         onAnimationEnd={() => setSwinging(false)}
         className={cn(
-          "relative -mt-1 flex w-[140px] flex-col items-center",
+          "relative -mt-1 flex w-[200px] flex-col items-center",
           swinging ? "animate-sign-swing" : "animate-sign-sway"
         )}
       >
-        {/* TALI ANYAM — serat hemp/jute twisted + kait logam */}
-        <svg width="140" height="36" viewBox="0 0 140 36" aria-hidden className="block rope-fluid">
+        {/* TALI ANYAM — serat hemp/jute twisted + kait logam (lebar 200px, kait pas di sudut papan) */}
+        <svg width="200" height="44" viewBox="0 0 200 44" aria-hidden className="block rope-fluid">
           <defs>
             <linearGradient id="ropeShade" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#e0cda0" />
@@ -84,36 +83,35 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
               <stop offset="100%" stopColor="#8e7544" />
             </linearGradient>
           </defs>
-          {/* Tali kiri — cubic bezier catenary (lebih smooth dari quadratic) */}
-          <path d="M70,1 C58,10 45,20 26,34" stroke="url(#ropeShade)" strokeWidth="4" fill="none" strokeLinecap="round" />
-          {/* Tali kanan — cubic bezier catenary simetris */}
-          <path d="M70,1 C82,10 95,20 114,34" stroke="url(#ropeShade)" strokeWidth="4" fill="none" strokeLinecap="round" />
-          {/* Highlight 3D — sisi atas tali (kurve sama dengan highlight tipis) */}
-          <path d="M70,0.8 C58,9.5 45,19.5 26,33.8" stroke="#f0e0b8" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.55" />
-          <path d="M70,0.8 C82,9.5 95,19.5 114,33.8" stroke="#f0e0b8" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.55" />
+          {/* Tali kiri — cubic bezier catenary dari paku ke sudut kiri papan */}
+          <path d="M100,1 C74,13 42,28 16,44" stroke="url(#ropeShade)" strokeWidth="4.5" fill="none" strokeLinecap="round" />
+          {/* Tali kanan — cubic bezier catenary ke sudut kanan papan */}
+          <path d="M100,1 C126,13 158,28 184,44" stroke="url(#ropeShade)" strokeWidth="4.5" fill="none" strokeLinecap="round" />
+          {/* Highlight 3D — sisi atas tali */}
+          <path d="M100,0.8 C74,12.5 42,27.5 16,43.8" stroke="#f0e0b8" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.55" />
+          <path d="M100,0.8 C126,12.5 158,27.5 184,43.8" stroke="#f0e0b8" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.55" />
           {/* Twist marks kiri — mengikuti kelengkungan tali */}
           <g className="flex-group">
-            <line x1="62" y1="6" x2="67" y2="9" transform="rotate(-35 64.5 7.5)" className="twist-mark" />
-            <line x1="54" y1="12" x2="59" y2="16" transform="rotate(-32 56.5 14)" className="twist-mark" />
-            <line x1="46" y1="17" x2="51" y2="21" transform="rotate(-28 48.5 19)" className="twist-mark" />
-            <line x1="37" y1="23" x2="42" y2="27" transform="rotate(-22 39.5 25)" className="twist-mark" />
-            <line x1="30" y1="28" x2="34" y2="32" transform="rotate(-18 32 30)" className="twist-mark" />
+            <line x1="87" y1="7" x2="93" y2="11" transform="rotate(-30 90 9)" className="twist-mark" />
+            <line x1="75" y1="14" x2="81" y2="18" transform="rotate(-28 78 16)" className="twist-mark" />
+            <line x1="61" y1="21" x2="67" y2="25" transform="rotate(-25 64 23)" className="twist-mark" />
+            <line x1="47" y1="28" x2="53" y2="32" transform="rotate(-22 50 30)" className="twist-mark" />
+            <line x1="33" y1="35" x2="39" y2="39" transform="rotate(-18 36 37)" className="twist-mark" />
           </g>
           {/* Twist marks kanan — simetris */}
           <g className="flex-group">
-            <line x1="78" y1="6" x2="73" y2="9" transform="rotate(35 75.5 7.5)" className="twist-mark" />
-            <line x1="86" y1="12" x2="81" y2="16" transform="rotate(32 83.5 14)" className="twist-mark" />
-            <line x1="94" y1="17" x2="89" y2="21" transform="rotate(28 91.5 19)" className="twist-mark" />
-            <line x1="103" y1="23" x2="98" y2="27" transform="rotate(22 100.5 25)" className="twist-mark" />
-            <line x1="110" y1="28" x2="106" y2="32" transform="rotate(18 108 30)" className="twist-mark" />
+            <line x1="113" y1="7" x2="107" y2="11" transform="rotate(30 110 9)" className="twist-mark" />
+            <line x1="125" y1="14" x2="119" y2="18" transform="rotate(28 122 16)" className="twist-mark" />
+            <line x1="139" y1="21" x2="133" y2="25" transform="rotate(25 136 23)" className="twist-mark" />
+            <line x1="153" y1="28" x2="147" y2="32" transform="rotate(22 150 30)" className="twist-mark" />
+            <line x1="167" y1="35" x2="161" y2="39" transform="rotate(18 164 37)" className="twist-mark" />
           </g>
-          {/* Mata kait logam di ujung tali */}
-          <circle cx="26" cy="34" r="2.5" fill="#a8a29e" stroke="#57534e" strokeWidth="0.6" />
-          <circle cx="114" cy="34" r="2.5" fill="#a8a29e" stroke="#57534e" strokeWidth="0.6" />
-          <circle cx="26" cy="34" r="0.9" fill="#44403c" />
-          <circle cx="114" cy="34" r="0.9" fill="#44403c" />
+          {/* Mata kait logam di sudut atas papan */}
+          <circle cx="16" cy="44" r="2.8" fill="#a8a29e" stroke="#57534e" strokeWidth="0.7" />
+          <circle cx="184" cy="44" r="2.8" fill="#a8a29e" stroke="#57534e" strokeWidth="0.7" />
+          <circle cx="16" cy="44" r="1" fill="#44403c" />
+          <circle cx="184" cy="44" r="1" fill="#44403c" />
         </svg>
-        {/* Style inline untuk animasi fluid */}
         <style>{`
           @keyframes rope-wiggle {
             0%, 100% { transform: translateY(0); }
@@ -134,7 +132,7 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
         {/* PAPAN KAYU */}
         <span
           className={cn(
-            "relative -mt-px flex items-center justify-center gap-1.5 overflow-hidden rounded-lg border-2 px-4 py-2.5",
+            "relative -mt-1 flex w-[200px] items-center justify-center gap-2 overflow-hidden rounded-lg border-2 px-4 py-3",
             "shadow-[0_5px_12px_rgba(0,0,0,0.3),inset_0_1px_2px_rgba(255,255,255,0.3),inset_0_-3px_6px_rgba(0,0,0,0.2)]",
             "border-[#5a3a1e]"
           )}
@@ -193,14 +191,14 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
           {/* Isi papan: lampu + teks terukir */}
           <span
             className={cn(
-              "relative size-2 rounded-full shadow-inner",
+              "relative size-2.5 rounded-full shadow-inner",
               open ? "animate-pulse bg-emerald-500" : "bg-rose-500"
             )}
             aria-hidden
           />
           <span
             className={cn(
-              "relative text-[13px] font-semibold tracking-[0.12em]",
+              "relative text-[15px] font-semibold tracking-[0.14em]",
               open ? "text-[#2a4d20]" : "text-[#6a1e1e]"
             )}
             style={{
