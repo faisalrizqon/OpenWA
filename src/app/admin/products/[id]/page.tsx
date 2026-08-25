@@ -207,21 +207,6 @@ export default async function ProductDetailPage({
         </Card>
       )}
 
-      {/* Foto Produk — galeri ala marketplace seller, admin only */}
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Foto Produk</CardTitle>
-            <CardDescription>
-              Galeri foto yang tampil di katalog publik — maksimal 8 foto. Arahkan
-              kursor ke foto untuk menghapusnya.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ProductGalleryControl productId={product.id} images={product.images} />
-          </CardContent>
-        </Card>
-      )}
       {/* Units */}
       <Card>
         <CardHeader>
@@ -354,6 +339,21 @@ export default async function ProductDetailPage({
           )}
         </CardContent>
       </Card>
+      {/* Foto Produk — galeri ala marketplace seller, admin only */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Foto Produk</CardTitle>
+            <CardDescription>
+              Galeri foto yang tampil di katalog publik — maksimal 8 foto. Klik
+              foto untuk melihat detail, klik ✕ untuk menghapus.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ProductGalleryControl productId={product.id} images={product.images} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Aturan denda keterlambatan — admin only */}
       {isAdmin && (
