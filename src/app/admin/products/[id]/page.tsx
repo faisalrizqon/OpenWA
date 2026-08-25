@@ -366,7 +366,7 @@ export default async function ProductDetailPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={saveLateFee} className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+            <form action={saveLateFee} className="space-y-3">
               <input type="hidden" name="productId" value={product.id} />
               <div className="space-y-1">
                 <Label htmlFor="feePerDay">Denda per hari (Rp)</Label>
@@ -404,7 +404,7 @@ export default async function ProductDetailPage({
                   ]}
                 />
               </div>
-              <div className="flex items-end">
+              <div className="flex justify-end border-t pt-3">
                 <Button type="submit" variant="secondary">
                   Simpan Denda
                 </Button>
