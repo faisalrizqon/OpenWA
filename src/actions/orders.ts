@@ -6,10 +6,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { countOverlapUnits } from "@/lib/availability";
-import { calcSubtotal } from "@/lib/pricing";
-import { nextOrderNumber } from "@/lib/orderNumber";
+import { calcSubtotal, getTierPrice } from "@/lib/pricing";
 import { saveUpload, deleteStoredFile } from "@/lib/storage";
 import { requireAdmin, requireMitraOrAdmin } from "@/lib/permissions";
+import { logAudit } from "@/lib/audit";
 interface ItemInput {
   productId: number;
   quantity: number;
@@ -188,6 +188,14 @@ export async function createOrder(formData: FormData) {
         });
       }
 
+      await logAudit(tx, {
+        entityType: "order",
+        entityId: order.id,
+        action: "create",
+        summary: `Order ${order.orderNumber} dibuat (${items.length} item)`,
+        userId: user.id,
+      });
+
       return order.id;
     });
   } catch (e) {
@@ -228,7 +236,7 @@ const VALID_STATUSES = ["booking", "active", "late", "completed", "cancelled"];
 
 /** Efek samping perubahan status — dipakai update tunggal & bulk.
  *  Masuk "active" assign unit (+ log rented); keluar masa sewa release unit (+ log returned). */
-async function applyStatusChange(tx: Tx, orderId: string, newStatus: string) {
+async function applyStatusChange(tx: Tx, orderId: string, newStatus: string, userId: string | null) {
   const order = await tx.order.findUnique({ where: { id: orderId } });
   if (!order) throw new Error("Order tidak ditemukan");
   if (order.status === newStatus) return;
@@ -275,10 +283,17 @@ async function applyStatusChange(tx: Tx, orderId: string, newStatus: string) {
         : {}),
     },
   });
+  await logAudit(tx, {
+    entityType: "order",
+    entityId: orderId,
+    action: "status_change",
+    summary: `Status ${order.status} → ${newStatus}`,
+    userId,
+  });
 }
 
 export async function updateOrderStatus(formData: FormData) {
-  const _user = await requireMitraOrAdmin();
+  const user = await requireMitraOrAdmin();
   const orderId = String(formData.get("orderId") ?? "");
   const newStatus = String(formData.get("newStatus") ?? "");
   const back = `/admin/orders/${orderId}`;
@@ -288,7 +303,7 @@ export async function updateOrderStatus(formData: FormData) {
 
   try {
     await prisma.$transaction(async (tx) => {
-      await applyStatusChange(tx, orderId, newStatus);
+      await applyStatusChange(tx, orderId, newStatus, user.id);
     });
   } catch (e) {
     if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
@@ -302,7 +317,7 @@ export async function updateOrderStatus(formData: FormData) {
 
 /** Ubah status massal (bulk action dari daftar orders). Efek samping sama per order. */
 export async function bulkUpdateOrderStatus(formData: FormData) {
-  const _user = await requireMitraOrAdmin();
+  const user = await requireMitraOrAdmin();
   const newStatus = String(formData.get("newStatus") ?? "");
   const orderIds = formData.getAll("orderIds").map((v) => String(v));
 
@@ -316,7 +331,7 @@ export async function bulkUpdateOrderStatus(formData: FormData) {
     if (!orderId) continue;
     try {
       await prisma.$transaction(async (tx) => {
-        await applyStatusChange(tx, orderId, newStatus);
+        await applyStatusChange(tx, orderId, newStatus, user.id);
       });
       updated++;
     } catch (e) {
@@ -333,7 +348,7 @@ export async function bulkUpdateOrderStatus(formData: FormData) {
 
 /** Hapus order beserta item, pembayaran, dan foto return (cascade). */
 export async function deleteOrder(formData: FormData) {
-  const _user = await requireAdmin();
+  const user = await requireAdmin();
   const orderId = String(formData.get("orderId") ?? "");
   if (!orderId) redirect("/admin/orders");
 
@@ -341,6 +356,13 @@ export async function deleteOrder(formData: FormData) {
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({ where: { id: orderId } });
       if (!order) return;
+      await logAudit(tx, {
+        entityType: "order",
+        entityId: orderId,
+        action: "delete",
+        summary: `Order ${order.orderNumber} dihapus`,
+        userId: user.id,
+      });
       // Lepas unit yang masih tercatat pada item (aman walau sudah released)
       await releaseOrderUnits(tx, orderId);
       await tx.order.delete({ where: { id: orderId } });
@@ -356,7 +378,7 @@ export async function deleteOrder(formData: FormData) {
 }
 
 export async function addPayment(formData: FormData) {
-  const _user = await requireMitraOrAdmin();
+  const user = await requireMitraOrAdmin();
   const orderId = String(formData.get("orderId") ?? "");
   const amount = Number(formData.get("amount"));
   const paymentType = String(formData.get("paymentType") ?? "");
@@ -380,6 +402,13 @@ export async function addPayment(formData: FormData) {
       note: note || null,
     },
   });
+  await logAudit(prisma, {
+    entityType: "payment",
+    entityId: orderId,
+    action: "create",
+    summary: `Pembayaran ${paymentType} Rp ${amount.toLocaleString("id-ID")} dicatat`,
+    userId: user.id,
+  });
 
   revalidatePath(back);
   revalidatePath("/admin/orders");
@@ -389,7 +418,7 @@ export async function addPayment(formData: FormData) {
 
 /** Update pembayaran yang sudah tercatat (edit nominal/cara/keterangan). */
 export async function editPayment(formData: FormData) {
-  const _user = await requireMitraOrAdmin();
+  const user = await requireMitraOrAdmin();
   const paymentId = String(formData.get("paymentId") ?? "");
   const amount = Number(formData.get("amount"));
   const method = String(formData.get("method") ?? "").trim();
@@ -404,6 +433,13 @@ export async function editPayment(formData: FormData) {
     where: { id: Number(paymentId) },
     data: { amount, method: method || null, note: note || null },
   });
+  await logAudit(prisma, {
+    entityType: "payment",
+    entityId: paymentId,
+    action: "update",
+    summary: `Pembayaran diedit (nominal Rp ${amount.toLocaleString("id-ID")})`,
+    userId: user.id,
+  });
 
   revalidatePath(back);
   revalidatePath("/admin/orders");
@@ -413,13 +449,20 @@ export async function editPayment(formData: FormData) {
 
 /** Hapus pembayaran dari order (misal admin salah input). */
 export async function deletePayment(formData: FormData) {
-  const _user = await requireAdmin();
+  const user = await requireAdmin();
   const paymentId = String(formData.get("paymentId") ?? "");
   const orderId = String(formData.get("orderId") ?? "");
   if (!paymentId || !orderId) redirect(`/admin/orders?error=payment`);
 
   try {
     await prisma.payment.delete({ where: { id: Number(paymentId) } });
+    await logAudit(prisma, {
+      entityType: "payment",
+      entityId: paymentId,
+      action: "delete",
+      summary: "Pembayaran dihapus",
+      userId: user.id,
+    });
   } catch (e) {
     if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
     redirect(`/admin/orders/${orderId}?error=payment`);
@@ -438,7 +481,7 @@ const RETURN_MIME_EXT: Record<string, string> = {
 };
 
 export async function submitReturn(formData: FormData) {
-  const _user = await requireMitraOrAdmin();
+  const user = await requireMitraOrAdmin();
   const orderId = String(formData.get("orderId") ?? "");
   const notes = String(formData.get("notes") ?? "").trim();
   const back = `/admin/orders/${orderId}`;
@@ -512,6 +555,13 @@ export async function submitReturn(formData: FormData) {
         where: { id: orderId },
         data: { status: "completed", returnedAt: new Date() },
       });
+      await logAudit(tx, {
+        entityType: "order",
+        entityId: orderId,
+        action: "status_change",
+        summary: "Order dikembalikan (completed)",
+        userId: user.id,
+      });
     });
   } catch (e) {
     if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
@@ -539,4 +589,217 @@ export async function deleteReturnPhoto(formData: FormData) {
 
   revalidateOrderPaths(orderId);
   redirect(`${back}?return=deleted`);
+}
+
+/** Tambah foto kondisi return untuk order yang SUDAH selesai — revisi tanpa
+ * mengubah status & unit (unit sudah di-release saat order diselesaikan). */
+export async function addReturnPhotos(formData: FormData) {
+  const _user = await requireMitraOrAdmin();
+  const orderId = String(formData.get("orderId") ?? "");
+  const notes = String(formData.get("notes") ?? "").trim();
+  const back = `/admin/orders/${orderId}`;
+
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) redirect("/admin/orders");
+
+  // Validasi foto: mime gambar & ≤ 5MB per file
+  const photos: { bytes: Buffer; ext: string }[] = [];
+  for (const entry of formData.getAll("photos")) {
+    if (!(entry instanceof File) || entry.size === 0) continue;
+    const ext = RETURN_MIME_EXT[entry.type];
+    if (!ext || entry.size > 5 * 1024 * 1024) redirect(`${back}?error=file`);
+    photos.push({ bytes: Buffer.from(await entry.arrayBuffer()), ext });
+  }
+  if (photos.length === 0) redirect(`${back}?error=return`);
+
+  for (let i = 0; i < photos.length; i++) {
+    const fileName = `${orderId}-add-${i}-${Date.now()}.${photos[i].ext}`;
+    const stored = await saveUpload("return", fileName, photos[i].bytes);
+    await prisma.returnPhoto.create({
+      data: {
+        orderId,
+        filePath: stored.filePath,
+        fileSize: stored.fileSize,
+        fileHash: stored.fileHash,
+        note: notes || null,
+      },
+    });
+  }
+
+  revalidateOrderPaths(orderId);
+  redirect(`${back}?return=photos-added`);
+}
+
+/** Perpanjang masa sewa order aktif/terlambat: tambah N hari, harga dihitung ulang
+ *  mengikuti tier durasi baru, dan stok periode tambahan dicek dulu. */
+export async function extendOrder(formData: FormData) {
+  const user = await requireMitraOrAdmin();
+  const orderId = String(formData.get("orderId") ?? "");
+  const extraDays = Number(formData.get("extraDays"));
+  const back = `/admin/orders/${orderId}`;
+
+  if (!orderId) redirect("/admin/orders");
+  if (!Number.isInteger(extraDays) || extraDays < 1 || extraDays > 365) {
+    redirect(`${back}?error=extend`);
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: { include: { product: true } } },
+      });
+      if (!order) throw new Error("Order tidak ditemukan");
+      if (order.status !== "active" && order.status !== "late") {
+        throw new Error("Hanya order aktif/terlambat yang bisa diperpanjang");
+      }
+
+      const oldEnd = new Date(order.endDate);
+      const newEnd = new Date(oldEnd.getTime() + extraDays * 24 * 3600_000);
+
+      // Cek stok tiap produk untuk jendela tambahan [oldEnd, newEnd)
+      for (const item of order.items) {
+        const [totalUnits, busyItems] = await Promise.all([
+          tx.unit.count({
+            where: { productId: item.productId, status: { notIn: ["maintenance", "lost"] } },
+          }),
+          tx.orderItem.findMany({
+            where: {
+              productId: item.productId,
+              order: {
+                status: { in: ["booking", "active", "late"] },
+                startDate: { lt: newEnd },
+                endDate: { gt: oldEnd },
+              },
+            },
+            select: {
+              quantity: true,
+              order: { select: { status: true, startDate: true, endDate: true } },
+            },
+          }),
+        ]);
+        const busy = countOverlapUnits(
+          item.productId,
+          oldEnd,
+          newEnd,
+          busyItems.map((it) => ({
+            status: it.order.status,
+            startDate: it.order.startDate,
+            endDate: it.order.endDate,
+            productId: item.productId,
+            quantity: it.quantity,
+          }))
+        );
+        if (item.quantity > totalUnits - busy) {
+          throw new Error(`Stok tidak cukup untuk perpanjangan: ${item.product.name}`);
+        }
+      }
+
+      // Durasi + harga diperbarui mengikuti tier durasi baru (harga flat per durasi)
+      for (const item of order.items) {
+        const durationHours = item.durationHours + extraDays * 24;
+        const unitPrice = getTierPrice(item.product, durationHours);
+        await tx.orderItem.update({
+          where: { id: item.id },
+          data: {
+            durationHours,
+            unitPrice,
+            subtotal: calcSubtotal({
+              unitPrice,
+              quantity: item.quantity,
+              discountType: item.discountType as "amount" | "percent" | null,
+              discountValue: item.discountValue,
+            }),
+          },
+        });
+      }
+
+      await tx.order.update({ where: { id: orderId }, data: { endDate: newEnd } });
+      await logAudit(tx, {
+        entityType: "order",
+        entityId: orderId,
+        action: "update",
+        summary: `Sewa diperpanjang +${extraDays} hari (harga mengikuti tier baru)`,
+        userId: user.id,
+        detail: { oldEnd: oldEnd.toISOString(), newEnd: newEnd.toISOString() },
+      });
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
+    const msg = e instanceof Error ? e.message : "Gagal memperpanjang sewa";
+    redirect(`${back}?error=${encodeURIComponent(msg)}`);
+  }
+
+  revalidateOrderPaths(orderId);
+  redirect(back);
+}
+
+/** Set/titip deposit jaminan untuk order (status held). */
+export async function setDeposit(formData: FormData) {
+  const user = await requireMitraOrAdmin();
+  const orderId = String(formData.get("orderId") ?? "");
+  const amount = Number(formData.get("depositAmount"));
+  const back = `/admin/orders/${orderId}`;
+
+  if (!orderId || !Number.isFinite(amount) || amount < 0) redirect(`${back}?error=payment`);
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { depositAmount: amount, depositStatus: amount > 0 ? "held" : "none" },
+  });
+  await logAudit(prisma, {
+    entityType: "order",
+    entityId: orderId,
+    action: "update",
+    summary: amount > 0 ? `Deposit dititip Rp ${amount.toLocaleString("id-ID")}` : "Deposit dihapus",
+    userId: user.id,
+  });
+
+  revalidatePath(back);
+  redirect(back);
+}
+
+/** Refund deposit: buat pembayaran deposit_refund + tandai refunded. */
+export async function refundDeposit(formData: FormData) {
+  const user = await requireMitraOrAdmin();
+  const orderId = String(formData.get("orderId") ?? "");
+  const back = `/admin/orders/${orderId}`;
+  if (!orderId) redirect("/admin/orders");
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) throw new Error("Order tidak ditemukan");
+      if (order.depositStatus !== "held" || order.depositAmount <= 0) {
+        throw new Error("Tidak ada deposit yang dititip");
+      }
+      await tx.payment.create({
+        data: {
+          orderId,
+          amount: order.depositAmount,
+          paymentType: "deposit_refund",
+          note: "Refund deposit jaminan",
+          status: "confirmed",
+        },
+      });
+      await tx.order.update({
+        where: { id: orderId },
+        data: { depositStatus: "refunded" },
+      });
+      await logAudit(tx, {
+        entityType: "order",
+        entityId: orderId,
+        action: "update",
+        summary: `Deposit Rp ${order.depositAmount.toLocaleString("id-ID")} dikembalikan`,
+        userId: user.id,
+      });
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
+    const msg = e instanceof Error ? e.message : "Gagal refund deposit";
+    redirect(`${back}?error=${encodeURIComponent(msg)}`);
+  }
+
+  revalidateOrderPaths(orderId);
+  redirect(back);
 }

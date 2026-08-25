@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ShieldCheck, Upload, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ShieldCheck, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { SelectField } from "@/components/SelectField";
 import { storageUrl } from "@/lib/storage-url";
@@ -17,6 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { deleteGuarantee } from "@/app/(shop)/actions/checkout";
+import { UploadField } from "@/components/UploadField";
 
 const DOC_OPTIONS = [
   { label: "KTP", value: "ktp" },
@@ -142,7 +142,6 @@ export function GuaranteeUpload({
   /** Halaman kembali setelah upload (mis. /admin/orders/<id>). */
   back?: string;
 }) {
-  const [fileName, setFileName] = React.useState("");
   const [docType, setDocType] = React.useState("ktp");
 
   return (
@@ -163,28 +162,13 @@ export function GuaranteeUpload({
 
       <div className="space-y-1.5">
         <Label htmlFor="guaranteeFile">Foto dokumen</Label>
-        <label
-          htmlFor="guaranteeFile"
-          className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed bg-muted/40 px-3 py-3 text-sm transition-colors hover:bg-accent"
-        >
-          <Upload className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          <span className="truncate">
-            {fileName || "Pilih foto KTP / kartu pelajar…"}
-          </span>
-        </label>
-        <input
+        <UploadField
           id="guaranteeFile"
           name="file"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
           required
-          className="sr-only"
-          onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
+          placeholder="Pilih foto KTP / kartu pelajar…"
+          helper="JPG/PNG/WebP, maksimal 5 MB. Dokumen jaminan hanya pelengkap data — bila salah upload, hapus lewat tombol ✕ pada dokumen lalu upload ulang."
         />
-        <p className="text-xs text-muted-foreground">
-          JPG/PNG/WebP, maksimal 5 MB. Dokumen jaminan hanya pelengkap data —
-          bila salah upload, hapus lewat tombol ✕ pada dokumen lalu upload ulang.
-        </p>
       </div>
 
       <Button type="submit" className="h-10 w-full gap-1.5">
