@@ -366,43 +366,45 @@ export default async function ProductDetailPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={saveLateFee} className="space-y-3">
+            <form action={saveLateFee} className="space-y-4">
               <input type="hidden" name="productId" value={product.id} />
-              <div className="space-y-1">
-                <Label htmlFor="feePerDay">Denda per hari (Rp)</Label>
-                <Input
-                  id="feePerDay"
-                  name="feePerDay"
-                  type="number"
-                  min="0"
-                  step="1000"
-                  defaultValue={product.lateFee?.feePerDay ?? 0}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="graceHours">Masa tenggang (jam)</Label>
-                <Input
-                  id="graceHours"
-                  name="graceHours"
-                  type="number"
-                  min="0"
-                  defaultValue={product.lateFee?.graceHours ?? 0}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Setelah lewat masa tenggang, denda mulai dihitung per hari.
-                </p>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="lateFeeActive">Status</Label>
-                <SelectField
-                  id="lateFeeActive"
-                  name="active"
-                  defaultValue={product.lateFee?.active !== false ? "true" : "false"}
-                  options={[
-                    { label: "Aktif", value: "true" },
-                    { label: "Nonaktif", value: "false" },
-                  ]}
-                />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <Label htmlFor="feePerDay">Denda per hari (Rp)</Label>
+                  <Input
+                    id="feePerDay"
+                    name="feePerDay"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    defaultValue={product.lateFee?.feePerDay ?? 0}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="graceHours">Masa tenggang (jam)</Label>
+                  <Input
+                    id="graceHours"
+                    name="graceHours"
+                    type="number"
+                    min="0"
+                    defaultValue={product.lateFee?.graceHours ?? 0}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Setelah lewat masa tenggang, denda mulai dihitung per hari.
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="lateFeeActive">Status</Label>
+                  <SelectField
+                    id="lateFeeActive"
+                    name="active"
+                    defaultValue={product.lateFee?.active !== false ? "true" : "false"}
+                    options={[
+                      { label: "Aktif", value: "true" },
+                      { label: "Nonaktif", value: "false" },
+                    ]}
+                  />
+                </div>
               </div>
               <div className="flex justify-end border-t pt-3">
                 <Button type="submit" variant="secondary">
