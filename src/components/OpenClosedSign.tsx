@@ -70,7 +70,7 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
       <span
         onAnimationEnd={() => setSwinging(false)}
         className={cn(
-          "relative -mt-1 flex w-[200px] flex-col items-center",
+          "relative -mt-1 flex w-[200px] translate-x-[-12px] flex-col items-center",
           swinging ? "animate-sign-swing" : "animate-sign-sway"
         )}
       >
