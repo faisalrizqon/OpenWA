@@ -8,7 +8,8 @@ import { prisma } from "@/lib/db";
 import { countOverlapUnits } from "@/lib/availability";
 import { calcSubtotal } from "@/lib/pricing";
 import { nextOrderNumber } from "@/lib/orderNumber";
-
+import { saveUpload, deleteStoredFile } from "@/lib/storage";
+import { requireAdmin, requireMitraOrAdmin } from "@/lib/permissions";
 interface ItemInput {
   productId: number;
   quantity: number;
@@ -19,6 +20,7 @@ interface ItemInput {
 }
 
 export async function createOrder(formData: FormData) {
+  const user = await requireMitraOrAdmin();
   const customerIdRaw = String(formData.get("customerId") ?? "");
   const newCustomerName = String(formData.get("newCustomerName") ?? "").trim();
   const newCustomerPhone = String(formData.get("newCustomerPhone") ?? "").trim();
@@ -35,7 +37,7 @@ export async function createOrder(formData: FormData) {
   try {
     items = JSON.parse(String(formData.get("items") ?? "[]"));
   } catch {
-    redirect("/orders/new?error=invalid");
+    redirect("/admin/orders/new?error=invalid");
   }
 
   const startDate = new Date(startDateRaw);
@@ -70,7 +72,7 @@ export async function createOrder(formData: FormData) {
       : null;
 
   if (!itemsValid || isNaN(startDate.getTime()) || (!usingExisting && !newCustomerValid)) {
-    redirect("/orders/new?error=invalid");
+    redirect("/admin/orders/new?error=invalid");
   }
 
   let orderId: string;
@@ -162,6 +164,7 @@ export async function createOrder(formData: FormData) {
           deliveryAddress: deliveryMode === "courier" ? deliveryAddress || null : null,
           courierFee,
           rescheduledFrom,
+          handledById: user.id,
         },
       });
 
@@ -190,85 +193,102 @@ export async function createOrder(formData: FormData) {
   } catch (e) {
     if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
     const msg = e instanceof Error ? e.message : "Gagal membuat order";
-    redirect(`/orders/new?error=${encodeURIComponent(msg)}`);
+    redirect(`/admin/orders/new?error=${encodeURIComponent(msg)}`);
   }
 
-  revalidatePath("/orders");
-  revalidatePath("/");
-  revalidatePath("/calendar");
-  redirect(`/orders/${orderId}`);
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin");
+  revalidatePath("/admin/calendar");
+  redirect(`/admin/orders/${orderId}`);
 }
 
-const REVALIDATE_PATHS = ["/orders", "/products", "/calendar", "/"] as const;
+const REVALIDATE_PATHS = ["/admin/orders", "/admin/products", "/admin/calendar", "/"] as const;
 
 function revalidateOrderPaths(orderId: string) {
   for (const p of REVALIDATE_PATHS) revalidatePath(p);
-  revalidatePath(`/orders/${orderId}`);
+  revalidatePath(`/admin/orders/${orderId}`);
 }
 
-async function releaseOrderUnits(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
-  orderId: string
-) {
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+async function releaseOrderUnits(tx: Tx, orderId: string) {
   const items = await tx.orderItem.findMany({ where: { orderId }, select: { unitId: true } });
   for (const it of items) {
     if (it.unitId != null) {
+      const unit = await tx.unit.findUnique({ where: { id: it.unitId }, select: { condition: true } });
       await tx.unit.update({ where: { id: it.unitId }, data: { status: "available" } });
+      await tx.unitEvent.create({
+        data: { unitId: it.unitId, orderId, event: "returned", conditionAfter: unit?.condition ?? null },
+      });
     }
   }
 }
 
+const VALID_STATUSES = ["booking", "active", "late", "completed", "cancelled"];
+
+/** Efek samping perubahan status — dipakai update tunggal & bulk.
+ *  Masuk "active" assign unit (+ log rented); keluar masa sewa release unit (+ log returned). */
+async function applyStatusChange(tx: Tx, orderId: string, newStatus: string) {
+  const order = await tx.order.findUnique({ where: { id: orderId } });
+  if (!order) throw new Error("Order tidak ditemukan");
+  if (order.status === newStatus) return;
+
+  const inRentBefore = order.status === "active" || order.status === "late";
+  const inRentAfter = newStatus === "active" || newStatus === "late";
+
+  if (inRentBefore && !inRentAfter) {
+    await releaseOrderUnits(tx, orderId);
+  }
+
+  // Masuk "active" → assign unit yang belum ter-assign
+  if (newStatus === "active" && order.status !== "active") {
+    const items = await tx.orderItem.findMany({
+      where: { orderId },
+      orderBy: { id: "asc" },
+      include: { product: true },
+    });
+    for (const item of items) {
+      if (item.unitId != null) continue; // sudah ter-assign sebelumnya
+      for (let q = 0; q < item.quantity; q++) {
+        const unit = await tx.unit.findFirst({
+          where: { productId: item.productId, status: "available" },
+        });
+        if (!unit) {
+          throw new Error(`Stok tidak cukup: ${item.product.name}`);
+        }
+        await tx.unit.update({ where: { id: unit.id }, data: { status: "rented" } });
+        await tx.unitEvent.create({ data: { unitId: unit.id, orderId, event: "rented" } });
+        // qty > 1: unitId hanya menyimpan unit pertama; sisanya dilacak via status rented.
+        if (q === 0) {
+          await tx.orderItem.update({ where: { id: item.id }, data: { unitId: unit.id } });
+        }
+      }
+    }
+  }
+
+  await tx.order.update({
+    where: { id: orderId },
+    data: {
+      status: newStatus,
+      ...(newStatus === "completed" && order.returnedAt == null
+        ? { returnedAt: new Date() }
+        : {}),
+    },
+  });
+}
+
 export async function updateOrderStatus(formData: FormData) {
+  const _user = await requireMitraOrAdmin();
   const orderId = String(formData.get("orderId") ?? "");
   const newStatus = String(formData.get("newStatus") ?? "");
-  const back = `/orders/${orderId}`;
+  const back = `/admin/orders/${orderId}`;
 
-  if (!orderId) redirect("/orders");
+  if (!orderId) redirect("/admin/orders");
+  if (!VALID_STATUSES.includes(newStatus)) redirect(`${back}?error=status`);
 
   try {
     await prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({ where: { id: orderId } });
-      if (!order) throw new Error("Order tidak ditemukan");
-
-      const from = order.status;
-
-      // booking → active: assign units
-      if (from === "booking" && newStatus === "active") {
-        const items = await tx.orderItem.findMany({
-          where: { orderId },
-          orderBy: { id: "asc" },
-          include: { product: true },
-        });
-        for (const item of items) {
-          for (let q = 0; q < item.quantity; q++) {
-            const unit = await tx.unit.findFirst({
-              where: { productId: item.productId, status: "available" },
-            });
-            if (!unit) {
-              throw new Error(`Stok tidak cukup: ${item.product.name}`);
-            }
-            await tx.unit.update({ where: { id: unit.id }, data: { status: "rented" } });
-            // qty > 1: unitId hanya bisa menyimpan satu — pakai kolom unitId pada item
-            // pertama; unit tambahan dilacak via status rented + kalender per unit.
-            if (q === 0) {
-              await tx.orderItem.update({ where: { id: item.id }, data: { unitId: unit.id } });
-            }
-          }
-        }
-        await tx.order.update({ where: { id: orderId }, data: { status: "active" } });
-      } else if (from === "active" && newStatus === "late") {
-        await tx.order.update({ where: { id: orderId }, data: { status: "late" } });
-      } else if (
-        (from === "active" || from === "late") &&
-        newStatus === "completed"
-      ) {
-        await releaseOrderUnits(tx, orderId);
-        await tx.order.update({ where: { id: orderId }, data: { status: "completed" } });
-      } else if (newStatus === "cancelled") {
-        await releaseOrderUnits(tx, orderId);
-        await tx.order.update({ where: { id: orderId }, data: { status: "cancelled" } });
-      }
-      // Transisi tidak valid → abaikan tanpa error
+      await applyStatusChange(tx, orderId, newStatus);
     });
   } catch (e) {
     if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
@@ -280,13 +300,69 @@ export async function updateOrderStatus(formData: FormData) {
   redirect(back);
 }
 
+/** Ubah status massal (bulk action dari daftar orders). Efek samping sama per order. */
+export async function bulkUpdateOrderStatus(formData: FormData) {
+  const _user = await requireMitraOrAdmin();
+  const newStatus = String(formData.get("newStatus") ?? "");
+  const orderIds = formData.getAll("orderIds").map((v) => String(v));
+
+  if (!VALID_STATUSES.includes(newStatus) || orderIds.length === 0) {
+    redirect("/admin/orders?error=bulk");
+  }
+
+  const errors: string[] = [];
+  let updated = 0;
+  for (const orderId of orderIds) {
+    if (!orderId) continue;
+    try {
+      await prisma.$transaction(async (tx) => {
+        await applyStatusChange(tx, orderId, newStatus);
+      });
+      updated++;
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
+      errors.push(`${orderId}: ${e instanceof Error ? e.message : "gagal"}`);
+    }
+  }
+
+  for (const p of REVALIDATE_PATHS) revalidatePath(p);
+  const qs = new URLSearchParams({ bulk: String(updated) });
+  if (errors.length > 0) qs.set("bulk_errors", errors.join(" | "));
+  redirect(`/admin/orders?${qs.toString()}`);
+}
+
+/** Hapus order beserta item, pembayaran, dan foto return (cascade). */
+export async function deleteOrder(formData: FormData) {
+  const _user = await requireAdmin();
+  const orderId = String(formData.get("orderId") ?? "");
+  if (!orderId) redirect("/admin/orders");
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) return;
+      // Lepas unit yang masih tercatat pada item (aman walau sudah released)
+      await releaseOrderUnits(tx, orderId);
+      await tx.order.delete({ where: { id: orderId } });
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
+    const msg = e instanceof Error ? e.message : "Gagal menghapus order";
+    redirect(`/admin/orders?error=${encodeURIComponent(msg)}`);
+  }
+
+  for (const p of REVALIDATE_PATHS) revalidatePath(p);
+  redirect("/admin/orders?deleted=1");
+}
+
 export async function addPayment(formData: FormData) {
+  const _user = await requireMitraOrAdmin();
   const orderId = String(formData.get("orderId") ?? "");
   const amount = Number(formData.get("amount"));
   const paymentType = String(formData.get("paymentType") ?? "");
   const method = String(formData.get("method") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
-  const back = `/orders/${orderId}`;
+  const back = `/admin/orders/${orderId}`;
 
   if (!orderId || !Number.isFinite(amount) || amount <= 0) {
     redirect(`${back}?error=payment`);
@@ -306,9 +382,53 @@ export async function addPayment(formData: FormData) {
   });
 
   revalidatePath(back);
-  revalidatePath("/orders");
-  revalidatePath("/");
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin");
   redirect(back);
+}
+
+/** Update pembayaran yang sudah tercatat (edit nominal/cara/keterangan). */
+export async function editPayment(formData: FormData) {
+  const _user = await requireMitraOrAdmin();
+  const paymentId = String(formData.get("paymentId") ?? "");
+  const amount = Number(formData.get("amount"));
+  const method = String(formData.get("method") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+  const back = `/admin/orders/${String(formData.get("orderId"))}`;
+
+  if (!paymentId || !Number.isFinite(amount) || amount <= 0) {
+    redirect(`${back}?error=payment`);
+  }
+
+  await prisma.payment.update({
+    where: { id: Number(paymentId) },
+    data: { amount, method: method || null, note: note || null },
+  });
+
+  revalidatePath(back);
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin");
+  redirect(back);
+}
+
+/** Hapus pembayaran dari order (misal admin salah input). */
+export async function deletePayment(formData: FormData) {
+  const _user = await requireAdmin();
+  const paymentId = String(formData.get("paymentId") ?? "");
+  const orderId = String(formData.get("orderId") ?? "");
+  if (!paymentId || !orderId) redirect(`/admin/orders?error=payment`);
+
+  try {
+    await prisma.payment.delete({ where: { id: Number(paymentId) } });
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
+    redirect(`/admin/orders/${orderId}?error=payment`);
+  }
+
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin");
+  redirect(`/admin/orders/${orderId}`);
 }
 
 const RETURN_MIME_EXT: Record<string, string> = {
@@ -318,9 +438,10 @@ const RETURN_MIME_EXT: Record<string, string> = {
 };
 
 export async function submitReturn(formData: FormData) {
+  const _user = await requireMitraOrAdmin();
   const orderId = String(formData.get("orderId") ?? "");
   const notes = String(formData.get("notes") ?? "").trim();
-  const back = `/orders/${orderId}`;
+  const back = `/admin/orders/${orderId}`;
 
   let conditions: { unitId: number; condition: string }[] = [];
   try {
@@ -350,22 +471,41 @@ export async function submitReturn(formData: FormData) {
     photos.push({ bytes: Buffer.from(await f.arrayBuffer()), ext });
   }
 
-  const dir = path.join(process.cwd(), "public", "uploads", "return");
-  await mkdir(dir, { recursive: true });
-  const written: string[] = [];
+  const written: { filePath: string; fileSize: number; fileHash: string }[] = [];
   for (let i = 0; i < photos.length; i++) {
     const fileName = `${orderId}-${i}-${Date.now()}.${photos[i].ext}`;
-    await writeFile(path.join(dir, fileName), photos[i].bytes);
-    written.push(`/uploads/return/${fileName}`);
+    const stored = await saveUpload("return", fileName, photos[i].bytes);
+    written.push(stored);
   }
 
   try {
     await prisma.$transaction(async (tx) => {
-      for (const filePath of written) {
-        await tx.returnPhoto.create({ data: { orderId, filePath, note: notes || null } });
+      for (const photo of written) {
+        await tx.returnPhoto.create({
+          data: {
+            orderId,
+            filePath: photo.filePath,
+            fileSize: photo.fileSize,
+            fileHash: photo.fileHash,
+            note: notes || null,
+          },
+        });
       }
       for (const c of conditions) {
+        const before = await tx.unit.findUnique({ where: { id: c.unitId }, select: { condition: true } });
         await tx.unit.update({ where: { id: c.unitId }, data: { condition: c.condition } });
+        if (before && before.condition !== c.condition) {
+          await tx.unitEvent.create({
+            data: {
+              unitId: c.unitId,
+              orderId,
+              event: "condition",
+              conditionBefore: before.condition,
+              conditionAfter: c.condition,
+              note: notes || null,
+            },
+          });
+        }
       }
       await releaseOrderUnits(tx, orderId);
       await tx.order.update({
@@ -380,4 +520,23 @@ export async function submitReturn(formData: FormData) {
 
   revalidateOrderPaths(orderId);
   redirect(back);
+}
+
+/** Hapus foto kondisi return yang sudah terupload — revisi bila salah upload. */
+export async function deleteReturnPhoto(formData: FormData) {
+  const returnPhotoId = Number(formData.get("returnPhotoId"));
+  const orderId = String(formData.get("orderId") ?? "");
+  const _user = await requireAdmin(); // Hanya admin
+
+  const back = `/admin/orders/${orderId}`;
+
+  const photo = await prisma.returnPhoto.findUnique({ where: { id: returnPhotoId } });
+  if (!photo || photo.orderId !== orderId) redirect(`${back}?error=invalid`);
+
+  // Hapus file fisik dari storage (idempotent), lalu record DB-nya
+  await deleteStoredFile(photo.filePath);
+  await prisma.returnPhoto.delete({ where: { id: returnPhotoId } });
+
+  revalidateOrderPaths(orderId);
+  redirect(`${back}?return=deleted`);
 }
