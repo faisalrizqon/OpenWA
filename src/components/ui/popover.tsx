@@ -29,8 +29,7 @@ function PopoverContent({
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "relative max-h-[min(var(--available-height),90vh)] min-w-(--available-width) w-max overflow-auto rounded-2xl border bg-popover p-4 text-popover-foreground shadow-lg outline-none",
-            "max-w-[calc(100vw-2rem)]",
+            "relative max-h-[min(var(--available-height),90vh)] w-max overflow-auto rounded-2xl border bg-popover p-4 text-popover-foreground shadow-lg outline-none",
             "[&_button]:!mb-1 [&_button]:!mt-0",
             className
           )}
