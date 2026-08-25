@@ -13,8 +13,7 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
     <div className="flex min-h-screen flex-col">
       <ShopTheme />
       <header className="glass sticky top-0 z-30 border-b border-border/70">
-        {/* Top bar ramping: logo kiri, nav kanan.
-            Papan OPEN/CLOSED menggantung di kiri link Katalog (hanya md+), melewati batas bawah top bar. */}
+        {/* Top bar ramping: logo kiri, papan OPEN/CLOSED tengah, nav kanan */}
         <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-2 md:px-8">
           {/* Kiri: logo */}
           <Link href="/" className="flex items-center gap-2.5">
@@ -27,14 +26,15 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
             </span>
           </Link>
 
-          {/* Kanan: nav — kompak di mobile (icon-only, papan gantung disembunyikan) */}
-          <nav className="flex items-center gap-1 sm:gap-2">
-            {/* Slot papan gantung — hanya tampil di md+; di kiri link Katalog */}
-            <div className="relative -ml-[24px] hidden h-10 w-12 md:block">
-              <div className="absolute left-1/2 top-[16px] -translate-x-1/2">
-                <OpenClosedSign hours={shop.hours} />
-              </div>
+          {/* Tengah: papan gantung OPEN/CLOSED di antara logo dan katalog */}
+          <div className="relative hidden md:block h-10 w-[100px]">
+            <div className="absolute left-1/2 top-[16px] -translate-x-1/2">
+              <OpenClosedSign hours={shop.hours} />
             </div>
+          </div>
+
+          {/* Kanan: nav — kompak di mobile (icon-only, papan gantung disembunyikan untuk mobile saja) */}
+          <nav className="flex items-center gap-1 sm:gap-2">
             <Link
               href="/"
               className="inline-flex h-9 items-center rounded-lg px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:px-3 sm:text-sm"
