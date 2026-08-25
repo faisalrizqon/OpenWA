@@ -5,6 +5,7 @@ import {
   PackageCheck,
   ShieldCheck,
   Check,
+  Star,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getStoreSettings } from "@/lib/content";
@@ -28,13 +29,13 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
     where: { id: productId, active: true },
     include: {
       category: { select: { name: true } },
-      units: { where: { status: { notIn: ["maintenance", "lost"] } }, select: { id: true } },
+      units: { where: { status: { notIn: ["maintenance", "lost"] } }, select: { id: true, photoPath: true, serialNumber: true } },
     },
   });
   if (!product) notFound();
 
   const shop = await getStoreSettings();
-
+  const unitPhotos = product.units.filter((u) => u.photoPath).slice(0, 4);
   const available = product.units.length;
   const tiers = PRICE_TIERS.map((t) => ({ ...t, price: product[t.key] as number })).filter(
     (t) => t.price > 0
@@ -47,8 +48,22 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
     include: { category: { select: { name: true } } },
   });
 
+  // Review customer untuk produk ini (dari order selesai)
+  const reviews = await prisma.review.findMany({
+    where: {
+      order: { status: "completed", items: { some: { productId } } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 6,
+    include: { customer: { select: { name: true } } },
+  });
+  const avgRating =
+    reviews.length > 0
+      ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+      : null;
+
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8 md:py-10">
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-10">
       <BackLink href="/" label="Kembali ke Katalog" className="mb-6" />
 
 
@@ -67,16 +82,31 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
               <Camera className="size-24 text-muted-foreground/25" aria-hidden />
             )}
           </div>
-          <div className="grid grid-cols-4 gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="flex aspect-square items-center justify-center rounded-xl border bg-muted/60"
-              >
-                <Camera className="size-6 text-muted-foreground/20" aria-hidden />
-              </div>
-            ))}
-          </div>
+          {unitPhotos.length > 0 ? (
+            <div className="grid grid-cols-4 gap-3">
+              {unitPhotos.map((u) => (
+                <div key={u.id} className="relative aspect-square overflow-hidden rounded-xl border bg-muted/60">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={u.photoPath!}
+                    alt={u.serialNumber ? `Unit ${u.serialNumber}` : `Unit #${u.id}`}
+                    className="size-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex aspect-square items-center justify-center rounded-xl border bg-muted/60"
+                >
+                  <Camera className="size-6 text-muted-foreground/20" aria-hidden />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Info */}
@@ -174,6 +204,49 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
           </div>
         </div>
       </div>
+
+      {/* Reviews produk */}
+      {reviews.length > 0 && (
+        <div className="mt-14">
+          <div className="mb-4 flex items-baseline justify-between">
+            <h2 className="text-lg font-bold tracking-tight">
+              Review penyewa {product.name}
+            </h2>
+            {avgRating != null && (
+              <span className="flex items-center gap-1 text-sm font-semibold">
+                <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden />
+                {avgRating.toFixed(1)} · {reviews.length} review
+              </span>
+            )}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {reviews.map((r) => (
+              <div key={r.id} className="rounded-2xl border bg-card p-4">
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star
+                      key={i}
+                      className={`size-3.5 ${
+                        i < r.rating ? "fill-amber-400 text-amber-400" : "text-neutral-200"
+                      }`}
+                      aria-hidden
+                    />
+                  ))}
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {r.text ?? "—"}
+                </p>
+                <p className="mt-2 text-xs font-medium">
+                  {r.customer.name}
+                  <span className="ml-1 font-normal text-muted-foreground">
+                    · {new Date(r.createdAt).toLocaleDateString("id-ID")}
+                  </span>
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Related */}
       {related.length > 0 && (

@@ -9,6 +9,7 @@ datasource db {
   provider = "sqlite"
   url      = "file:../data/mudahsewa.db"
 }
+
 // --- Categories (multi-kategori future-ready) ---
 model Category {
   id          Int       @id @default(autoincrement())
@@ -20,24 +21,25 @@ model Category {
 
 // --- Products with price tier (6/12/24/48 jam) ---
 model Product {
-  id           Int         @id @default(autoincrement())
-  sku          String      @unique
-  categoryId   Int
-  category     Category    @relation(fields: [categoryId], references: [id])
-  name         String
-  description  String?
-  imagePath    String?     // foto produk: /uploads/products/... (null = placeholder ikon)
+  id             Int      @id @default(autoincrement())
+  sku            String   @unique
+  categoryId     Int
+  category       Category @relation(fields: [categoryId], references: [id])
+  name           String
+  description    String?
+  imagePath      String? // foto produk: /uploads/products/... (null = placeholder ikon)
   // Price tiers (flat per duration) — rupiah
-  price6h      Float       @default(0)
-  price12h     Float       @default(0)
-  price24h     Float       @default(0) // default basePrice fallback
-  price48h     Float       @default(0)
-  stockThreshold Int        @default(1)
-  active       Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  
-  units        Unit[]
-  orderItems   OrderItem[]
+  price6h        Float    @default(0)
+  price12h       Float    @default(0)
+  price24h       Float    @default(0) // default basePrice fallback
+  price48h       Float    @default(0)
+  stockThreshold Int      @default(1)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  units      Unit[]
+  orderItems OrderItem[]
+  lateFee    LateFee?
 }
 
 // --- Units (physical serial numbers / asset tags) ---
@@ -46,93 +48,128 @@ model Unit {
   productId    Int
   product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   serialNumber String?     @unique
+  photoPath    String? // foto fisik unit: /uploads/units/... (null = tanpa foto)
   condition    String      @default("Bagus") // Bagus | Cukup | Rusak
   status       String      @default("available") // available | rented | maintenance | lost
   notes        String?
   createdAt    DateTime    @default(now())
-  
   orderItems   OrderItem[]
+  unitEvents   UnitEvent[]
+
+  @@index([productId, status])
 }
 
 // --- Customers + Blacklist + CRM ---
 model Customer {
-  id               Int         @id @default(autoincrement())
-  name             String
-  phone            String      @unique
-  email            String?
-  address          String?
-  notes            String?
-  isBlacklisted    Boolean     @default(false)
-  blacklistReason  String?
-  createdAt        DateTime    @default(now())
-  
-  orders           Order[]
-  documents        Document[]
+  id              Int      @id @default(autoincrement())
+  name            String
+  phone           String   @unique
+  email           String?
+  address         String?
+  notes           String?
+  isBlacklisted   Boolean  @default(false)
+  blacklistReason String?
+  passwordHash    String? // login portal customer (No. HP + password)
+  createdAt       DateTime @default(now())
+
+  orders    Order[]
+  documents Document[]
+  reviews   Review[]
+
+  @@index([email])
 }
 
-// --- Documents (KTP / selfie KTP / kartu pelajar) ---
+// --- Documents (KTP / selfie KTP / kartu pelajar) — bisa per customer atau per order (jaminan) ---
 model Document {
   id         Int      @id @default(autoincrement())
   customerId Int
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  docType    String   // ktp | selfie_ktp | kartu_pelajar | other
+  orderId    String? // jika dokumen diupload sebagai jaminan order tertentu
+  order      Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  docType    String // ktp | selfie_ktp | kartu_pelajar | other
   filePath   String
+  fileSize   Int      @default(0)
+  fileHash   String?  @unique
   uploadedAt DateTime @default(now())
+
+  @@index([customerId])
+  @@index([orderId])
 }
 
 // --- Orders lifecycle: booking → active → late → completed/cancelled ---
 model Order {
-  id           String       @id @default(cuid())
-  orderNumber  String       @unique
-  customerId   Int
-  customer     Customer     @relation(fields: [customerId], references: [id])
-  courier      String?      // delivery service (optional phase 2)
-  shippingCost Float        @default(0)
-  handledBy    String?      // staff name (phase 2 fee tracking)
-  courierFee   Float        @default(0) // Gaji Transport (Rp) dari Notion
+  id          String   @id @default(cuid())
+  orderNumber String   @unique
+  customerId  Int
+  customer    Customer @relation(fields: [customerId], references: [id])
+  courier     String? // delivery service (optional phase 2)
+  courierFee  Float    @default(0) // Gaji Transport (Rp) dari Notion — bisa dicustom di checkout
+  tipAmount   Float    @default(0) // Tip untuk kurir/toko dari customer
+  photoLink   String? // Link drive berisi foto hasil (diisi admin bila customer minta)
+  handledBy   String? // staff name legacy (Notion import) — tetap dipertahankan
+  handledById String? // relasi ke User (fase 2 role, null = order lama / online checkout)
 
-  status       String       @default("booking") // booking | active | late | completed | cancelled
-  startDate    DateTime
-  endDate      DateTime
-  noteOrder    String?      // sisa catatan bebas dari Notion (Catatan)
+  status          String    @default("booking") // booking | active | late | completed | cancelled
+  startDate       DateTime
+  endDate         DateTime
+  noteOrder       String? // sisa catatan bebas dari Notion (Catatan)
   // --- Field hasil normalisasi kolom Catatan Notion ---
-  guaranteeType   String?   // ktp | kartu_pelajar | lainnya (Jaminan: KTP)
-  guaranteeNumber String?   // nomor identitas jaminan
+  guaranteeType   String? // ktp | kartu_pelajar | lainnya (Jaminan: KTP)
+  guaranteeNumber String? // nomor identitas jaminan
   deliveryMode    String    @default("pickup") // pickup | courier (COD: Weleri / antar kurir)
-  deliveryAddress String?   // alamat antar/pickup
+  deliveryAddress String? // alamat antar/pickup
+  depositAmount   Float    @default(0) // uang jaminan yang dititipkan (Rp)
+  depositStatus   String   @default("none") // none | held | refunded
   rescheduledFrom DateTime? // order di-reschedule dari tanggal ini (Reschedule dari ...)
   returnedAt      DateTime? // tanggal aktual pengembalian (kolom Returned Notion)
 
   // --- Customer self-checkout / payment gateway ---
-  source        String    @default("admin")  // admin | online (checkout dari katalog)
-  paymentMethod String?    // cash | qris | midtrans
-  paymentStatus String    @default("unpaid") // unpaid | pending | paid | partial | refunded
-  paymentRef    String?    // midtrans order_id / referensi gateway
+  source        String  @default("admin") // admin | online (checkout dari katalog)
+  paymentMethod String? // cash | qris | midtrans
+  paymentStatus String  @default("unpaid") // unpaid | pending | paid | partial | refunded
+  paymentRef    String? // midtrans order_id / referensi gateway
 
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  
-  items        OrderItem[]
-  payments     Payment[]
-  returnPhotos ReturnPhoto[]
+  // --- Promo ---
+  promoCodeId   Int?
+  promoCode     PromoCode? @relation(fields: [promoCodeId], references: [id])
+  promoDiscount Float      @default(0) // potongan dari kode promo
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items         OrderItem[]
+  payments      Payment[]
+  returnPhotos  ReturnPhoto[]
+  handledByUser User?         @relation("OrderHandledBy", fields: [handledById], references: [id])
+  documents     Document[]
+  unitEvents    UnitEvent[]
+  review        Review?
+
+  @@index([status])
+  @@index([startDate, endDate])
+  @@index([createdAt])
+  @@index([handledById])
 }
 
 // --- Order Items with explicit durationHours and locked unitPrice ---
 model OrderItem {
-  id            Int      @id @default(autoincrement())
-  orderId       String
-  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId     Int
-  product       Product  @relation(fields: [productId], references: [id])
-  unitId        Int?     // optional physical unit assignment when activated
-  unit          Unit?    @relation(fields: [unitId], references: [id])
-  
-  quantity      Int      @default(1)
-  durationHours Int      @default(24)
-  unitPrice     Float    // harga tier yang dikunci saat order dibuat
-  discountType  String?  // amount | percent | null
-  discountValue Float    @default(0)
-  subtotal      Float    @default(0)
+  id        Int     @id @default(autoincrement())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  unitId    Int? // optional physical unit assignment when activated
+  unit      Unit?   @relation(fields: [unitId], references: [id])
+
+  quantity      Int     @default(1)
+  durationHours Int     @default(24)
+  unitPrice     Float // harga tier yang dikunci saat order dibuat
+  discountType  String? // amount | percent | null
+  discountValue Float   @default(0)
+  subtotal      Float   @default(0)
+
+  @@index([productId, orderId])
+  @@index([unitId])
 }
 
 // --- Payments: dp, pelunasan, denda, deposit_refund ---
@@ -141,13 +178,16 @@ model Payment {
   orderId     String
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   amount      Float
-  paymentType String   // dp | pelunasan | denda | deposit_refund
-  method      String?  // cash | qris | midtrans | transfer_bca | transfer_mandiri | etc
-  status      String   @default("confirmed") // pending | confirmed | failed (pending = menunggu verifikasi admin/gateway)
-  proofPath   String?  // bukti transfer / QRIS upload dari customer
-  gatewayRef  String?  // midtrans transaction_id / order_id
+  paymentType String // dp | pelunasan | denda | deposit_refund
+  method      String? // cash | qris | midtrans | transfer_bca | transfer_mandiri | etc
+  status      String   @default("pending") // pending | confirmed | failed (pending = menunggu verifikasi admin/gateway)
+  proofPath   String? // bukti transfer / QRIS upload dari customer
+  gatewayRef  String? // midtrans transaction_id / order_id
   note        String?
   paidAt      DateTime @default(now())
+
+  @@index([orderId, paidAt])
+  @@index([method])
 }
 
 // --- Return validation with photos & condition check ---
@@ -156,6 +196,236 @@ model ReturnPhoto {
   orderId    String
   order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   filePath   String
+  fileSize   Int      @default(0)
+  fileHash   String?
   note       String?
   uploadedAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+// --- Storefront CMS: identitas toko & teks halaman depan (baris tunggal, id=1) ---
+model StoreContent {
+  id Int @id @default(1)
+
+  // Identitas toko (header, footer, kontak)
+  storeName String @default("MudahSewa")
+  tagline   String @default("Sewa Kamera & Digicam Harian")
+  whatsapp  String @default("081234567890")
+  location  String @default("Weleri, Kendal")
+  hours     String @default("Setiap hari · 08.00 – 21.00")
+
+  // Tampilan halaman depan
+  theme       String @default("y2k") // y2k | album | mono | coquette
+  heroVariant String @default("polaroid") // polaroid | exif | filmstrip | stamp | flip | grid | sticker
+
+  // Headline hero (accent dirender italic + warna primer)
+  heroTitleBefore String @default("Sewa kamera")
+  heroAccent      String @default("impianmu")
+  heroTitleAfter  String @default(", tanpa ribet.")
+  heroSubtitle    String @default("Digicam & kamera pilihan siap dipakai untuk liburan, konten, atau acara spesial. Booking cukup lewat WhatsApp — cepat dan gampang.")
+
+  // Badge kepercayaan di bawah hero
+  trustBadge1 String @default("Jaminan KTP / kartu pelajar")
+  trustBadge2 String @default("Setiap hari · 08.00 – 21.00")
+  trustBadge3 String @default("Dipercaya pelajar Weleri")
+
+  // Judul tiap section halaman depan
+  catalogTitle        String @default("Pilih kameramu")
+  testimonialTitle    String @default("Kata mereka yang sudah sewa")
+  testimonialSubtitle String @default("Review asli dari pelanggan kami")
+  videoTitle          String @default("Video & tutorial")
+  videoSubtitle       String @default("Tips, review, dan cara booking di MudahSewa")
+  ctaTitle            String @default("Tidak menemukan yang kamu cari?")
+  ctaSubtitle         String @default("Chat admin kami — kami bantu carikan kamera yang pas dengan kebutuhan & budgetmu.")
+
+  // --- Konfigurasi metode pembayaran online ---
+  cashEnabled     Boolean @default(true)
+  qrisEnabled     Boolean @default(true)
+  transferEnabled Boolean @default(false)
+  // QRIS statis (fallback bila Midtrans tidak dikonfigurasi)
+  qrisImagePath    String @default("/qris.png")
+  qrisMerchantName String @default("MudahSewa")
+  // Rekening bank untuk pembayaran transfer manual
+  transferBankName        String @default("")
+  transferAccountNumber   String @default("")
+  transferAccountHolder   String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- Foto hero halaman depan ---
+model HeroImage {
+  id        Int      @id @default(autoincrement())
+  name      String
+  imagePath String? // /uploads/hero/... (null/"" = ikon placeholder)
+  timestamp String   @default("") // hiasan ala digicam, mis. "23 · 08 · 26"
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// --- Kartu keunggulan di bawah hero ---
+model Perk {
+  id          Int      @id @default(autoincrement())
+  icon        String   @default("camera") // wallet | shield | clock | star | camera | truck | heart | zap | package | badge
+  title       String
+  description String
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// --- Testimoni pelanggan ---
+model Testimonial {
+  id        Int      @id @default(autoincrement())
+  name      String
+  context   String   @default("") // mis. "Sewa digicam untuk liburan ke Dieng"
+  text      String
+  rating    Int      @default(5) // 1-5 bintang
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// --- Konten video / tutorial ---
+model VideoContent {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String   @default("")
+  href        String   @default("#") // link video / sosmed
+  sortOrder    Int      @default(0)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String?
+  role         String   @default("mitra") // admin | mitra
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  handledOrders Order[]   @relation("OrderHandledBy")
+  auditLogs     AuditLog[]
+
+  @@index([role])
+  @@index([active])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// --- Riwayat per unit: log event sewa/return/maintenance per unit fisik ---
+model UnitEvent {
+  id              Int      @id @default(autoincrement())
+  unitId          Int
+  unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  orderId         String? // null untuk event manual (maintenance, dll)
+  order           Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  event           String // rented | returned | condition | maintenance | available
+  conditionBefore String?
+  conditionAfter  String?
+  note            String?
+  createdAt       DateTime @default(now())
+
+  @@index([unitId, createdAt])
+}
+
+// --- Review & rating pelanggan untuk order selesai ---
+model Review {
+  id         Int      @id @default(autoincrement())
+  orderId    String   @unique // satu review per order
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  rating     Int // 1-5 bintang
+  text       String?
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+// --- Kode promo / kupon diskon ---
+model PromoCode {
+  id             Int      @id @default(autoincrement())
+  code           String   @unique
+  discountType   String // amount | percent
+  discountValue  Float // rupiah (amount) atau persen (percent)
+  minOrderAmount Float? // minimal subtotal item untuk berlaku
+  maxDiscount    Float? // plafon diskon (hanya untuk percent)
+  startDate      DateTime
+  endDate        DateTime
+  usageLimit     Int      @default(0) // 0 = tanpa batas
+  usedCount      Int      @default(0)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  orders Order[]
+}
+
+// --- Audit Log: jejak perubahan data penting (order/produk/pelanggan/pembayaran/user) ---
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  entityType String   // order | product | customer | unit | payment | user | settings
+  entityId   String
+  action     String   // create | update | delete | status_change
+  summary    String   // ringkasan manusia, mis. "status booking → active"
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  detail     String?  // JSON detail tambahan
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// --- Denda keterlambatan otomatis per produk ---
+model LateFee {
+  id          Int     @id @default(autoincrement())
+  productId   Int     @unique
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  feePerDay   Float   @default(0) // denda per hari keterlambatan (Rp)
+  graceHours  Int     @default(0) // jam tenggang setelah endDate sebelum dihitung
+  active      Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
