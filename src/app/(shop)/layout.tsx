@@ -30,8 +30,8 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
           {/* Kanan: nav */}
           <nav className="flex items-center gap-2">
             {/* Slot papan gantung — di kiri link Katalog; paku turun sedikit di bawah
-                garis tengah teks "Katalog", geser kiri via -ml-1. */}
-            <div className="relative -ml-1 h-10 w-12">
+                garis tengah teks "Katalog", geser kiri via -ml-3. */}
+            <div className="relative -ml-3 h-10 w-12">
               <div className="absolute left-1/2 top-[16px] -translate-x-1/2">
                 <OpenClosedSign hours={shop.hours} />
               </div>
