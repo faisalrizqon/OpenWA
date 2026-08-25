@@ -13,17 +13,10 @@ export default async function PortalLoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo — link ke landing page */}
         <Link href="/" className="mb-8 flex items-center justify-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+          <span className="flex size-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
             <Camera className="size-5" aria-hidden />
           </span>
-          <span className="leading-tight">
-            <span className="block text-[15px] font-extrabold tracking-tight">
-              {shop.storeName}
-            </span>
-            <span className="hidden text-xs text-muted-foreground sm:block">
-              {shop.tagline}
-            </span>
-          </span>
+          <span className="text-lg font-extrabold tracking-tight">{shop.storeName}</span>
         </Link>
 
         {/* Card login — glassmorphism seperti admin login */}
