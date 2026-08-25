@@ -27,7 +27,7 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
           </Link>
 
           {/* Tengah: papan gantung OPEN/CLOSED — tampil di semua ukuran, posisi kiri dari nav */}
-          <div className="relative h-10 w-[80px] shrink-0 sm:w-[100px]">
+          <div className="relative h-10 shrink-0">
             <div className="absolute left-1/2 top-[14px] -translate-x-1/2">
               <OpenClosedSign hours={shop.hours} />
             </div>
