@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  addDays,
   addMonths,
   eachDayOfInterval,
   endOfMonth,
@@ -13,6 +14,7 @@ import {
   startOfWeek,
   subMonths,
 } from "date-fns";
+
 import { id as localeId } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -50,9 +52,10 @@ export function Calendar({
   };
 
   const today = stripTime(new Date());
+  // Grid selalu 6 minggu (42 hari): tinggi kalender konstan antar bulan,
+  // sehingga popup tidak resize/reposisi (geser) saat navigasi bulan.
   const gridStart = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
-  const gridEnd = endOfWeek(endOfMonth(month), { weekStartsOn: 1 });
-  const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
+  const days = eachDayOfInterval({ start: gridStart, end: addDays(gridStart, 41) });
 
   return (
     <div className={cn("w-64 select-none", className)}>

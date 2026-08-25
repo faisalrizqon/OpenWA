@@ -24,13 +24,15 @@ function PopoverContent({
         sideOffset={sideOffset}
         collisionBoundary="clipping-ancestors"
         collisionPadding={16}
-        className="isolate z-[9999]"
+        /* transition-none: posisi diatur lewat transform inline oleh Floating UI.
+           Tanpa ini browser meng-animasikan perubahan posisi → popup terlihat
+           "geser" saat membuka / flip / scroll. */
+        className="isolate z-[9999] transition-none"
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "relative max-h-[min(var(--available-height),90vh)] w-max overflow-auto rounded-2xl border bg-popover p-4 text-popover-foreground shadow-lg outline-none",
-            "[&_button]:!mb-1 [&_button]:!mt-0",
+            "relative max-h-[min(var(--available-height),90vh)] w-max overflow-auto rounded-2xl border bg-popover p-4 text-popover-foreground shadow-lg outline-none transition-none",
             className
           )}
           {...props}
