@@ -2,12 +2,11 @@
 
 import * as React from "react";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
-
 import { cn } from "@/lib/utils";
 
-const Popover = PopoverPrimitive.Root;
-const PopoverTrigger = PopoverPrimitive.Trigger;
-const PopoverClose = PopoverPrimitive.Close;
+export const Popover = PopoverPrimitive.Root;
+export const PopoverTrigger = PopoverPrimitive.Trigger;
+export const PopoverClose = PopoverPrimitive.Close;
 
 function PopoverContent({
   className,
@@ -23,12 +22,16 @@ function PopoverContent({
         align={align}
         side={side}
         sideOffset={sideOffset}
-        className="isolate z-50"
+        collisionBoundary="clipping-ancestors"
+        collisionPadding={16}
+        className="isolate z-[9999]"
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "z-50 origin-(--transform-origin) rounded-2xl bg-popover p-3 text-popover-foreground shadow-xl ring-1 ring-foreground/10 outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            "relative max-h-[min(var(--available-height),90vh)] min-w-(--available-width) w-max overflow-auto rounded-2xl border bg-popover p-4 text-popover-foreground shadow-lg outline-none",
+            "max-w-[calc(100vw-2rem)]",
+            "[&_button]:!mb-1 [&_button]:!mt-0",
             className
           )}
           {...props}
@@ -38,4 +41,4 @@ function PopoverContent({
   );
 }
 
-export { Popover, PopoverTrigger, PopoverContent, PopoverClose };
+export { PopoverContent };
