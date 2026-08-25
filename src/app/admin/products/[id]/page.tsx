@@ -222,66 +222,6 @@ export default async function ProductDetailPage({
           </CardContent>
         </Card>
       )}
-
-      {/* Aturan denda keterlambatan — admin only */}
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Denda Keterlambatan</CardTitle>
-            <CardDescription>
-              Denda otomatis disarankan di order yang telat kembali. Isi 0 atau matikan untuk
-              menonaktifkan.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={saveLateFee} className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
-              <input type="hidden" name="productId" value={product.id} />
-              <div className="space-y-1">
-                <Label htmlFor="feePerDay">Denda per hari (Rp)</Label>
-                <Input
-                  id="feePerDay"
-                  name="feePerDay"
-                  type="number"
-                  min="0"
-                  step="1000"
-                  defaultValue={product.lateFee?.feePerDay ?? 0}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="graceHours">Masa tenggang (jam)</Label>
-                <Input
-                  id="graceHours"
-                  name="graceHours"
-                  type="number"
-                  min="0"
-                  defaultValue={product.lateFee?.graceHours ?? 0}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Setelah lewat masa tenggang, denda mulai dihitung per hari.
-                </p>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="lateFeeActive">Status</Label>
-                <SelectField
-                  id="lateFeeActive"
-                  name="active"
-                  defaultValue={product.lateFee?.active !== false ? "true" : "false"}
-                  options={[
-                    { label: "Aktif", value: "true" },
-                    { label: "Nonaktif", value: "false" },
-                  ]}
-                />
-              </div>
-              <div className="flex items-end">
-                <Button type="submit" variant="secondary">
-                  Simpan Denda
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Units */}
       <Card>
         <CardHeader>
@@ -414,6 +354,66 @@ export default async function ProductDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {/* Aturan denda keterlambatan — admin only */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Denda Keterlambatan</CardTitle>
+            <CardDescription>
+              Denda otomatis disarankan di order yang telat kembali. Isi 0 atau matikan untuk
+              menonaktifkan.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={saveLateFee} className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+              <input type="hidden" name="productId" value={product.id} />
+              <div className="space-y-1">
+                <Label htmlFor="feePerDay">Denda per hari (Rp)</Label>
+                <Input
+                  id="feePerDay"
+                  name="feePerDay"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  defaultValue={product.lateFee?.feePerDay ?? 0}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="graceHours">Masa tenggang (jam)</Label>
+                <Input
+                  id="graceHours"
+                  name="graceHours"
+                  type="number"
+                  min="0"
+                  defaultValue={product.lateFee?.graceHours ?? 0}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Setelah lewat masa tenggang, denda mulai dihitung per hari.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="lateFeeActive">Status</Label>
+                <SelectField
+                  id="lateFeeActive"
+                  name="active"
+                  defaultValue={product.lateFee?.active !== false ? "true" : "false"}
+                  options={[
+                    { label: "Aktif", value: "true" },
+                    { label: "Nonaktif", value: "false" },
+                  ]}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button type="submit" variant="secondary">
+                  Simpan Denda
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
 
       {/* Riwayat Event Unit (log sewa/return/maintenance) */}
       <Card>
