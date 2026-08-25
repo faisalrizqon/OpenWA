@@ -11,7 +11,7 @@ import { getStoreSettings } from "@/lib/content";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
-import { GuaranteeUpload } from "@/components/GuaranteeUpload";
+import { GuaranteeUpload, GuaranteeDocs } from "@/components/GuaranteeUpload";
 import { submitGuarantee } from "../../actions/checkout";
 
 export const dynamic = "force-dynamic";
@@ -113,36 +113,23 @@ export default async function OrderStatusPage({ params }: PageProps<"/order-stat
           </div>
         </CardContent>
       </Card>
-      {/* Jaminan: upload KTP/selfie + dokumen terupload */}
+      {/* Jaminan: opsional (pelengkap data) — KTP/selfie terupload bisa dihapus via ✕ untuk revisi */}
       <Card className="mt-5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="size-4 text-emerald-600" aria-hidden />
-            Jaminan
+            Jaminan{" "}
+            <span className="text-xs font-normal text-muted-foreground">
+              (opsional — pelengkap data)
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {order.documents.length > 0 ? (
-            <div className="grid grid-cols-3 gap-3">
-              {order.documents.map((d) => (
-                <a key={d.id} href={d.filePath} target="_blank" rel="noopener noreferrer" className="group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={d.filePath}
-                    alt={d.docType}
-                    className="h-24 w-full rounded-lg border object-cover transition-opacity group-hover:opacity-80"
-                  />
-                  <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {d.docType === "ktp" ? "KTP" : d.docType === "selfie_ktp" ? "Selfie KTP" : d.docType === "kartu_pelajar" ? "Kartu Pelajar" : "Lainnya"}
-                  </p>
-                </a>
-              ))}
-            </div>
-          ) : (
-            <p className="rounded-lg bg-muted/60 px-3 py-2.5 text-xs text-muted-foreground">
-              Belum ada jaminan terupload. Setelah barang diambil, upload foto KTP / selfie + KTP sebagai bukti.
-            </p>
-          )}
+          <GuaranteeDocs
+            orderId={order.id}
+            documents={order.documents}
+            columns="grid-cols-2 sm:grid-cols-3"
+          />
           <GuaranteeUpload orderId={order.id} action={submitGuarantee} />
         </CardContent>
       </Card>

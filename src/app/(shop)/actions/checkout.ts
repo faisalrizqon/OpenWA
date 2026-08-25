@@ -1,6 +1,6 @@
 "use server";
 
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, writeFile, unlink } from "fs/promises";
 import path from "path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -9,11 +9,8 @@ import { countOverlapUnits } from "@/lib/availability";
 import { calcSubtotal, getTierPrice } from "@/lib/pricing";
 import { nextOrderNumber } from "@/lib/orderNumber";
 import { calcPromoDiscount, checkPromoEligibility } from "@/lib/promo";
-import {
-  createMidtransTransaction,
-  midtransConfigured,
-  type PaymentMethod,
-} from "@/lib/payment";
+import { saveUpload, resolveStoragePath } from "@/lib/storage";
+import { createMidtransTransaction, midtransConfigured, type PaymentMethod } from "@/lib/payment";
 import { requireMitraOrAdmin } from "@/lib/permissions";
 
 interface CheckoutItemInput {
@@ -257,7 +254,7 @@ export async function changePaymentMethod(formData: FormData) {
   if (!orderNumber) redirect(back);
 
   const method = String(formData.get("method") ?? "").trim();
-  const validMethods = ["cash", "qris", "midtrans"];
+  const validMethods = ["cash", "qris", "midtrans", "transfer"];
   if (!validMethods.includes(method) || (method === "midtrans" && !midtransConfigured())) {
     redirect(`${back}?error=method`);
   }
@@ -333,10 +330,9 @@ export async function submitPaymentProof(formData: FormData) {
   const items = await prisma.orderItem.findMany({ where: { orderId: order.id } });
   const total = items.reduce((s, it) => s + it.subtotal, 0);
 
-  const dir = path.join(process.cwd(), "public", "uploads", "payment");
-  await mkdir(dir, { recursive: true });
+  const bytes = Buffer.from(await file.arrayBuffer());
   const fileName = `${order.orderNumber}-${Date.now()}.${ext}`;
-  await writeFile(path.join(dir, fileName), Buffer.from(await file.arrayBuffer()));
+  const stored = await saveUpload("proof", fileName, bytes);
 
   await prisma.$transaction([
     prisma.payment.create({
@@ -346,7 +342,7 @@ export async function submitPaymentProof(formData: FormData) {
         paymentType: "pelunasan",
         method: order.paymentMethod ?? "qris",
         status: "pending",
-        proofPath: `/uploads/payment/${fileName}`,
+        proofPath: stored.filePath,
         note: "Bukti bayar dari customer (menunggu verifikasi)",
       },
     }),
@@ -396,7 +392,10 @@ export async function submitGuarantee(formData: FormData) {
 
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) redirect("/");
-  const back = `/order-status/${order.orderNumber}`;
+  // Halaman kembali: default order-status customer; admin bisa kirim `back`
+  // (mis. /admin/orders/<id>) agar kembali ke halaman detail order.
+  const backParam = String(formData.get("back") ?? "");
+  const back = backParam.startsWith("/") ? backParam : `/order-status/${order.orderNumber}`;
 
   if (!["ktp", "selfie_ktp", "kartu_pelajar", "other"].includes(docType)) redirect(`${back}?error=invalid`);
   if (!(file instanceof File) || file.size === 0) redirect(`${back}?error=nofile`);
@@ -420,6 +419,41 @@ export async function submitGuarantee(formData: FormData) {
   revalidatePath(back);
   revalidatePath(`/admin/orders/${orderId}`);
   redirect(`${back}?guarantee=uploaded`);
+}
+
+/** Hapus dokumen jaminan yang sudah terupload (revisi bila salah upload).
+ * Dipakai dari halaman order-status customer & detail order admin.
+ * Jaminan bersifat opsional (pelengkap data), jadi dokumen boleh dihapus. */
+export async function deleteGuarantee(formData: FormData) {
+  const documentId = Number(formData.get("documentId"));
+  const orderId = String(formData.get("orderId") ?? "");
+
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) redirect("/");
+
+  const backParam = String(formData.get("back") ?? "");
+  const back = backParam.startsWith("/") ? backParam : `/order-status/${order.orderNumber}`;
+
+  const doc = await prisma.document.findUnique({ where: { id: documentId } });
+  if (!doc || doc.orderId !== orderId) redirect(`${back}?error=invalid`);
+
+  // Hapus file fisik: dukung path legacy /uploads/... dan storage baru /storage/...
+  if (doc.filePath.startsWith("/storage/")) {
+    const fullPath = resolveStoragePath(doc.filePath);
+    if (fullPath) await unlink(fullPath).catch(() => {});
+  } else if (doc.filePath.startsWith("/uploads/")) {
+    const relative = doc.filePath.slice("/uploads/".length);
+    if (!relative.includes("..")) {
+      await unlink(path.join(process.cwd(), "public", "uploads", relative)).catch(() => {});
+    }
+  }
+
+  await prisma.document.delete({ where: { id: doc.id } });
+
+  revalidatePath(back);
+  revalidatePath(`/order-status/${order.orderNumber}`);
+  revalidatePath(`/admin/orders/${orderId}`);
+  redirect(`${back}?guarantee=deleted`);
 }
 
 /** Admin simpan link Drive berisi foto hasil untuk customer. */
