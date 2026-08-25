@@ -29,18 +29,20 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
 
           {/* Kanan: nav */}
           <nav className="flex items-center gap-2">
+            {/* Slot papan gantung — paku tepat di atas link Katalog (di kiri Katalog),
+                papan menjuntai melewati batas bawah header. */}
+            <div className="relative h-9 w-12">
+              {/* Paku tepat di tengah vertikal — sejajar dengan teks Katalog (h-9) */}
+              <div className="absolute left-1/2 top-3.5 -translate-x-1/2">
+                <OpenClosedSign hours={shop.hours} />
+              </div>
+            </div>
             <Link
               href="/"
               className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               Katalog
             </Link>
-            {/* Slot papan gantung — menggantung dari paku yang sejajar atas dengan tombol Katalog */}
-            <div className="relative flex items-center h-10 w-12">
-              <div className="absolute left-1/2 -top-1 -translate-x-1/2">
-                <OpenClosedSign hours={shop.hours} />
-              </div>
-            </div>
             <Link
               href="/pricelist"
               className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
