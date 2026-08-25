@@ -6,7 +6,7 @@ import { uploadProductImages, deleteProductImage } from "@/actions/products";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
-const MAX_IMAGES = 8;
+const MAX_IMAGES = 10;
 
 export interface ProductImageItem {
   id: number;
@@ -17,7 +17,7 @@ export interface ProductImageItem {
  * Galeri foto produk ala marketplace seller: grid foto terupload + upload
  * multi-file (auto-submit saat file dipilih) + hapus per foto dengan tombol
  * ✕ di kanan atas (seragam dengan jaminan). Klik foto untuk lihat detail
- * (lightbox). Maksimal 8 foto per produk.
+ * (lightbox). Maksimal 10 foto per produk.
  */
 export function ProductGalleryControl({
   productId,

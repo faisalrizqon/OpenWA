@@ -456,7 +456,7 @@ export async function deleteUnitPhoto(formData: FormData) {
   redirect(back);
 }
 
-const MAX_PRODUCT_IMAGES = 8;
+const MAX_PRODUCT_IMAGES = 10;
 
 /** Upload foto galeri produk (admin-only, bisa banyak sekaligus, max 8 per produk). */
 export async function uploadProductImages(formData: FormData) {

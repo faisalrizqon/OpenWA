@@ -340,7 +340,7 @@ export default async function ProductDetailPage({
           <CardHeader>
             <CardTitle>Foto Produk</CardTitle>
             <CardDescription>
-              Galeri foto yang tampil di katalog publik — maksimal 8 foto. Klik
+              Galeri foto yang tampil di katalog publik — maksimal 10 foto. Klik
               foto untuk melihat detail, klik ✕ untuk menghapus.
             </CardDescription>
           </CardHeader>
