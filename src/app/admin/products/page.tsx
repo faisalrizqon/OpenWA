@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProductRowActions } from "@/components/ProductAdminActions";
+import { PageNotifier, type PageNotification } from "@/components/PageNotifier";
 import {
   Table,
   TableBody,
@@ -36,6 +37,14 @@ export default async function ProductsPage({
     orderBy: { id: "asc" },
     include: { category: true, units: true },
   });
+  const notifications: PageNotification[] = [];
+  if (deleted === "1") {
+    notifications.push({ type: "success", message: "Produk berhasil dihapus." });
+  }
+  if (error) {
+    notifications.push({ type: "error", message: decodeURIComponent(error) });
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -43,17 +52,7 @@ export default async function ProductsPage({
         description="Stok live per unit fisik — klik nama atau ikon pensil untuk edit"
         action={isAdmin ? <HeaderLink href="/admin/products/new" label="Tambah Produk" /> : undefined}
       />
-
-      {deleted === "1" && (
-        <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-          Produk berhasil dihapus.
-        </p>
-      )}
-      {error && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-          {decodeURIComponent(error)}
-        </p>
-      )}
+      <PageNotifier notifications={notifications} />
 
       <Card>
         <CardHeader>
@@ -77,7 +76,7 @@ export default async function ProductsPage({
                   <TableHead>Kategori</TableHead>
                   <TableHead>Harga (6/12/24/48 jam)</TableHead>
                   <TableHead className="text-center">Stok</TableHead>
-                  <TableHead>Kondisi</TableHead>
+                  <TableHead>Status Stok</TableHead>
                   {isAdmin && <TableHead className="text-right">Aksi</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -125,7 +124,7 @@ export default async function ProductsPage({
                             Stok menipis
                           </span>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Aman</span>
+                          <span className="text-xs text-muted-foreground">Stok aman</span>
                         )}
                       </TableCell>
                       <TableCell>

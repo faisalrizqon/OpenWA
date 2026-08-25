@@ -176,17 +176,12 @@ export default async function ProductDetailPage({
                   defaultValue={product.stockThreshold}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="initialUnits">Jumlah Unit</Label>
-                <Input
-                  id="initialUnits"
-                  name="initialUnits"
-                  type="number"
-                  min="1"
-                  defaultValue={product.units.length}
-                />
+              <div className="space-y-2 rounded-lg bg-muted/40 p-3">
+                <p className="text-sm font-medium">Jumlah Unit: {product.units.length}</p>
                 <p className="text-xs text-muted-foreground">
-                  Menambah/mengurangi akan menyesuaikan unit fisik (unit dirental tidak bisa dikurangi).
+                  Kelola jumlah unit lewat card <span className="font-medium">Unit Fisik</span> di
+                  bawah (tambah/hapus per unit) — tidak lewat form ini, agar tidak
+                  saling mengintervensi.
                 </p>
               </div>
               <div className="space-y-2 sm:col-span-2">

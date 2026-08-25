@@ -47,11 +47,11 @@ export async function createProduct(formData: FormData) {
         entityType: "product",
         entityId: String(product.id),
         action: "create",
-        summary: `Produk "${product.name}" dibuat (${data.initialUnits} unit)`,
+        summary: `Produk "${product.name}" dibuat (${data.initialUnits ?? 1} unit)`,
         userId: user.id,
       });
 
-      for (let i = 0; i < data.initialUnits; i++) {
+      for (let i = 0; i < (data.initialUnits ?? 1); i++) {
         await tx.unit.create({
           data: {
             productId: product.id,
@@ -122,35 +122,10 @@ export async function updateProduct(formData: FormData) {
         userId: user.id,
       });
 
-      // Sinkronkan jumlah unit fisik dengan form (tambah/kurangi)
-      const currentUnitCount = await tx.unit.count({
-        where: { productId: Number(productIdRaw) },
-      });
-      const target = data.initialUnits;
-      if (target > currentUnitCount) {
-        for (let i = 0; i < target - currentUnitCount; i++) {
-          await tx.unit.create({
-            data: {
-              productId: Number(productIdRaw),
-              condition: "Bagus",
-              status: "available",
-            },
-          });
-        }
-      } else if (target < currentUnitCount) {
-        // Kurangi hanya unit yang tidak sedang dirental
-        const removable = await tx.unit.findMany({
-          where: { productId: Number(productIdRaw), status: { not: "rented" } },
-          orderBy: { id: "desc" },
-          take: currentUnitCount - target,
-        });
-        if (removable.length < currentUnitCount - target) {
-          throw new Error("Unit sedang dirental — tidak bisa mengurangi stok");
-        }
-        await tx.unit.deleteMany({
-          where: { id: { in: removable.map((u) => u.id) } },
-        });
-      }
+      // Catatan: jumlah unit fisik TIDAK dikelola lewat form edit ini
+      // (hindari redundansi & intervensi). Tambah/kurangi unit hanya via
+      // card "Unit Fisik" di halaman detail produk (form Tambah Unit &
+      // tombol Hapus Unit per baris).
     });
 
     revalidatePath("/admin/products");

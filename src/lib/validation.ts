@@ -10,7 +10,7 @@ export const productSchema = z.object({
   price24h: z.coerce.number().nonnegative(),
   price48h: z.coerce.number().nonnegative(),
   stockThreshold: z.coerce.number().int().min(1).default(1),
-  initialUnits: z.coerce.number().int().min(1).default(1),
+  initialUnits: z.coerce.number().int().min(1).optional(),
 });
 
 export const customerSchema = z.object({
