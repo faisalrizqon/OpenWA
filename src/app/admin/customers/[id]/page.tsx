@@ -6,6 +6,7 @@ import { ClipboardList, ImageIcon, Lock as LockIcon } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/pricing";
+import { storageUrl } from "@/lib/storage";
 import { StatusBadge } from "@/components/StatusBadge";
 import { KtpUpload } from "@/components/KtpUpload";
 import { PageHeader } from "@/components/PageHeader";
@@ -34,7 +35,7 @@ import {
 
 const DOC_LABELS: Record<string, string> = {
   ktp: "KTP",
-  selfie_ktp: "Selfie + KTP",
+  selfie_ktp: "Selfie + Identitas",
   kartu_pelajar: "Kartu Pelajar",
   other: "Lainnya",
 };
@@ -367,7 +368,7 @@ export default async function CustomerDetailPage({
                 <figure key={d.id} className="space-y-1.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={d.filePath}
+                    src={storageUrl(d.filePath)}
                     alt={DOC_LABELS[d.docType] ?? d.docType}
                     className="h-40 w-40 rounded-xl border object-cover"
                   />

@@ -18,7 +18,7 @@ export function KtpUpload({ customerId }: { customerId: number }) {
           defaultValue="ktp"
           options={[
             { label: "KTP", value: "ktp" },
-            { label: "Selfie + KTP", value: "selfie_ktp" },
+            { label: "Selfie + Identitas", value: "selfie_ktp" },
             { label: "Kartu Pelajar", value: "kartu_pelajar" },
             { label: "Lainnya", value: "other" },
           ]}

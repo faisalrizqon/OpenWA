@@ -20,14 +20,14 @@ import { deleteGuarantee } from "@/app/(shop)/actions/checkout";
 
 const DOC_OPTIONS = [
   { label: "KTP", value: "ktp" },
-  { label: "Selfie + KTP", value: "selfie_ktp" },
+  { label: "Selfie + Identitas", value: "selfie_ktp" },
   { label: "Kartu Pelajar", value: "kartu_pelajar" },
   { label: "Lainnya", value: "other" },
 ];
 
 export const DOC_LABELS: Record<string, string> = {
   ktp: "KTP",
-  selfie_ktp: "Selfie KTP",
+  selfie_ktp: "Selfie + Identitas",
   kartu_pelajar: "Kartu Pelajar",
   other: "Lainnya",
 };
