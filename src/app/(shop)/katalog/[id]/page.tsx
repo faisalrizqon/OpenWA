@@ -17,9 +17,9 @@ import {
 } from "@/lib/shop";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { BookingWidget } from "@/components/BookingWidget";
-import { ExternalLink } from "@/components/LinkButton";
 import { BackLink } from "@/components/BackLink";
-
+import { ExternalLink } from "@/components/LinkButton";
+import { ProductGallery } from "@/components/ProductGallery";
 export default async function KatalogDetailPage({ params }: PageProps<"/katalog/[id]">) {
   const { id } = await params;
   const productId = Number(id);
@@ -30,6 +30,7 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
     include: {
       category: { select: { name: true } },
       units: { where: { status: { notIn: ["maintenance", "lost"] } }, select: { id: true, photoPath: true, serialNumber: true } },
+      images: { orderBy: { sortOrder: "asc" } },
     },
   });
   if (!product) notFound();
@@ -70,42 +71,35 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
       <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
         {/* Gallery */}
         <div className="space-y-3">
-          <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl border bg-muted">
-            {product.imagePath ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={product.imagePath}
-                alt={product.name}
-                className="size-full object-cover"
-              />
-            ) : (
-              <Camera className="size-24 text-muted-foreground/25" aria-hidden />
-            )}
-          </div>
-          {unitPhotos.length > 0 ? (
-            <div className="grid grid-cols-4 gap-3">
-              {unitPhotos.map((u) => (
-                <div key={u.id} className="relative aspect-square overflow-hidden rounded-xl border bg-muted/60">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+          {/* Galeri produk — klik thumbnail untuk ganti foto utama */}
+          {product.images.length > 0 ? (
+            <ProductGallery images={product.images.map((img) => ({ src: img.filePath, alt: `Foto ${img.id}` }))} />
+          ) : (
+            <>
+              <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl border bg-muted">
+                {product.imagePath ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={u.photoPath!}
-                    alt={u.serialNumber ? `Unit ${u.serialNumber}` : `Unit #${u.id}`}
+                    src={product.imagePath}
+                    alt={product.name}
                     className="size-full object-cover"
                   />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 gap-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="flex aspect-square items-center justify-center rounded-xl border bg-muted/60"
-                >
-                  <Camera className="size-6 text-muted-foreground/20" aria-hidden />
-                </div>
-              ))}
-            </div>
+                ) : (
+                  <Camera className="size-24 text-muted-foreground/25" aria-hidden />
+                )}
+              </div>
+              {/* Placeholder grid saat belum ada foto galeri */}
+              <div className="grid grid-cols-4 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex aspect-square items-center justify-center rounded-xl border bg-muted/60"
+                  >
+                    <Camera className="size-6 text-muted-foreground/20" aria-hidden />
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
 

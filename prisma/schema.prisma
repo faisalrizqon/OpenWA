@@ -38,6 +38,7 @@ model Product {
   createdAt      DateTime @default(now())
 
   units      Unit[]
+  images     ProductImage[]
   orderItems OrderItem[]
   lateFee    LateFee?
 }
@@ -57,6 +58,18 @@ model Unit {
   unitEvents   UnitEvent[]
 
   @@index([productId, status])
+}
+
+// --- Galeri foto produk (ala marketplace seller, max ~8 per produk) ---
+model ProductImage {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  filePath  String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
 }
 
 // --- Customers + Blacklist + CRM ---
@@ -118,8 +131,6 @@ model Order {
   guaranteeNumber String? // nomor identitas jaminan
   deliveryMode    String    @default("pickup") // pickup | courier (COD: Weleri / antar kurir)
   deliveryAddress String? // alamat antar/pickup
-  depositAmount   Float    @default(0) // uang jaminan yang dititipkan (Rp)
-  depositStatus   String   @default("none") // none | held | refunded
   rescheduledFrom DateTime? // order di-reschedule dari tanggal ini (Reschedule dari ...)
   returnedAt      DateTime? // tanggal aktual pengembalian (kolom Returned Notion)
 
@@ -172,13 +183,13 @@ model OrderItem {
   @@index([unitId])
 }
 
-// --- Payments: dp, pelunasan, denda, deposit_refund ---
+// --- Payments: dp, pelunasan, denda ---
 model Payment {
   id          Int      @id @default(autoincrement())
   orderId     String
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   amount      Float
-  paymentType String // dp | pelunasan | denda | deposit_refund
+  paymentType String // dp | pelunasan | denda
   method      String? // cash | qris | midtrans | transfer_bca | transfer_mandiri | etc
   status      String   @default("pending") // pending | confirmed | failed (pending = menunggu verifikasi admin/gateway)
   proofPath   String? // bukti transfer / QRIS upload dari customer

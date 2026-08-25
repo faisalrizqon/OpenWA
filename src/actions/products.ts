@@ -480,3 +480,107 @@ export async function deleteUnitPhoto(formData: FormData) {
   revalidatePath(`/katalog/${productId}`);
   redirect(back);
 }
+
+const MAX_PRODUCT_IMAGES = 8;
+
+/** Upload foto galeri produk (admin-only, bisa banyak sekaligus, max 8 per produk). */
+export async function uploadProductImages(formData: FormData) {
+  const user = await requireAdmin();
+  const productIdRaw = String(formData.get("productId") ?? "");
+  const back = `/admin/products/${productIdRaw}`;
+
+  const productId = Number(productIdRaw);
+  if (!Number.isInteger(productId)) redirect(`${back}?error=invalid`);
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    include: { images: true },
+  });
+  if (!product) redirect(`${back}?error=invalid`);
+
+  const files = formData.getAll("files").filter(
+    (f): f is File => f instanceof File && f.size > 0
+  );
+  if (files.length === 0) redirect(`${back}?error=file`);
+  if (product.images.length + files.length > MAX_PRODUCT_IMAGES) {
+    redirect(`${back}?error=maximages`);
+  }
+
+  const dir = path.join(process.cwd(), "public", "uploads", "products", productIdRaw);
+  await mkdir(dir, { recursive: true });
+
+  const written: { filePath: string; sortOrder: number }[] = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const ext = UNIT_PHOTO_MIME_EXT[file.type];
+    if (!ext || file.size > 5 * 1024 * 1024) redirect(`${back}?error=file`);
+    const fileName = `gallery-${Date.now()}-${i}.${ext}`;
+    await writeFile(path.join(dir, fileName), Buffer.from(await file.arrayBuffer()));
+    written.push({
+      filePath: `/uploads/products/${productIdRaw}/${fileName}`,
+      sortOrder: product.images.length + i,
+    });
+  }
+
+  try {
+    await prisma.productImage.createMany({
+      data: written.map((w) => ({ productId, filePath: w.filePath, sortOrder: w.sortOrder })),
+    });
+    await logAudit(prisma, {
+      entityType: "product",
+      entityId: productIdRaw,
+      action: "update",
+      summary: `${written.length} foto galeri produk "${product.name}" diupload`,
+      userId: user.id,
+    });
+  } catch (e) {
+    for (const w of written) {
+      await unlink(path.join(process.cwd(), "public", w.filePath)).catch(() => {});
+    }
+    redirect(`${back}?error=invalid`);
+  }
+
+  revalidatePath(back);
+  revalidatePath(`/katalog/${productId}`);
+  revalidatePath("/katalog");
+  revalidatePath("/");
+  redirect(back);
+}
+
+/** Hapus satu foto galeri produk (admin-only). */
+export async function deleteProductImage(formData: FormData) {
+  const user = await requireAdmin();
+  const imageIdRaw = Number(formData.get("imageId"));
+  const productIdRaw = String(formData.get("productId") ?? "");
+  const back = `/admin/products/${productIdRaw}`;
+
+  const productId = Number(productIdRaw);
+  if (!Number.isInteger(imageIdRaw) || !Number.isInteger(productId)) {
+    redirect(`${back}?error=invalid`);
+  }
+
+  const image = await prisma.productImage.findUnique({
+    where: { id: imageIdRaw },
+    include: { product: { select: { name: true } } },
+  });
+  if (!image || image.productId !== productId) redirect(`${back}?error=invalid`);
+
+  if (image.filePath.startsWith("/uploads/")) {
+    await unlink(path.join(process.cwd(), "public", image.filePath)).catch(() => {});
+  }
+  await prisma.productImage.delete({ where: { id: image.id } });
+
+  await logAudit(prisma, {
+    entityType: "product",
+    entityId: productIdRaw,
+    action: "update",
+    summary: `Foto galeri produk "${image.product.name}" dihapus`,
+    userId: user.id,
+  });
+
+  revalidatePath(back);
+  revalidatePath(`/katalog/${productId}`);
+  revalidatePath("/katalog");
+  revalidatePath("/");
+  redirect(back);
+}

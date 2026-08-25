@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
+import { PageNotifier, type PageNotification } from "@/components/PageNotifier";
 import { BackLink } from "@/components/BackLink";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,10 +25,12 @@ import {
   addUnit,
   updateUnit,
   deleteUnit,
+  saveLateFee,
 } from "@/actions/products";
+import { UnitPhotoControl } from "@/components/UnitPhotoControl";
+import { ProductGalleryControl } from "@/components/ProductGalleryControl";
 import { DeleteProductDialog } from "@/components/ProductAdminActions";
 import { cn } from "@/lib/utils";
-import { PageNotifier, type PageNotification } from "@/components/PageNotifier";
 
 const UNIT_STATUSES: Record<string, { label: string; className: string }> = {
   available: { label: "Tersedia", className: "bg-emerald-100 text-emerald-700" },
@@ -49,7 +52,7 @@ export default async function ProductDetailPage({
   const [product, unitEvents, categories] = await Promise.all([
     prisma.product.findUnique({
       where: { id: productId },
-      include: { category: true, units: { orderBy: { id: "asc" } } },
+      include: { category: true, units: { orderBy: { id: "asc" } }, images: { orderBy: { sortOrder: "asc" } }, lateFee: true },
     }),
     // Riwayat event unit fisik produk ini (50 terbaru)
     prisma.unitEvent.findMany({
@@ -72,7 +75,9 @@ export default async function ProductDetailPage({
   if (error === "sku") notifications.push({ type: "error", message: "SKU sudah dipakai produk lain." });
   if (error === "serial") notifications.push({ type: "error", message: "Nomor seri sudah dipakai unit lain." });
   if (error === "invalid") notifications.push({ type: "error", message: "Data tidak valid — periksa kembali isian form." });
-  if (error && !["sku", "serial", "invalid"].includes(error)) notifications.push({ type: "error", message: decodeURIComponent(error) });
+  if (error === "file") notifications.push({ type: "error", message: "File tidak valid — hanya JPG/PNG/WebP maksimal 5MB." });
+  if (error === "maximages") notifications.push({ type: "error", message: "Maksimal 8 foto galeri per produk." });
+  if (error && !["sku", "serial", "invalid", "file", "maximages"].includes(error)) notifications.push({ type: "error", message: decodeURIComponent(error) });
   const priceFields: { key: "price6h" | "price12h" | "price24h" | "price48h"; label: string }[] = [
     { key: "price6h", label: "Harga 6 Jam" },
     { key: "price12h", label: "Harga 12 Jam" },
@@ -202,6 +207,81 @@ export default async function ProductDetailPage({
         </Card>
       )}
 
+      {/* Foto Produk — galeri ala marketplace seller, admin only */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Foto Produk</CardTitle>
+            <CardDescription>
+              Galeri foto yang tampil di katalog publik — maksimal 8 foto. Arahkan
+              kursor ke foto untuk menghapusnya.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ProductGalleryControl productId={product.id} images={product.images} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Aturan denda keterlambatan — admin only */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Denda Keterlambatan</CardTitle>
+            <CardDescription>
+              Denda otomatis disarankan di order yang telat kembali. Isi 0 atau matikan untuk
+              menonaktifkan.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={saveLateFee} className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+              <input type="hidden" name="productId" value={product.id} />
+              <div className="space-y-1">
+                <Label htmlFor="feePerDay">Denda per hari (Rp)</Label>
+                <Input
+                  id="feePerDay"
+                  name="feePerDay"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  defaultValue={product.lateFee?.feePerDay ?? 0}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="graceHours">Masa tenggang (jam)</Label>
+                <Input
+                  id="graceHours"
+                  name="graceHours"
+                  type="number"
+                  min="0"
+                  defaultValue={product.lateFee?.graceHours ?? 0}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Setelah lewat masa tenggang, denda mulai dihitung per hari.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="lateFeeActive">Status</Label>
+                <SelectField
+                  id="lateFeeActive"
+                  name="active"
+                  defaultValue={product.lateFee?.active !== false ? "true" : "false"}
+                  options={[
+                    { label: "Aktif", value: "true" },
+                    { label: "Nonaktif", value: "false" },
+                  ]}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button type="submit" variant="secondary">
+                  Simpan Denda
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Units */}
       <Card>
         <CardHeader>
@@ -246,6 +326,7 @@ export default async function ProductDetailPage({
             <TableHeader>
               <TableRow>
                 <TableHead>#</TableHead>
+                <TableHead>Foto</TableHead>
                 <TableHead>No. Seri</TableHead>
                 <TableHead>Kondisi</TableHead>
                 <TableHead>Status</TableHead>
@@ -256,6 +337,13 @@ export default async function ProductDetailPage({
               {product.units.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="text-muted-foreground">{u.id}</TableCell>
+                  <TableCell>
+                    <UnitPhotoControl
+                      unitId={u.id}
+                      productId={product.id}
+                      photoPath={u.photoPath}
+                    />
+                  </TableCell>
                   <TableCell className="font-mono text-sm">
                     {u.serialNumber ?? "—"}
                   </TableCell>
