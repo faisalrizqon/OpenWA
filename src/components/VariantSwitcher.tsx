@@ -32,7 +32,7 @@ interface VariantSwitcherProps {
 /** Panel pilihan tema & hero. Pilihan langsung disimpan permanen
  *  (localStorage) oleh parent — berlaku di tab/halaman mana pun. */
 export function VariantSwitcher({ theme, hero, onSelectTheme, onSelectHero }: VariantSwitcherProps) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   if (!open) {
     return (

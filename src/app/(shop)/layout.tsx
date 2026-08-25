@@ -13,10 +13,10 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
     <div className="flex min-h-screen flex-col">
       <ShopTheme />
       <header className="glass sticky top-0 z-30 border-b border-border/70">
-        {/* Top bar ramping: logo kiri, papan OPEN/CLOSED tengah, nav kanan */}
-        <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-2 md:px-8">
+        {/* Top bar: logo kiri, papan OPEN/CLOSED, nav kanan */}
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 px-3 py-2 sm:gap-4 sm:px-4 md:px-8">
           {/* Kiri: logo */}
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href="/" className="flex shrink-0 items-center gap-2">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
               <Camera className="size-5" aria-hidden />
             </span>
@@ -26,40 +26,40 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
             </span>
           </Link>
 
-          {/* Tengah: papan gantung OPEN/CLOSED di antara logo dan katalog */}
-          <div className="relative hidden md:block h-10 w-[100px]">
-            <div className="absolute left-1/2 top-[16px] -translate-x-1/2">
+          {/* Tengah: papan gantung OPEN/CLOSED — tampil di semua ukuran, posisi kiri dari nav */}
+          <div className="relative h-10 w-[80px] shrink-0 sm:w-[100px]">
+            <div className="absolute left-1/2 top-[14px] -translate-x-1/2">
               <OpenClosedSign hours={shop.hours} />
             </div>
           </div>
 
-          {/* Kanan: nav — kompak di mobile (icon-only, papan gantung disembunyikan untuk mobile saja) */}
-          <nav className="flex items-center gap-1 sm:gap-2">
+          {/* Kanan: nav */}
+          <nav className="flex items-center gap-0.5 sm:gap-2">
             <Link
               href="/"
-              className="inline-flex h-9 items-center rounded-lg px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:px-3 sm:text-sm"
+              className="inline-flex h-9 items-center rounded-lg px-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:px-3 sm:text-sm"
             >
               Katalog
             </Link>
             <Link
               href="/pricelist"
-              className="inline-flex h-9 items-center rounded-lg px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:px-3 sm:text-sm"
+              className="inline-flex h-9 items-center rounded-lg px-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:px-3 sm:text-sm"
             >
               Pricelist
             </Link>
             <Link
               href="/track"
-              className="inline-flex h-9 items-center rounded-lg px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:px-3 sm:text-sm"
+              className="hidden h-9 items-center rounded-lg px-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:inline-flex sm:px-3 sm:text-sm"
             >
               Lacak Order
             </Link>
             <Link
               href="/portal/login"
-              className="relative inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/30 ring-2 ring-primary/40 transition-all hover:bg-primary/90 hover:ring-primary/60 sm:px-3.5 sm:text-sm"
+              className="relative inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-2 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/30 ring-2 ring-primary/40 transition-all hover:bg-primary/90 hover:ring-primary/60 sm:px-3.5 sm:text-sm"
             >
               <UserRound className="size-4" aria-hidden />
               <span className="hidden sm:inline">Login Member</span>
-              {/* Titik notifikasi — biar mencolok */}
+              {/* Titik notifikasi */}
               <span className="absolute -right-1 -top-1 flex size-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500"></span>
@@ -69,10 +69,10 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
               href={waLink(shop.whatsapp, generalMessage(shop.storeName))}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 sm:px-3 sm:text-sm"
+              className="hidden h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 sm:inline-flex sm:px-3 sm:text-sm"
             >
               <WhatsAppIcon aria-hidden />
-              <span className="hidden sm:inline">Hubungi</span><span className="hidden sm:inline">&nbsp;</span><span className="hidden md:inline">WhatsApp</span>
+              <span className="hidden md:inline">WhatsApp</span>
             </a>
           </nav>
         </div>
