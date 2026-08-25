@@ -14,7 +14,7 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
       <ShopTheme />
       <header className="glass sticky top-0 z-30 border-b border-border/70">
         {/* Top bar ramping: logo kiri, nav kanan.
-            Papan OPEN/CLOSED menggantung di tengah, melewati batas bawah top bar. */}
+            Papan OPEN/CLOSED menggantung tepat setelah link Katalog, melewati batas bawah top bar. */}
         <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-2 md:px-8">
           {/* Kiri: logo */}
           <Link href="/" className="flex items-center gap-2.5">
@@ -27,14 +27,6 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
             </span>
           </Link>
 
-          {/* Agak kiri dari tengah header: papan gantung — absolute supaya tidak menambah
-              tinggi top bar, sengaja menjuntai melewati tepi bawah header. */}
-          <div className="pointer-events-none absolute left-[44%] top-0 -translate-x-1/2">
-            <div className="pointer-events-auto pt-1">
-              <OpenClosedSign hours={shop.hours} />
-            </div>
-          </div>
-
           {/* Kanan: nav */}
           <nav className="flex items-center gap-2">
             <Link
@@ -43,6 +35,12 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
             >
               Katalog
             </Link>
+            {/* Slot papan gantung — menggantung dari paku yang sejajar atas dengan tombol Katalog */}
+            <div className="relative flex items-center h-10 w-12">
+              <div className="absolute left-1/2 -top-1 -translate-x-1/2">
+                <OpenClosedSign hours={shop.hours} />
+              </div>
+            </div>
             <Link
               href="/pricelist"
               className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
