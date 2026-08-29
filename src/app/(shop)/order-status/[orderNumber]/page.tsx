@@ -228,31 +228,42 @@ export default async function OrderStatusPage({ params, searchParams }: PageProp
           })()}
         </div>
       )}
-      {/* Link Drive foto hasil */}
-      {order.photoLink && (
-        <Card className="mt-5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DriveIcon className="size-5" />
-              Foto Hasil Sewa
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Link Drive berisi foto hasil dari kamera yang disewa:
+      {/* Link Drive foto hasil — selalu tampil; bila admin belum menyimpan link,
+          tampilkan catatan agar customer bisa meminta admin meng-upload. */}
+      <Card className="mt-5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DriveIcon className="size-5" />
+            Foto Hasil Sewa
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {order.photoLink ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Link Drive berisi foto hasil dari kamera yang disewa:
+              </p>
+              <a
+                href={order.photoLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-2 break-all rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/20"
+              >
+                <DriveIcon className="size-5" />
+                Buka Foto di Google Drive
+              </a>
+            </>
+          ) : (
+            <p className="rounded-lg bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+              Link foto hasil belum di-upload. Anda bisa menghubungi admin dan meminta{" "}
+              <span className="font-medium text-foreground">
+                meng-upload link Google Drive berisi foto hasil
+              </span>{" "}
+              sewa Anda — link akan tampil di halaman ini setelah tersimpan.
             </p>
-            <a
-              href={order.photoLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-2 break-all rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/20"
-            >
-              <DriveIcon className="size-5" />
-              Buka Foto di Google Drive
-            </a>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <ExternalLink
           href={waLink(shop.whatsapp, waText)}
