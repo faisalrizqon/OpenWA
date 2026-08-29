@@ -18,8 +18,9 @@ interface RelatedProductCardProps {
   hrefPrefix?: string;
 }
 
-/** Kartu mini untuk bagian "Produk serupa" — proporsi seimbang: thumbnail
- *  persegi di atas, lalu kategori, nama (maks 2 baris), dan harga mulai.
+/** Kartu mini untuk bagian "Produk serupa" — ukuran compact seperti kartu
+ *  sebelumnya: baris horizontal, thumbnail 56px di kiri, lalu kategori dan
+ *  nama (1 baris) di kanan, plus harga mulai yang kecil di bawah nama.
  *  Gambar mengikuti foto produk asli (jalur productPhotosOf). */
 export function RelatedProductCard(p: RelatedProductCardProps) {
   const { main } = productPhotosOf(p);
@@ -28,32 +29,24 @@ export function RelatedProductCard(p: RelatedProductCardProps) {
   return (
     <Link
       href={`${p.hrefPrefix ?? "/katalog"}/${p.id}`}
-      className="group overflow-hidden rounded-2xl border bg-card transition-all hover:-translate-y-0.5 hover:shadow-md"
+      className="group flex items-center gap-3 rounded-2xl border bg-card p-3 transition-colors hover:bg-muted/50"
     >
-      {/* Thumbnail produk — persegi, proporsi tetap di semua ukuran layar */}
-      <div className="flex aspect-square items-center justify-center overflow-hidden bg-muted">
+      {/* Thumbnail produk — 56px (size-14), sama dengan ukuran sebelumnya */}
+      <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted">
         {main ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={storageUrl(main.src)}
-            alt={p.name}
-            className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
+          <img src={storageUrl(main.src)} alt={p.name} className="size-full object-cover" />
         ) : (
-          <Camera className="size-8 text-muted-foreground/30" aria-hidden />
+          <Camera className="size-6 text-muted-foreground/40" aria-hidden />
         )}
-      </div>
+      </span>
 
-      {/* Info — hierarki jelas: kategori kecil, nama 2 baris, harga menonjol */}
-      <div className="space-y-1 p-3">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          {p.categoryName}
-        </p>
-        <p className="line-clamp-2 min-h-10 text-sm font-medium leading-snug group-hover:text-primary">
-          {p.name}
-        </p>
+      {/* Info — kategori kecil, nama 1 baris, harga mulai kecil */}
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground">{p.categoryName}</p>
+        <p className="truncate text-sm font-medium group-hover:text-primary">{p.name}</p>
         {price > 0 && (
-          <p className="text-xs font-semibold text-emerald-700">
+          <p className="mt-0.5 text-xs font-medium text-emerald-700">
             Mulai {formatRupiah(price)}
           </p>
         )}
