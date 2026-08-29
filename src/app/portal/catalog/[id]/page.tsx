@@ -179,6 +179,8 @@ export default async function PortalCatalogDetailPage({ params }: PageProps<"/po
                 hours: t.hours,
                 price: product[t.key] as number,
               }))}
+              checkoutPath="/portal/checkout"
+              catalogPath="/portal/catalog"
             />
             <div className="space-y-2 pt-1">
               <ExternalLink

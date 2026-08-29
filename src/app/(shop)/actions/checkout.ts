@@ -44,11 +44,13 @@ function parseCheckoutItems(raw: string): CheckoutItemInput[] | null {
 
 /** Redirect kembali ke halaman checkout dengan pesan error, sambil
  *  mempertahankan konteks produk. TANPA productId di URL, halaman
- *  /checkout langsung melempar user ke landing page ("/"). */
+ *  checkout langsung melempar user ke landing page ("/").
+ *  `checkoutPage` membedakan jalur publik (/checkout) vs portal (/portal/checkout). */
 function failCheckout(
   first: CheckoutItemInput,
   startDateRaw: string,
-  msg: string
+  msg: string,
+  checkoutPage: string = "/checkout"
 ): never {
   const p = new URLSearchParams({
     productId: String(first.productId),
@@ -57,10 +59,15 @@ function failCheckout(
     error: msg,
   });
   if (startDateRaw) p.set("startDate", startDateRaw);
-  redirect(`/checkout?${p.toString()}`);
+  redirect(`${checkoutPage}?${p.toString()}`);
 }
-/** Checkout customer dari katalog: buat Order (status booking, source online). */
-export async function checkoutOrder(formData: FormData) {
+/** Checkout customer dari katalog: buat Order (status booking, source online).
+ *  `portal` = true untuk redirect ke /portal/orders/[orderNumber],
+ *  false (default) untuk /order-status/[orderNumber]. */
+export async function checkoutOrder(
+  formData: FormData,
+  { portal }: { portal?: boolean } = {}
+) {
   const name = String(formData.get("name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
@@ -83,18 +90,18 @@ export async function checkoutOrder(formData: FormData) {
   // quantity, durasi, startDate). Tanpa productId halaman checkout langsung
   // redirect("/") ke landing page.
   if (!items) {
-    // Tidak ada item sama sekali — kembali ke katalog
     redirect("/");
   }
 
   const first = items[0];
+  const checkoutPage = portal ? "/portal/checkout" : "/checkout";
 
   if (isNaN(startDate.getTime()) || name.length < 2 || !PHONE_RE.test(phone)) {
-    failCheckout(first, startDateRaw, "Data pesanan tidak lengkap atau tidak valid. Periksa kembali lalu coba lagi.");
+    failCheckout(first, startDateRaw, "Data pesanan tidak lengkap atau tidak valid. Periksa kembali lalu coba lagi.", checkoutPage);
   }
   // Midtrans hanya boleh dipilih kalau memang dikonfigurasi
   if (paymentMethod === "midtrans" && !midtransConfigured()) {
-    failCheckout(first, startDateRaw, "Pembayaran online belum tersedia. Pilih metode lain.");
+    failCheckout(first, startDateRaw, "Pembayaran online belum tersedia. Pilih metode lain.", checkoutPage);
   }
 
   let orderId: string;
@@ -208,7 +215,7 @@ export async function checkoutOrder(formData: FormData) {
   } catch (e) {
     if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
     const msg = e instanceof Error ? e.message : "Gagal membuat pesanan";
-    failCheckout(first, startDateRaw, msg);
+    failCheckout(first, startDateRaw, msg, checkoutPage);
   }
 
   // Midtrans: buat transaksi Snap lalu arahkan customer ke halaman pembayaran
@@ -240,10 +247,17 @@ export async function checkoutOrder(formData: FormData) {
       // (admin bisa follow-up); jangan gagalkan checkout.
       if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
     }
-    redirect(`/order-status/${orderNumber}`);
+    redirect(`${portal ? "/portal/orders" : "/order-status"}/${orderNumber}`);
   }
 
-  redirect(`/order-status/${orderNumber}`);
+  redirect(`${portal ? "/portal/orders" : "/order-status"}/${orderNumber}`);
+}
+
+/** Checkout jalur portal customer — sama dengan checkoutOrder tetapi semua
+ *  redirect (sukses & error) tetap di jalur /portal/* supaya customer tidak
+ *  terlempar ke halaman publik tanpa login. */
+export async function checkoutOrderPortal(formData: FormData) {
+  return checkoutOrder(formData, { portal: true });
 }
 
 /** Customer mengubah metode pembayaran sebelum lunas.

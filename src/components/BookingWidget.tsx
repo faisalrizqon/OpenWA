@@ -13,6 +13,10 @@ interface BookingWidgetProps {
   productId: number;
   product: TieredProduct;
   prices: { label: string; hours: number; price: number }[];
+  /** Path halaman checkout — publik "/checkout" (default) atau portal "/portal/checkout". */
+  checkoutPath?: string;
+  /** Prefix halaman katalog untuk saran produk serupa — "/katalog" (default) atau "/portal/catalog". */
+  catalogPath?: string;
 }
 
 interface AvailabilityResponse {
@@ -31,7 +35,13 @@ function toLocalInputValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function BookingWidget({ productId, product, prices }: BookingWidgetProps) {
+export function BookingWidget({
+  productId,
+  product,
+  prices,
+  checkoutPath = "/checkout",
+  catalogPath = "/katalog",
+}: BookingWidgetProps) {
   const router = useRouter();
   const now = useMemo(() => new Date(), []);
   const [startDate, setStartDate] = useState(() => {
@@ -117,7 +127,7 @@ export function BookingWidget({ productId, product, prices }: BookingWidgetProps
       durationHours: String(durationHours),
       startDate: start.toISOString(),
     });
-    router.push(`/checkout?${params.toString()}`);
+    router.push(`${checkoutPath}?${params.toString()}`);
   };
 
   return (
@@ -251,7 +261,7 @@ export function BookingWidget({ productId, product, prices }: BookingWidgetProps
                       variant="outline"
                       size="sm"
                       className="border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
-                      onClick={() => router.push(`/katalog/${p.id}`)}
+                      onClick={() => router.push(`${catalogPath}/${p.id}`)}
                     >
                       {p.name}
                     </Button>
