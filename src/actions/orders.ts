@@ -5,7 +5,7 @@ import path from "path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { nextOrderNumber } from "@/lib/orderNumber"
+import { generateOrderNumber } from "@/lib/orderNumber";
 import { ensureStockAvailable } from "@/lib/availability";
 import { calcSubtotal, getTierPrice } from "@/lib/pricing";
 import { saveUpload, deleteStoredFile } from "@/lib/storage";
@@ -115,14 +115,9 @@ export async function createOrder(formData: FormData) {
         });
       }
 
-      // Order number: count orders created today (local)
-      const now = new Date();
-      const localStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const localEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-      const todayCount = await tx.order.count({
-        where: { createdAt: { gte: localStart, lt: localEnd } },
-      });
-      const orderNumber = nextOrderNumber(todayCount, now);
+      // Nomor order: ambil nomor terbesar yang sudah ada untuk tanggal lokal
+      // ini (count-based numbering bisa duplikat bila ada order dihapus).
+      const orderNumber = await generateOrderNumber(tx);
 
       const order = await tx.order.create({
         data: {

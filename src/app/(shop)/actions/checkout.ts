@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { ensureStockAvailable } from "@/lib/availability";
 import { calcSubtotal, getTierPrice } from "@/lib/pricing";
-import { nextOrderNumber } from "@/lib/orderNumber";
+import { generateOrderNumber } from "@/lib/orderNumber";
 import { calcPromoDiscount, checkPromoEligibility } from "@/lib/promo";
 import { saveUpload, resolveStoragePath } from "@/lib/storage";
 import { createMidtransTransaction, midtransConfigured, type PaymentMethod } from "@/lib/payment";
@@ -147,14 +147,9 @@ export async function checkoutOrder(
         });
       }
 
-      // 3) Nomor order
-      const now = new Date();
-      const localStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const localEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-      const todayCount = await tx.order.count({
-        where: { createdAt: { gte: localStart, lt: localEnd } },
-      });
-      const orderNumber = nextOrderNumber(todayCount, now);
+      // Nomor order: ambil nomor terbesar yang sudah ada untuk tanggal lokal
+      // ini (count-based numbering bisa duplikat bila ada order dihapus).
+      const orderNumber = await generateOrderNumber(tx);
 
       // 4) Order + items
       const order = await tx.order.create({
