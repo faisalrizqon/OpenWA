@@ -167,6 +167,7 @@ model Order {
   review        Review?
   messageLogs   MessageLog[]
   codReminders  CodReminder[]
+  reminders     Reminder[]
   gopayPayments GopayPayment[]
 
   @@index([status])
@@ -530,4 +531,24 @@ model CodReminder {
   @@unique([orderId, slot])
   @@index([status])
   @@index([sentAt])
+}
+
+// --- Reminder WA otomatis (COD/RETURN/LATE) per order ---
+model Reminder {
+  id             Int       @id @default(autoincrement())
+  orderId        String
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  slot           String    // "3h"|"1h"|"24h"|... | "late"
+  type           String    // "cod"|"return"|"late"
+  status         String    @default("pending") // pending|sent|skipped
+  sentAt         DateTime? // saat terkirim sukses
+  error          String?   // detail bila gagal kirim
+  scheduledAt    DateTime? // target waktu kirim (untuk LATE repeat scheduling)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([orderId, slot, type])
+  @@index([status])
+  @@index([type, status])
+  @@index([scheduledAt])
 }

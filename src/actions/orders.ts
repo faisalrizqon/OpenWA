@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 import { ensureStockAvailable } from "@/lib/availability";
 import { generateOrderNumber } from "@/lib/orderNumber";
 import { calcSubtotal, getTierPrice } from "@/lib/pricing";
-import { ensureCodReminders } from "@/lib/reminders/scheduler";
+import { ensureOrderReminders } from "@/lib/reminders/scheduler";
 import { saveUpload, deleteStoredFile } from "@/lib/storage";
 import { requireAdmin, requireMitraOrAdmin } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
@@ -175,7 +175,7 @@ export async function createOrder(formData: FormData) {
   }
 
   // Slot reminder COD disiapkan SETELAH transaksi commit (hindari nested-tx SQLite)
-  await ensureCodReminders(orderId);
+  await ensureOrderReminders(orderId);
 
   revalidatePath("/admin/orders");
   revalidatePath("/admin");

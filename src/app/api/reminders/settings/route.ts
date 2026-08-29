@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getReminderSettings, saveReminderSettings, ReminderSettings, SLOT_KEYS } from "@/lib/reminders/config";
-import { startCodReminderLoop } from "@/lib/reminders/scheduler";
+import { startReminderLoop } from "@/lib/reminders/scheduler";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const settings = await getReminderSettings();
     return NextResponse.json({ ok: true, settings });
@@ -21,34 +21,68 @@ export async function POST(request: NextRequest) {
 
   try {
     const data = await request.json() as Partial<ReminderSettings>;
-    
-    // Build slots dari field request — iterasi SLOT_KEYS agar index type-safe
-    const buildSlots = () => {
-      const result = {} as Record<"3h" | "1h" | "30m" | "5m", { enabled: boolean; minutes: number }>;
-      for (const slot of SLOT_KEYS) {
-        result[slot] = {
-          enabled: Boolean(data.slots?.[slot]?.enabled),
-          minutes: Math.max(1, Number(data.slots?.[slot]?.minutes) || 1),
-        };
-      }
-      return result;
+
+    const current = await getReminderSettings();
+
+    const num = (v: unknown, fb: number) => {
+      const n = Number(v);
+      return Number.isFinite(n) && n >= 0 ? n : fb;
     };
 
+    // Merge COD slots — hanya slot yang dikenal
+    const codSlots = { ...current.cod.slots };
+    if (data.cod?.slots) {
+      for (const key of SLOT_KEYS) {
+        const incoming = (data.cod.slots as Record<string, { enabled?: boolean; minutesBefore?: number }>)[key];
+        if (incoming) {
+          codSlots[key] = {
+            ...codSlots[key],
+            enabled: incoming.enabled ?? codSlots[key].enabled,
+            minutesBefore: num(incoming.minutesBefore, codSlots[key].minutesBefore),
+          };
+        }
+      }
+    }
+
+    // Merge RETURN slots
+    const returnSlots = { ...current.return.slots };
+    if (data.return?.slots) {
+      for (const key of Object.keys(current.return.slots)) {
+        const incoming = (data.return.slots as Record<string, { enabled?: boolean; minutesBefore?: number }>)[key];
+        if (incoming) {
+          returnSlots[key as keyof typeof returnSlots] = {
+            ...returnSlots[key as keyof typeof returnSlots],
+            enabled: incoming.enabled ?? returnSlots[key as keyof typeof returnSlots].enabled,
+            minutesBefore: num(incoming.minutesBefore, returnSlots[key as keyof typeof returnSlots].minutesBefore),
+          };
+        }
+      }
+    }
+
     const settings: ReminderSettings = {
-      enabled: Boolean(data.enabled ?? true),
-      slots: buildSlots(),
-      graceMinutes: Math.max(1, Number(data.graceMinutes) || 10),
-      scanIntervalSeconds: Math.max(15, Number(data.scanIntervalSeconds) || 60),
-      notifyAdmin: Boolean(data.notifyAdmin ?? false),
-      adminPhone: typeof data.adminPhone === "string" && data.adminPhone.trim() ? data.adminPhone.trim() : null,
+      enabled: data.enabled ?? current.enabled,
+      cod: {
+        slots: codSlots,
+        graceMinutes: num(data.cod?.graceMinutes, current.cod.graceMinutes),
+      },
+      return: {
+        slots: returnSlots,
+        graceMinutes: num(data.return?.graceMinutes, current.return.graceMinutes),
+      },
+      late: {
+        enabled: data.late?.enabled ?? current.late.enabled,
+        initialDelayHours: num(data.late?.initialDelayHours, current.late.initialDelayHours),
+        repeatIntervalDays: Math.max(1, num(data.late?.repeatIntervalDays, current.late.repeatIntervalDays)),
+      },
+      scanIntervalSeconds: Math.max(15, num(data.scanIntervalSeconds, current.scanIntervalSeconds)),
+      notifyAdmin: data.notifyAdmin ?? current.notifyAdmin,
+      adminPhone: typeof data.adminPhone === "string" ? (data.adminPhone.trim() || null) : current.adminPhone,
     };
 
     await saveReminderSettings(settings);
-    
-    // Restart loop bila interval berubah
-    if (Number(data.scanIntervalSeconds) !== 60) {
-      startCodReminderLoop();
-    }
+
+    // Restart loop agar interval baru langsung berlaku
+    startReminderLoop();
 
     return NextResponse.json({ ok: true, message: "Settings saved" });
   } catch (error) {
