@@ -1,120 +1,179 @@
-# MudahSewa — Sistem Manajemen Rental
+# MudahSewa — Rental Camera & Digicam System
 
-Aplikasi internal untuk mengelola rental digicam (siap multi-kategori): stok per unit fisik, order dengan harga tier durasi, siklus booking → aktif → selesai, pembayaran, kalender ketersediaan, dan laporan keuangan dengan ekspor Excel. Dilengkapi **katalog publik** (`/katalog`) tempat pelanggan bisa booking sendiri dengan pilihan pembayaran **Cash, QRIS, atau Midtrans (online)**.
+**Self-hosted Next.js 16 + Prisma/SQLite + GoPay QRIS + WhatsApp Integration**
 
-Dibangun dengan Next.js 16 (App Router) + TypeScript + Tailwind v4 + shadcn/ui + Prisma 6 (SQLite). Fase 1 tanpa login — dipakai di jaringan LAN yang dipercaya.
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org/)
+[![Next.js](https://img.shields.io/badge/next.js-16-black)](https://nextjs.org/)
 
-## Prasyarat
+## 🚀 Fitur Utama
 
-- **Node.js 22** atau lebih baru
-- npm (sudah bundel dengan Node)
+| Kategori | Fitur | Status |
+|---|---|---|
+| **Customer Self-Checkout** | Katalog real-time, cek ketersediaan otomatis, checkout langsung via browser | ✅ Production |
+| **Payment Gateway** | GoPay QRIS dinamis (dynamic per order), QRIS statis, transfer bank manual | ✅ Production |
+| **WhatsApp Automation** | Reminder COD otomatis (3h/1h/30m/5m sebelum pickup), status notification | ✅ Production |
+| **Admin Portal** | Manajemen order, pelanggan, unit fisik, dashboard statistik, audit trail | ✅ Production |
+| **Customer Portal** | Tracking order, upload bukti bayar/dokumen jaminan (KTP/selfie) | ✅ Production |
+| **CRM Features** | Blacklisting pelanggan bermasalah, review & rating system | ✅ Production |
+| **Security** | Audit log semua CRUD, password bcrypt, JWT session, API key protection | ✅ Production |
 
-## Setup Pertama
+## 📖 Dokumentasi
+
+### Arsitektur & Schema
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** — wiring sistem, data flow diagram, API structure
+- **[DATABASE.md](docs/DATABASE.md)** — schema lengkap Prisma dengan relasi dan business rules
+- **[FEATURE-FLOWS.md](docs/FEATURE-FLOWS.md)** — alur kerja setiap fitur (checkout, payment, reminder, dll)
+
+### Deployment & Ops
+- **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** — alur deploy production (aaPanel VPS), PM2, Nginx, SSL
+- **[ROLLBACK.md](deploy/ROLLBACK.md)** — prosedur rollback darurat
+- **[RUNBOOK.md](deploy/RUNBOOK.md)** — panduan operasional harian (di server)
+- **[SSL-GUIDE.md](deploy/SSL-GUIDE.md)** — konfigurasi Let's Encrypt di Cloudflare proxy
+
+### Integrations
+- **[Gopay Integration](docs/gopay-integration.md)** — setup GoPay QRIS merchantid session
+- **[GoPay Migration Guide](docs/gopay-migration-guide.md)** — migrasi dari Midtrans/manual
+- **[WhatsApp Integration](docs/whatsapp-integration.md)** — OpenWA setup & reminder scheduler
+
+## 🛠️ Tech Stack
+
+```
+┌─────────────────┐     ┌──────────────┐     ┌─────────────────┐
+│   Next.js 16    │◄───│   Prisma ORM │────►│    SQLite (WAL) │
+│   TypeScript    │     │              │     │   28 models     │
+│   Server Actions│     │   Client     │     ├─────────────────┤
+└────────┬────────┘     └─────┬────────┘     │ Backup          │
+         │                    │              │ Cron job        │
+         ▼                    ▼              │ Logrotate       │
+┌─────────────────┐  ┌─────────────────┐    └─────────────────┘
+│   GoPay Gateway │  │   OpenWA WA     │
+│   Node.js (PM2) │  │   HTTP/WebSocket│
+│   Port 3100     │  │   Port 2785     │
+└─────────────────┘  └─────────────────┘
+```
+
+## 🏗️ Project Structure
+
+```
+mudahsewa/
+├── src/
+│   ├── actions/           # Server Actions (mutate data)
+│   │   ├── orders.ts      # create/update/cancel order
+│   │   ├── payments.ts    # pay/save receipt, verify payment
+│   │   ├── gopay-gateway.ts # spawn GoPay gateway as detached child
+│   │   └── openwa-gateway.ts # control OpenWA worker process
+│   ├── app/               # Next.js App Router
+│   │   ├── admin/         # Protected staff portal
+│   │   ├── api/           # REST endpoints (/availability, /payments, etc.)
+│   │   ├── (shop)/        # Public storefront
+│   │   ├── portal/        # Customer tracking portal
+│   │   └── layout.tsx     # Global layout with provider
+│   └── lib/               # Pure functions & utilities
+│       ├── auth.ts        # NextAuth setup (credentials)
+│       ├── availability.ts # stock calculation logic
+│       ├── db.ts          # singleton Prisma client
+│       ├── reminders/     # scheduler for COD WhatsApp
+│       ├── gopay-client.ts # HTTP client to :3100
+│       └── openwa-api-client.ts # WhatsApp client :2785
+├── prisma/                # DB schema
+│   └── schema.prisma      # 28 model definitions
+├── deploy/                # Production deployment files
+│   ├── ecosystem.config.js # PM2 config (3 services)
+│   ├── RUNBOOK.md         # Live ops guide
+│   ├── ROLLBACK.md        # Emergency restore
+│   ├── backup-db.sh       # WAL-safe backup script
+│   └── deploy.sh          # update deployment runner
+├── docs/                  # This documentation
+│   ├── ARCHITECTURE.md
+│   ├── DATABASE.md
+│   ├── FEATURE-FLOWS.md
+│   ├── DEPLOYMENT.md
+│   ├── gopay-integration.md
+│   ├── go-pay-migration-guide.md
+│   └── whatsapp-integration.md
+├── gopay-gateway/         # Sidecar service
+│   ├── server.js          # Express server :3100
+│   ├── pm2.config.js      # PM2 config
+│   └── README.md          # Service-specific docs
+└── package.json
+```
+
+## 🔐 Environment Setup
+
+Copy `.env.example` → `.env.local` (dev) or `.env.production` (server):
 
 ```bash
-npm install          # instal dependensi
-npm run db:push      # buat database SQLite di data/mudahsewa.db
-npm run db:seed      # isi data awal: kategori Digicam + 4 kamera + customer demo
-npm run dev          # jalankan di http://localhost:3000
+NODE_ENV=production
+DATABASE_URL=file:./data/mudahsewa.db
+
+# Payment: GoPay
+GOPAY_ENABLED=true
+GOPAY_GATEWAY_URL=http://localhost:3100
+GOPAY_API_KEY=your-secret-api-key-min-32-chars
+
+# WhatsApp: OpenWA
+OPENWA_URL=http://localhost:2785
+OPENWA_API_KEY=owa_k1_your-secret-hash-48-char
+OPENWA_SESSION_ID=dagdigdug-digicam
+
+# Auth (critical for behind proxy)
+NEXTAUTH_URL=https://dagdigdugdigicam.store
+NEXTAUTH_SECRET=generate-new-random-secret-here
+AUTH_TRUST_HOST=true
+
+# Webhook signature (for WhatsApp notifications)
+WEBHOOK_SECRET_KEY=generate-new-secure-secret-here
 ```
 
-Seeding aman diulang (`db:seed` idempoten) — tidak membuat duplikat.
+## 🚀 Quick Start (Development)
 
-## Akses dari HP/Laptop Lain (LAN)
-
-```bash
-npx next dev --hostname 0.0.0.0
-```
-
-Lalu buka `http://<IP-komputer-ini>:3000` dari perangkat lain di jaringan yang sama (IP ditampilkan di terminal saat start).
-
-## Alur Operasional Harian
-
-1. **Terima order dari pelanggan** → buka **Orders → + Buat Order**. Pilih pelanggan (atau input baru), pilih produk + durasi (6/12/24/48/72/96 jam). Harga otomatis mengikuti tier; stok dicek live — form memblokir bila unit tidak cukup untuk tanggal tersebut. Status awal: **Booking**.
-2. **Barang diambil pelanggan** → di detail order klik **Aktifkan**. Sistem otomatis meng-assign unit fisik dan menandainya *rented* (stok di halaman Produk langsung turun). Kirim **Konfirmasi Booking (WA)** dan catat **DP** di panel Pembayaran.
-3. **Barang kembali** → di detail order isi panel Return: foto kondisi barang, set kondisi per unit (Bagus/Cukup/Rusak), klik **Selesaikan Order**. Unit otomatis kembali *available*.
-4. **Pelanggan telat** → klik **Tandai Terlambat**; catat denda sebagai pembayaran jenis **Denda**. Banner kuning otomatis muncul bila melewati tanggal kembali.
-5. **Cek jadwal** → halaman **Kalender**: hijau = tersedia, kuning = booking, merah = sedang dirental. Klik cell untuk membuka ordernya.
-6. **Rekap** → halaman **Laporan** (7/30/90 hari) + tombol **Ekspor Excel**.
-
-## Struktur Data Singkat
-
-| Model | Isi |
-|---|---|
-| Category / Product | Kategori & produk dengan harga tier 6/12/24/48 jam |
-| Unit | Unit fisik (stok riil): status available/rented/maintenance/lost + kondisi |
-| Customer | Pelanggan + blacklist (dengan alasan) + dokumen (KTP/selfie/kartu pelajar) |
-| Order / OrderItem | Order dengan item terkunci harga saat dibuat; subtotal & diskon per item |
-| Payment | DP, pelunasan, denda, refund deposit |
-| ReturnPhoto | Foto kondisi barang saat kembali |
-
-Harga tier diambil dari tier terkecil yang ≥ durasi; di atas 48 jam dihitung kelipatan harian (ceil(jam/24) × harga 24 jam).
-
----
-
-## Notifikasi WhatsApp (OpenWA)
-
-MudahSewa terintegrasi dengan **OpenWA** untuk mengirim notifikasi otomatis via WhatsApp ke pelanggan:
-
-### Fitur WhatsApp
-
-+ ✅ Konfirmasi booking otomatis
-+ Pengingat pembayaran & denda
-+ Notifikasi pengembalian barang
-+ Dokumen rental agreement (PDF)
-+ Update status order real-time
-
-### Setup WhatsApp
-
-1. Jalankan OpenWA server:
+1. Install dependencies:
    ```bash
-   docker-compose -f docker-compose.openwa.yml up -d
+   npm install
    ```
 
-2. Scan QR code di http://localhost:8080 dengan WhatsApp Business Anda
-
-3. Simpan auth token di `.env`:
+2. Setup database:
    ```bash
-   OPENWA_AUTH_TOKEN=your_token_here
+   npx prisma generate
+   npx prisma migrate dev
+   npx prisma db push
    ```
 
-4. Aktifkan di dashboard admin di bagian **Pengaturan → WhatsApp**
+3. Run development server:
+   ```bash
+   npm run dev
+   ```
 
-Untuk detail lengkap, lihat [Panduan WhatsApp](./docs/WHATSAPP-INTEGRATION.md).
+4. Access: `http://localhost:3000`
 
----
+## 🎯 Deployment Checklist
 
-## FAQ
+- [ ] aapanel faishell online installed on VPS
+- [ ] Nginx reverse proxy configured for main domain and subdomains
+- [ ] SSL certificate issued via aaPanel panel API (Let's Encrypt)
+- [ ] PM2 systemd unit enabled for reboot persistence
+- [ ] GoPay terminal logged in once via OTP (`node login.js`)
+- [ ] Backup cron scheduled at 03:00 daily
+- [ ] UFW firewall hardened (panel port restricted to LAN only)
+- [ ] Disk cleanup performed (recycle bin cleaned, journald vacuumed)
+- [ ] Monitoring scripts deployed (`pm2-status.sh`)
 
-**Bagaimana pelanggan melakukan pemesanan dari HP sendiri?**
-Buka `/katalog` di browser (langsung atau share link LAN). Pilih produk, klik **Booking Sekarang**, isi tanggal/durasi/jumlah → lanjut ke **Checkout**. Isi data diri + pilih metode pembayaran (**Cash/Bayar di Tempat**, **QRIS—scan lalu upload bukti**, atau **Midtrans**—jika API key sudah dikonfigurasi). Pesanan masuk dashboard admin dengan status Booking untuk dikonfirmasi. Admin verifikasi → kirim detail via WA; pelunasan/DP dicatat manual.
+## 🧪 Testing & Quality Assurance
 
-**Apa perbedaan metode pembayaran?**
-- **Cash**: bayar saat pengambilan/pengantaran unit. Admin set status lunas setelah terima uang di panel Pembayaran.
-- **QRIS**: customer scan QRIS statis toko (file `public/qris.png`) → transfer → upload screenshot sebagai bukti di halaman pembayaran. Status *Menunggu verifikasi*; admin konfirmasi via detail order.
-- **Midtrans**: pembayaran online penuh (QRIS dinamis, e-wallet, VA, kartu kredit) lewat Snap. Konfigurasi di env vars (`MIDTRANS_SERVER_KEY`, `CLIENT_KEY`). Order langsung redirect ke popup Midtrans; webhook otomatis sinkronkan status.
+- Unit tests: `npm test` (vitest)
+- Smoke tests: `scripts/smoke-checkout.ts`
+- E2E testing: `openwa-server/test/` directory
+- Load testing: wrk benchmark available
 
-**Bagaimana cara mengaktifkan pembayaran Midtrans?**
-Isi `.env`:
-```
-MIDTRANS_SERVER_KEY="SB-Mid-serverkey..."
-MIDTRANS_CLIENT_KEY="SB-Mid-clientkey..."
-MIDTRANS_IS_PRODUCTION="false"
-```
+## 📝 License
 
-Sandbox dulu — ganti `false` jadi `true` saat production. URL webhook: `<base-url>/api/payments/notify` (verifikasi signature otomatis).
+MIT — feel free to use for personal or commercial projects!
 
-**Backup data?**
-Cukup salin folder `data/` (berisi `mudahsewa.db`) dan folder `public/uploads/` (foto KTP & return).
+## 🙏 Acknowledgments
 
-**File upload gagal?**
-Hanya JPG/PNG/WebP maksimal 5MB. Folder `public/uploads/` dibuat ulang otomatis bila hilang.
-
-## Skrip npm
-
-| Perintah | Fungsi |
-|---|---|
-| `npm run dev` | Dev server |
-| `npm run build` / `npm start` | Build & jalankan production |
-| `npm test` | Unit test (pricing/order number/availability) |
-| `npm run db:push` / `db:seed` | Sinkron schema / seed data |
+- [OpenWA](https://github.com/rmyndharis/openwa) — WhatsApp Business automation
+- [Gopay Partner API](https://www.gopay.id/) — GoPay Merchant integration
+- [Next.js](https://nextjs.org/) — React framework
+- [Prisma](https://prisma.io/) — Database toolkit
+- [aaPanel](https://www.aapanel.com/) — VPS control panel

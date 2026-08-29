@@ -95,7 +95,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                   </h3>
                 </Reveal>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
                   {byCategory.get(cat)!.map((p, prodIdx) => {
                     // Jalur foto: upload admin (galeri→unit) = foto utama; sisanya preview kotak kecil
                     const { main, previews } = productPhotosOf(p);

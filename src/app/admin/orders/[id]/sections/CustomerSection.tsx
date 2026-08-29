@@ -7,7 +7,7 @@ import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { waLink } from "@/lib/wa";
 import { GUARANTEE_TYPES, dateFmt } from "./constants";
 import { confirmPendingOrder } from "@/actions/orders";
-
+import { OrderActionsSection } from "./OrderActionsSection";
 export interface CustomerSectionProps {
   order: {
     id: string;
@@ -16,6 +16,8 @@ export interface CustomerSectionProps {
     handledByUser?: { name: string } | null;
     handledBy?: string | null;
     status: string;
+    startDate: Date;
+    endDate: Date;
     noteOrder?: string | null;
     guaranteeType?: string | null;
     guaranteeNumber?: string | null;
@@ -147,10 +149,16 @@ export function CustomerSection({
           />
         )}
       </div>
-
       {/* Catatan order */}
       {order.noteOrder && (
         <p className="mt-4 rounded-lg bg-muted px-3 py-2 text-sm">{order.noteOrder}</p>
+      )}
+
+      {/* Quick action ubah tanggal sewa */}
+      {isAdmin && (
+        <div className="mt-4">
+          <OrderActionsSection orderId={order.id} initialStartDate={order.startDate} initialEndDate={order.endDate} />
+        </div>
       )}
 
       {/* Detail tambahan */}
@@ -193,8 +201,6 @@ export function CustomerSection({
           )}
         </dl>
       )}
-
-      {/* Ubah status + hapus order */}
       <div className="mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
         <StatusChangeForm orderId={order.id} status={order.status} />
         {isAdmin && <DeleteOrderDialog orderId={order.id} orderNumber={order.orderNumber} />}

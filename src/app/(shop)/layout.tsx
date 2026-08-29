@@ -5,7 +5,6 @@ import { waLink, generalMessage } from "@/lib/shop";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { ShopTheme } from "@/components/ShopTheme";
 import { OpenClosedSign } from "@/components/OpenClosedSign";
-import { OpenClosedBadge } from "@/components/OpenClosedBadge";
 import { MobileNavMenu } from "@/components/MobileNavMenu";
 
 export default async function ShopLayout({ children }: LayoutProps<"/">) {
@@ -30,7 +29,12 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
 
           {/* Kanan mobile: badge BUKA/TUTUP compact + tombol menu hamburger */}
           <div className="flex items-center gap-2 sm:hidden">
-            <OpenClosedBadge hours={shop.hours} />
+            {/* Papan kayu OPEN/CLOSED versi kecil (animasi ayun tetap ada) */}
+            <div className="relative h-12 w-[90px] shrink-0">
+              <div className="absolute left-[-55px] top-0 origin-top scale-[0.45]">
+                <OpenClosedSign hours={shop.hours} />
+              </div>
+            </div>
             <MobileNavMenu whatsappUrl={waLink(shop.whatsapp, generalMessage(shop.storeName))} />
           </div>
 

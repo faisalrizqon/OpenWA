@@ -13,7 +13,6 @@ import { CustomerSection } from "./sections/CustomerSection";
 import { FinancialSummary } from "./sections/FinancialSummary";
 import { GuaranteeSection } from "./sections/GuaranteeSection";
 import { ItemsSection } from "./sections/ItemsSection";
-import { OrderActionsSection } from "./sections/OrderActionsSection";
 import { PaymentSection } from "./sections/PaymentSection";
 import { ReturnSection } from "./sections/ReturnSection";
 import { dateFmt } from "./sections/constants";
@@ -132,13 +131,6 @@ export default async function OrderDetailPage({
           <span className="text-sm text-muted-foreground hidden sm:inline-block">
             {dateFmt(order.startDate)} → {dateFmt(order.endDate)}
           </span>
-          {isAdmin && (
-            <OrderActionsSection
-              orderId={order.id}
-              initialStartDate={order.startDate}
-              initialEndDate={order.endDate}
-            />
-          )}
         </div>
         <Link
           href={`/invoice/${order.id}`}
@@ -156,7 +148,6 @@ export default async function OrderDetailPage({
           Melewati tanggal kembali ({dateFmt(order.endDate)}) — pertimbangkan tandai terlambat
         </p>
       )}
-
       <div className="grid gap-4 lg:grid-cols-2">
         <CustomerSection
           order={order}
@@ -167,7 +158,6 @@ export default async function OrderDetailPage({
           lateWarningWA={lateWarningWA}
           isAdmin={isAdmin}
         />
-        <FinancialSummary order={order} total={total} paid={paid} sisa={sisa} />
       </div>
 
       {/* Pembayaran dinaikkan di bawah ringkasan, jaminan turun ke bawah */}

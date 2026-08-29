@@ -81,3 +81,11 @@ storage/
 !gopay-gateway/.env.example
 !openwa-server/.env.example
 openwa-server/
+
+# Local development plans
+.hermes/
+
+# Database - jangan commit DB berisi data pelanggan (PII)
+data/*.db
+data/*.db-*
+!data/.gitkeep

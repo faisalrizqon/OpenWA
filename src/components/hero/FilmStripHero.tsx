@@ -26,7 +26,7 @@ export function FilmStripHero({ products, settings }: { products: HeroProduct[];
       </div>
 
       {/* Film strip marquee */}
-      <div className="mt-auto overflow-hidden bg-foreground py-3">
+      <div className="mt-auto overflow-hidden py-3">
         <div className="film-sprockets h-3 w-full opacity-70" />
         <div className="film-strip-track gap-3 py-3">
           {frames.map((p, i) => (
