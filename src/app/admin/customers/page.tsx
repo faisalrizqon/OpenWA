@@ -5,8 +5,9 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLink } from "@/components/HeaderLink";
 import { EmptyState } from "@/components/EmptyState";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageNotifier, type PageNotification } from "@/components/PageNotifier";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CustomerRowActions } from "@/components/CustomerAdminActions";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import {
@@ -45,6 +46,11 @@ export default async function CustomersPage({
     include: { _count: { select: { orders: true } } },
   });
 
+  const notifications: PageNotification[] = [];
+  if (deleted === "1") {
+    notifications.push({ type: "success", message: "Pelanggan berhasil dihapus." });
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -52,12 +58,7 @@ export default async function CustomersPage({
         description="Kontak WA, riwayat order, dan status blacklist"
         action={<HeaderLink href="/admin/customers/new" label="Tambah Pelanggan" />}
       />
-
-      {deleted === "1" && (
-        <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-          Pelanggan berhasil dihapus.
-        </p>
-      )}
+      <PageNotifier notifications={notifications} />
 
       {/* Search */}
       <Card>

@@ -1,10 +1,11 @@
 "use server";
 
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, writeFile, unlink } from "fs/promises";
 import path from "path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { nextOrderNumber } from "@/lib/orderNumber"
 import { countOverlapUnits } from "@/lib/availability";
 import { calcSubtotal, getTierPrice } from "@/lib/pricing";
 import { saveUpload, deleteStoredFile } from "@/lib/storage";
@@ -95,31 +96,37 @@ export async function createOrder(formData: FormData) {
         customerId = upserted.id;
       }
 
-      // Stock check per product within transaction
+      // Stock check per product within transaction — with rest buffer
       const productIds = Array.from(new Set(items.map((it) => it.productId)));
       const maxDuration = Math.max(...items.map((it) => it.durationHours));
       const endDate = new Date(startDate.getTime() + maxDuration * 3600_000);
 
       for (const pid of productIds) {
-        const [totalUnits, busyItems] = await Promise.all([
+        const [product, totalUnits] = await Promise.all([
+          tx.product.findUnique({ where: { id: pid } }),
           tx.unit.count({
             where: { productId: pid, status: { notIn: ["maintenance", "lost"] } },
           }),
-          tx.orderItem.findMany({
-            where: {
-              productId: pid,
-              order: {
-                status: { in: ["booking", "active", "late"] },
-                startDate: { lt: endDate },
-                endDate: { gt: startDate },
-              },
-            },
-            select: {
-              quantity: true,
-              order: { select: { status: true, startDate: true, endDate: true } },
-            },
-          }),
         ]);
+        
+        const restBufferHours = product?.chargingRestHours ?? 3;
+        const endDateFilter = new Date(startDate.getTime() - (restBufferHours * 3600_000));
+        
+        const busyItems = await tx.orderItem.findMany({
+          where: {
+            productId: pid,
+            order: {
+              status: { in: ["booking", "active", "late"] },
+              startDate: { lt: endDate },
+              endDate: { gt: endDateFilter },
+            },
+          },
+          select: {
+            quantity: true,
+            order: { select: { status: true, startDate: true, endDate: true } },
+          },
+        });
+        
         const busy = countOverlapUnits(
           pid,
           startDate,
@@ -130,14 +137,12 @@ export async function createOrder(formData: FormData) {
             endDate: it.order.endDate,
             productId: pid,
             quantity: it.quantity,
-          }))
+          })),
+          restBufferHours
         );
-        const needed = items
-          .filter((it) => it.productId === pid)
-          .reduce((s, it) => s + it.quantity, 0);
+        const needed = items.filter((it) => it.productId === pid).reduce((s, it) => s + it.quantity, 0);
         if (needed > totalUnits - busy) {
-          const product = await tx.product.findUnique({ where: { id: pid } });
-          throw new Error(`Stok tidak cukup: ${product?.name ?? pid}`);
+          throw new Error(`Stok tidak cukup untuk ${product?.name ?? pid}. Unit masih dalam masa charge/istirahat.`);
         }
       }
 
@@ -210,7 +215,18 @@ export async function createOrder(formData: FormData) {
   redirect(`/admin/orders/${orderId}`);
 }
 
-const REVALIDATE_PATHS = ["/admin/orders", "/admin/products", "/admin/calendar", "/"] as const;
+const REVALIDATE_PATHS = [
+  "/admin/orders",
+  "/admin/products",
+  "/admin/calendar",
+  "/",
+  // Portal customer: order/jaminan/review harus ikut terhapus dari cache
+  // saat order dihapus/diubah admin — termasuk daftar order di portal.
+  "/portal",
+  "/portal/orders",
+  "/portal/documents",
+  "/portal/reviews",
+] as const;
 
 function revalidateOrderPaths(orderId: string) {
   for (const p of REVALIDATE_PATHS) revalidatePath(p);
@@ -232,7 +248,7 @@ async function releaseOrderUnits(tx: Tx, orderId: string) {
   }
 }
 
-const VALID_STATUSES = ["booking", "active", "late", "completed", "cancelled"];
+const VALID_STATUSES = ["pending", "booking", "active", "late", "completed", "cancelled"];
 
 /** Efek samping perubahan status — dipakai update tunggal & bulk.
  *  Masuk "active" assign unit (+ log rented); keluar masa sewa release unit (+ log returned). */
@@ -376,6 +392,46 @@ export async function deleteOrder(formData: FormData) {
   for (const p of REVALIDATE_PATHS) revalidatePath(p);
   redirect("/admin/orders?deleted=1");
 }
+/** Hapus order massal — hapus beberapa order sekaligus, release unit, audit log per order. */
+export async function bulkDeleteOrder(formData: FormData) {
+  const user = await requireAdmin();
+  const orderIdsRaw = formData.getAll("orderId").map((v) => String(v)).filter(Boolean);
+  if (orderIdsRaw.length === 0) redirect("/admin/orders");
+
+  const errors: string[] = [];
+  let deleted = 0;
+
+  for (const orderId of orderIdsRaw) {
+    try {
+      await prisma.$transaction(async (tx) => {
+        const order = await tx.order.findUnique({ where: { id: orderId } });
+        if (!order) return;
+
+        await logAudit(tx, {
+          entityType: "order",
+          entityId: orderId,
+          action: "delete",
+          summary: `Order ${order.orderNumber} dihapus via bulk`,
+          userId: user.id,
+        });
+
+        await releaseOrderUnits(tx, orderId);
+        await tx.order.delete({ where: { id: orderId } });
+      });
+      deleted++;
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
+      const msg = e instanceof Error ? e.message : "gagal";
+      errors.push(`${orderId}: ${msg}`);
+    }
+  }
+
+  for (const p of REVALIDATE_PATHS) revalidatePath(p);
+  const qs = new URLSearchParams({ deleted: String(deleted) });
+  if (errors.length > 0) qs.set("errors", errors.join(" | "));
+  redirect(`/admin/orders?${qs.toString()}`);
+}
+
 
 export async function addPayment(formData: FormData) {
   const user = await requireMitraOrAdmin();
@@ -384,14 +440,28 @@ export async function addPayment(formData: FormData) {
   const paymentType = String(formData.get("paymentType") ?? "");
   const method = String(formData.get("method") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
-  const back = `/admin/orders/${orderId}`;
+  const proofFileRaw = formData.get("proof") as File | undefined;
+  const back = `/admin/orders/${String(formData.get("orderId"))}`;
 
-  if (!orderId || !Number.isFinite(amount) || amount <= 0) {
+  if (!orderId || !Number.isFinite(amount) || amount <= 0 || !["dp", "pelunasan", "denda"].includes(paymentType)) {
     redirect(`${back}?error=payment`);
   }
-  if (!["dp", "pelunasan", "denda", "deposit_refund"].includes(paymentType)) {
-    redirect(`${back}?error=payment`);
+
+  let proofPath: string | null = null;
+  if (proofFileRaw && proofFileRaw.size > 0) {
+    const MAX_PROOF_BYTES = 5 * 1024 * 1024; // 5MB
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (proofFileRaw.size > MAX_PROOF_BYTES || !validTypes.includes(proofFileRaw.type)) {
+      redirect(`${back}?error=file`);
+    }
+    const ext = proofFileRaw.type === "image/jpeg" ? "jpg" : proofFileRaw.type === "image/png" ? "png" : "webp";
+    const filename = `${orderId}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+    const bytes = Buffer.from(await proofFileRaw.arrayBuffer());
+    proofPath = (await saveUpload("proof", filename, bytes)).filePath;
   }
+
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true } });
+  if (!order) redirect(`${back}?error=notfound`);
 
   await prisma.payment.create({
     data: {
@@ -400,8 +470,12 @@ export async function addPayment(formData: FormData) {
       paymentType,
       method: method || null,
       note: note || null,
+      ...(proofPath && { proofPath }),
+      status: "pending",
+      paidAt: new Date(),
     },
   });
+
   await logAudit(prisma, {
     entityType: "payment",
     entityId: orderId,
@@ -423,16 +497,50 @@ export async function editPayment(formData: FormData) {
   const amount = Number(formData.get("amount"));
   const method = String(formData.get("method") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
+  const proofFileRaw = formData.get("proof") as File | undefined;
   const back = `/admin/orders/${String(formData.get("orderId"))}`;
 
   if (!paymentId || !Number.isFinite(amount) || amount <= 0) {
     redirect(`${back}?error=payment`);
   }
 
+  // Get current payment to check existing proof & order ref
+  const existingPayment = await prisma.payment.findUnique({
+    where: { id: Number(paymentId) },
+    select: { proofPath: true, orderId: true },
+  });
+
+  // Handle file upload for proof - delete old if replacing
+  let newProofPath: string | null = existingPayment?.proofPath ?? null;
+  if (proofFileRaw && proofFileRaw.size > 0) {
+    const MAX_PROOF_BYTES = 5 * 1024 * 1024;
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (proofFileRaw.size > MAX_PROOF_BYTES || !validTypes.includes(proofFileRaw.type)) {
+      redirect(`${back}?error=file`);
+    }
+    const ext = proofFileRaw.type === "image/jpeg" ? "jpg" : proofFileRaw.type === "image/png" ? "png" : "webp";
+    const filename = `${existingPayment?.orderId ?? paymentId}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+    const bytes = Buffer.from(await proofFileRaw.arrayBuffer());
+    const result = await saveUpload("proof", filename, bytes);
+
+    // Hapus bukti lama bila ada (idempotent — aman jika file sudah tidak ada)
+    if (existingPayment?.proofPath) {
+      await deleteStoredFile(existingPayment.proofPath);
+    }
+
+    newProofPath = result.filePath;
+  }
+
   await prisma.payment.update({
     where: { id: Number(paymentId) },
-    data: { amount, method: method || null, note: note || null },
+    data: { 
+      amount, 
+      method: method || null, 
+      note: note || null,
+      ...(newProofPath !== existingPayment?.proofPath && { proofPath: newProofPath }),
+    },
   });
+  
   await logAudit(prisma, {
     entityType: "payment",
     entityId: paymentId,
@@ -455,6 +563,23 @@ export async function deletePayment(formData: FormData) {
   if (!paymentId || !orderId) redirect(`/admin/orders?error=payment`);
 
   try {
+    // Ambil proofPath dulu supaya file bukti ikut terhapus bersama record
+    const payment = await prisma.payment.findUnique({
+      where: { id: Number(paymentId) },
+      select: { proofPath: true },
+    });
+    if (payment?.proofPath) {
+      if (payment.proofPath.startsWith("/storage/")) {
+        await deleteStoredFile(payment.proofPath);
+      } else {
+        // Legacy: bukti lama tersimpan di public/ — hapus langsung
+        try {
+          await unlink(path.join(process.cwd(), "public", payment.proofPath));
+        } catch {
+          /* file sudah tidak ada — abaikan */
+        }
+      }
+    }
     await prisma.payment.delete({ where: { id: Number(paymentId) } });
     await logAudit(prisma, {
       entityType: "payment",
@@ -658,26 +783,32 @@ export async function extendOrder(formData: FormData) {
       const newEnd = new Date(oldEnd.getTime() + extraDays * 24 * 3600_000);
 
       // Cek stok tiap produk untuk jendela tambahan [oldEnd, newEnd)
+      // Cek stok tiap produk untuk jendela tambahan [oldEnd, newEnd) — dengan rest buffer
       for (const item of order.items) {
-        const [totalUnits, busyItems] = await Promise.all([
+        const [product, totalUnits] = await Promise.all([
+          tx.product.findUnique({ where: { id: item.productId } }),
           tx.unit.count({
             where: { productId: item.productId, status: { notIn: ["maintenance", "lost"] } },
           }),
-          tx.orderItem.findMany({
-            where: {
-              productId: item.productId,
-              order: {
-                status: { in: ["booking", "active", "late"] },
-                startDate: { lt: newEnd },
-                endDate: { gt: oldEnd },
-              },
-            },
-            select: {
-              quantity: true,
-              order: { select: { status: true, startDate: true, endDate: true } },
-            },
-          }),
         ]);
+        
+        const restBufferHours = product?.chargingRestHours ?? 3;
+        const endDateFilter = new Date(oldEnd.getTime() - (restBufferHours * 3600_000));
+        
+        const busyItems = await tx.orderItem.findMany({
+          where: {
+            productId: item.productId,
+            order: {
+              status: { in: ["booking", "active", "late"] },
+              startDate: { lt: newEnd },
+              endDate: { gt: endDateFilter },
+            },
+          },
+          select: {
+            quantity: true,
+            order: { select: { status: true, startDate: true, endDate: true } },
+          },
+        });
         const busy = countOverlapUnits(
           item.productId,
           oldEnd,
@@ -688,10 +819,11 @@ export async function extendOrder(formData: FormData) {
             endDate: it.order.endDate,
             productId: item.productId,
             quantity: it.quantity,
-          }))
+          })),
+          restBufferHours
         );
         if (item.quantity > totalUnits - busy) {
-          throw new Error(`Stok tidak cukup untuk perpanjangan: ${item.product.name}`);
+          throw new Error(`Stok tidak cukup untuk perpanjangan: ${item.product.name}. Unit masih dalam masa charge/istirahat.`);
         }
       }
 
@@ -802,4 +934,32 @@ export async function refundDeposit(formData: FormData) {
 
   revalidateOrderPaths(orderId);
   redirect(back);
+}
+
+/** Anti-spam: admin terima/tolak order online yang masih `pending`.
+ *  accept → booking (masuk antrian normal), reject → cancelled. */
+export async function confirmPendingOrder(formData: FormData) {
+  const user = await requireMitraOrAdmin();
+  const orderId = String(formData.get("orderId") ?? "");
+  const action = String(formData.get("action") ?? "").trim(); // "accept" | "reject"
+  if (!orderId || !["accept", "reject"].includes(action)) redirect("/admin/orders");
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, orderNumber: true, status: true },
+  });
+  if (!order) redirect("/admin/orders");
+
+  const backParam = String(formData.get("back") ?? "");
+  const back = backParam.startsWith("/") ? backParam : `/admin/orders/${orderId}`;
+  if (order.status !== "pending") redirect(`${back}?error=${encodeURIComponent("Order sudah diproses.")}`);
+
+  const newStatus = action === "accept" ? "booking" : "cancelled";
+  await prisma.$transaction(async (tx) => {
+    await applyStatusChange(tx, orderId, newStatus, user.id);
+  });
+
+  revalidateOrderPaths(orderId);
+  revalidatePath("/admin/orders");
+  redirect(`${back}?pending=${action}`);
 }

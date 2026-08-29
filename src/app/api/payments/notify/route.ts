@@ -80,11 +80,10 @@ export async function POST(request: Request) {
     await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: "unpaid" } });
   }
 
-  revalidatePath(`/payment/${order.orderNumber}`);
   revalidatePath(`/order-status/${order.orderNumber}`);
-  revalidatePath("/orders");
-  revalidatePath(`/orders/${order.id}`);
-  revalidatePath("/");
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${order.id}`);
+  revalidatePath("/admin");
 
   return Response.json({ ok: true });
 }

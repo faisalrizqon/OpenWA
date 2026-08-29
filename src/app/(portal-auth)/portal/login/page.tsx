@@ -2,11 +2,25 @@ import Link from "next/link";
 import { Camera } from "lucide-react";
 import { getStoreSettings } from "@/lib/content";
 import { CustomerLoginForm } from "@/components/CustomerLoginForm";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 /** Login portal customer — tampilan sama seperti /login admin (gradient bg,
  *  card centered), tapi field: No. HP + kata sandi vs email + kata sandi. */
 export default async function PortalLoginPage() {
   const shop = await getStoreSettings();
+  
+  // Cek apakah user sudah login sebagai customer
+  const session = await auth();
+  if (session?.user?.role === "customer") {
+    // User sudah login sebagai customer -> redirect ke portal
+    redirect("/portal");
+  }
+
+  // Cek juga jika staff/admin mencoba akses portal login -> redirect ke admin
+  if (session?.user?.role === "admin" || session?.user?.role === "mitra") {
+    redirect("/admin");
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-accent/30 px-4">

@@ -1,4 +1,5 @@
 const statusMap: Record<string, { label: string; className: string }> = {
+  pending: { label: "Perlu Konfirmasi", className: "bg-amber-100 text-amber-800" },
   booking: { label: "Booking", className: "bg-yellow-100 text-yellow-800" },
   active: { label: "Aktif", className: "bg-blue-100 text-blue-800" },
   late: { label: "Terlambat", className: "bg-red-100 text-red-800" },

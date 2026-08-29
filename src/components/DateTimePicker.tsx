@@ -163,7 +163,7 @@ export function DateTimePicker({
           >
             <CalendarDays className="size-4 text-muted-foreground" aria-hidden />
             <span className={cn(!valid && "text-muted-foreground")}>
-              {valid ? format(date, "EEEE, dd MMM yyyy", { locale: localeId }) : "Pilih tanggal"}
+              {valid ? format(date, "EEEE, dd MMMM yyyy", { locale: localeId }) : "Pilih tanggal"}
             </span>
           </PopoverTrigger>
           <PopoverContent>
@@ -236,7 +236,7 @@ export function DatePicker({
         >
           <CalendarDays className="size-4 text-muted-foreground" aria-hidden />
           <span className={cn(!valid && "text-muted-foreground")}>
-            {valid ? format(date!, "dd MMM yyyy", { locale: localeId }) : placeholder}
+            {valid ? format(date!, "dd MMMM yyyy", { locale: localeId }) : placeholder}
           </span>
         </PopoverTrigger>
         <PopoverContent>

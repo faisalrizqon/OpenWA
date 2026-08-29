@@ -1,12 +1,28 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, ImagePlus, X } from "lucide-react";
+import { Camera, ImagePlus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import { uploadProductImages, deleteProductImage } from "@/actions/products";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const MAX_IMAGES = 10;
+
+// Batas ukuran per file (sama dengan validasi server di uploadProductImages).
+// Validasi client-side penting: jika total body melebihi proxyClientMaxBodySize,
+// Next.js memotong stream request dan busboy gagal parse multipart
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+
 
 export interface ProductImageItem {
   id: number;
@@ -40,30 +56,27 @@ export function ProductGalleryControl({
               key={img.id}
               className="group relative aspect-square overflow-hidden rounded-xl border bg-muted/40"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={img.filePath}
-                alt={`Foto produk ${img.id}`}
-                className="size-full cursor-zoom-in object-cover transition-transform duration-200 group-hover:scale-105"
+              {/* Klik foto = buka lightbox (button agar bisa diakses keyboard) */}
+              <button
+                type="button"
                 onClick={() => setLightboxSrc(img.filePath)}
-              />
-              {/* Tombol ✕ di kanan atas — seragam dengan pola jaminan */}
-              <form
-                action={deleteProductImage}
-                onSubmit={(e) => {
-                  if (!window.confirm("Hapus foto ini dari galeri produk?")) e.preventDefault();
-                }}
+                aria-label={`Perbesar foto produk ${img.id}`}
+                className="block size-full cursor-zoom-in"
               >
-                <input type="hidden" name="imageId" value={img.id} />
-                <input type="hidden" name="productId" value={productId} />
-                <button
-                  type="submit"
-                  aria-label="Hapus foto produk"
-                  className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-card/95 text-muted-foreground shadow-sm ring-1 ring-border/70 transition-colors hover:bg-red-50 hover:text-red-600"
-                >
-                  <X className="size-3.5" aria-hidden />
-                </button>
-              </form>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={img.filePath}
+                  alt={`Foto produk ${img.id}`}
+                  className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
+                />
+              </button>
+              {/* Overlay gradasi saat hover — murni visual (pointer-events-none)
+                  sehingga klik foto tetap membuka lightbox. */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/25 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+
+              {/* Tombol hapus foto — muncul saat hover, konfirmasi lewat dialog in-app
+                  (bukan window.confirm bawaan browser). */}
+              <DeleteImageDialog imageId={img.id} productId={productId} src={img.filePath} />
             </div>
           ))}
         </div>
@@ -85,9 +98,32 @@ export function ProductGalleryControl({
             accept="image/jpeg,image/png,image/webp"
             className="sr-only"
             onChange={(e) => {
-              if (e.target.files && e.target.files.length > 0) {
-                (e.currentTarget.form as HTMLFormElement).requestSubmit();
+              const input = e.currentTarget;
+              const files = input.files;
+              if (!files || files.length === 0) return;
+
+              // Validasi jumlah file dulu — jika total body melebihi
+              // proxyClientMaxBodySize, Next.js memotong stream dan busboy
+              // gagal parse multipart ("Unexpected end of form").
+              if (files.length > remaining) {
+                toast.error(`Maksimal ${remaining} foto lagi untuk galeri ini`, {
+                  description: `Kamu memilih ${files.length} file — pilih paling banyak ${remaining}.`,
+                });
+                input.value = ""; // reset agar file yang sama bisa dipilih lagi
+                return;
               }
+
+              // Validasi ukuran per file (maks 20MB, sama dengan aturan server).
+              const oversized = Array.from(files).filter((f) => f.size > MAX_FILE_SIZE);
+              if (oversized.length > 0) {
+                toast.error("Ada file melebihi batas 20MB — tidak diupload", {
+                  description: oversized.map((f) => `• ${f.name}`).join("\n"),
+                });
+                input.value = "";
+                return;
+              }
+
+              input.form?.requestSubmit();
             }}
           />
           <button
@@ -102,7 +138,7 @@ export function ProductGalleryControl({
             )}
             {images.length > 0 ? "Tambah Foto" : "Upload Foto Produk"}
             <span className="text-xs text-muted-foreground">
-              sisa {remaining} slot · JPG/PNG/WebP maks 5MB
+              sisa {remaining} slot · JPG/PNG/WebP maks 20MB
             </span>
           </button>
         </form>
@@ -129,5 +165,61 @@ export function ProductGalleryControl({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/**
+ * Konfirmasi hapus satu foto galeri — dialog in-app dengan preview foto,
+ * pengganti window.confirm bawaan browser yang tampilannya tidak konsisten.
+ * Pola sama dengan DeleteProductDialog di ProductAdminActions.
+ */
+function DeleteImageDialog({
+  imageId,
+  productId,
+  src,
+}: {
+  imageId: number;
+  productId: number;
+  src: string;
+}) {
+  return (
+    <Dialog>
+      <DialogTrigger
+        render={
+          <button
+            type="button"
+            aria-label="Hapus foto dari galeri"
+            className="absolute right-1.5 top-1.5 z-10 flex size-7 items-center justify-center rounded-full bg-card/95 text-muted-foreground opacity-0 shadow-sm ring-1 ring-border/70 backdrop-blur-sm transition-all duration-200 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 focus-visible:opacity-100"
+          >
+            <X className="size-3.5" aria-hidden />
+          </button>
+        }
+      />
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Hapus foto ini dari galeri?</DialogTitle>
+          <DialogDescription>
+            Foto akan dihapus permanen dan tidak bisa dikembalikan.
+          </DialogDescription>
+        </DialogHeader>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt="Preview foto yang akan dihapus"
+          className="h-36 w-full rounded-lg border object-cover"
+        />
+        <form action={deleteProductImage}>
+          <input type="hidden" name="imageId" value={imageId} />
+          <input type="hidden" name="productId" value={productId} />
+          <DialogFooter>
+            <DialogClose render={<Button type="button" variant="outline">Batal</Button>} />
+            <Button type="submit" variant="destructive" className="gap-1.5">
+              <Trash2 className="size-3.5" aria-hidden />
+              Ya, Hapus
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

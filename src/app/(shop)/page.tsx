@@ -15,6 +15,7 @@ import { HERO_VARIANTS } from "@/lib/content";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Card, CardContent } from "@/components/ui/card";
 import { ShopHero, type HeroVariant } from "@/components/ShopHero";
+import { productPhotosOf } from "@/lib/productPhotos";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     orderBy: [{ categoryId: "asc" }, { name: "asc" }],
     include: {
       category: { select: { name: true } },
-      units: { where: { status: { notIn: ["maintenance", "lost"] } }, select: { id: true } },
+      units: { where: { status: { notIn: ["maintenance", "lost"] } }, select: { id: true, photoPath: true, serialNumber: true } },
+      images: { orderBy: { sortOrder: "asc" }, select: { filePath: true } },
     },
   });
 
@@ -94,16 +96,19 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                 </Reveal>
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {byCategory.get(cat)!.map((p, prodIdx) => (
+                  {byCategory.get(cat)!.map((p, prodIdx) => {
+                    // Jalur foto: upload admin (galeri→unit) = foto utama; sisanya preview kotak kecil
+                    const { main, previews } = productPhotosOf(p);
+                    return (
                     <Reveal key={p.id} delay={0.2 + catIdx * 0.15 + prodIdx * 0.08}>
                       <div className="group film-frame-hover flash-hover flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/10">
                         <Link href={`/katalog/${p.id}`} className="flex flex-col">
                           <div className="film-sprockets h-4 w-full bg-foreground/85" aria-hidden />
                           <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
-                            {p.imagePath ? (
+                            {main ? (
                               <Image
-                                src={p.imagePath}
-                                alt={p.name}
+                                src={main.src}
+                                alt={`${p.name} — foto produk`}
                                 fill
                                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                 className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -122,6 +127,20 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                               <PackageCheck className="size-3.5" aria-hidden />
                               {p.units.length > 0 ? `${p.units.length} unit siap` : "Kosong"}
                             </span>
+                            {/* Preview: sisa foto galeri/unit dari admin panel — kotak kecil di atas foto utama */}
+                            {previews.length > 0 && (
+                              <div className="absolute bottom-2 left-2 flex gap-1.5">
+                                {previews.map((pv) => (
+                                  <span
+                                    key={pv.src}
+                                    className="block size-9 overflow-hidden rounded-md border-2 border-card bg-card shadow-sm sm:size-10"
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={pv.src} alt="" className="size-full object-cover" />
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <div className="flex flex-col p-4 pb-3">
                             <p className="text-xs font-medium text-muted-foreground">{p.category.name}</p>
@@ -159,7 +178,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                         </div>
                       </div>
                     </Reveal>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}

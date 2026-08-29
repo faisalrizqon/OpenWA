@@ -1,22 +1,21 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarClock, Image, PackageCheck, ShieldCheck } from "lucide-react";
+import { CalendarClock, ClipboardList, CheckCircle2, AlertTriangle, Flag, Ban, Wallet, ShieldCheck } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/pricing";
 import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, type PaymentMethod } from "@/lib/payment";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import { DriveIcon } from "@/components/DriveIcon";
 import { ExternalLink } from "@/components/LinkButton";
 import { waLink } from "@/lib/shop";
 import { getStoreSettings } from "@/lib/content";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/StatusBadge";
-import { GuaranteeUpload, GuaranteeDocs } from "@/components/GuaranteeUpload";
-import { submitGuarantee } from "../../actions/checkout";
+import { UnifiedPaymentPanel } from "@/components/UnifiedPaymentPanel";
+import { PageNotifier, type PageNotification } from "@/components/PageNotifier";
+import { completeOrder } from "@/app/(shop)/actions/checkout";
 
 export const dynamic = "force-dynamic";
 
-export default async function OrderStatusPage({ params }: PageProps<"/order-status/[orderNumber]">) {
+export default async function OrderStatusPage({ params, searchParams }: PageProps<"/order-status/[orderNumber]">) {
   const { orderNumber } = await params;
   const order = await prisma.order.findUnique({
     where: { orderNumber },
@@ -38,6 +37,36 @@ export default async function OrderStatusPage({ params }: PageProps<"/order-stat
   const statusLabel = PAYMENT_STATUS_LABELS[order.paymentStatus] ?? order.paymentStatus;
   const waText = `Halo, saya mau cek pesanan *${order.orderNumber}* a.n. ${order.customer.name}. Terima kasih!`;
 
+  // Notifikasi hasil aksi (unified payment submit, upload/hapus jaminan)
+  const sp = await searchParams;
+  const successParam = Array.isArray(sp.success) ? sp.success[0] : sp.success;
+  const errorParam = Array.isArray(sp.error) ? sp.error[0] : sp.error;
+  const guaranteeParam = Array.isArray(sp.guarantee) ? sp.guarantee[0] : sp.guarantee;
+  const notifications: PageNotification[] = [];
+  if (successParam === "completed") {
+    notifications.push({
+      type: "success",
+      message: "Pembayaran berhasil dikirim! Admin akan memverifikasi pesanan Anda.",
+    });
+  }
+  if (guaranteeParam === "uploaded") {
+    notifications.push({ type: "success", message: "Dokumen jaminan berhasil diupload." });
+  } else if (guaranteeParam === "deleted") {
+    notifications.push({ type: "info", message: "Dokumen jaminan dihapus. Silakan upload ulang bila perlu." });
+  }
+  if (errorParam) {
+    const errorMessages: Record<string, string> = {
+      "missing-guarantee": "Jaminan belum lengkap — wajib upload foto identitas (KTP / kartu pelajar) DAN foto selfie untuk metode cash.",
+      "missing-proof": "Pilih file bukti terlebih dahulu (foto/screenshot).",
+      nofile: "Pilih file terlebih dahulu.",
+      file: "File tidak valid — maksimal 5MB (akan otomatis dikompres).",
+      "file-type-invalid": "Format file tidak didukung.",
+      "file-size-exceeded": "Ukuran file terlalu besar. Maksimal 5MB (auto-kompresi aktif).",
+      "invalid-method": "Metode pembayaran tidak valid.",
+    };
+    notifications.push({ type: "error", message: errorMessages[errorParam] ?? "Terjadi kesalahan. Silakan coba lagi." });
+  }
+
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-12">
       <div className="mx-auto w-full max-w-2xl">
@@ -45,12 +74,32 @@ export default async function OrderStatusPage({ params }: PageProps<"/order-stat
       <p className="mt-1 text-sm text-muted-foreground">
         Nomor pesanan <span className="font-semibold text-foreground">{order.orderNumber}</span>
       </p>
+      <PageNotifier notifications={notifications} />
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <StatusBadge status={order.status} />
-        <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-          Pembayaran: {statusLabel}
-        </span>
+      {/* Status order & pembayaran — tengah, besar, prominent */}
+      <div className="mt-4 flex justify-center">
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <span className="inline-flex items-center gap-2 rounded-full bg-yellow-100 px-6 py-2.5 text-lg font-bold text-yellow-800 shadow-sm">
+            {order.status === "pending" && (<><AlertTriangle className="size-5" aria-hidden />Menunggu Konfirmasi</>)}
+            {order.status === "booking" && (<><ClipboardList className="size-5" aria-hidden />Booking</>)}
+            {order.status === "active" && (<><CheckCircle2 className="size-5" aria-hidden />Aktif</>)}
+            {order.status === "late" && (<><AlertTriangle className="size-5" aria-hidden />Terlambat</>)}
+            {order.status === "completed" && (<><Flag className="size-5" aria-hidden />Selesai</>)}
+            {order.status === "cancelled" && (<><Ban className="size-5" aria-hidden />Dibatalkan</>)}
+          </span>
+          <span
+            className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-lg font-bold shadow-sm ${
+              order.paymentStatus === "paid"
+                ? "bg-emerald-500 text-white"
+                : order.paymentStatus === "pending"
+                  ? "bg-amber-500 text-white"
+                  : "bg-blue-500 text-white"
+            }`}
+          >
+            <Wallet className="size-5" aria-hidden />
+            {order.paymentStatus === "paid" ? "Pembayaran: LUNAS" : `Pembayaran: ${statusLabel}`}
+          </span>
+        </div>
       </div>
 
       <Card className="mt-5">
@@ -113,34 +162,79 @@ export default async function OrderStatusPage({ params }: PageProps<"/order-stat
           </div>
         </CardContent>
       </Card>
-      {/* Jaminan: opsional (pelengkap data) — KTP/selfie terupload bisa dihapus via ✕ untuk revisi */}
-      <Card className="mt-5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldCheck className="size-4 text-emerald-600" aria-hidden />
-            Jaminan{" "}
-            <span className="text-xs font-normal text-muted-foreground">
-              (opsional — pelengkap data)
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <GuaranteeDocs
-            orderId={order.id}
-            documents={order.documents}
-            columns="grid-cols-2 sm:grid-cols-3"
-          />
-          <GuaranteeUpload orderId={order.id} action={submitGuarantee} />
-        </CardContent>
-      </Card>
 
+      {/* Pembayaran & jaminan langsung di halaman ini — tidak perlu pindah tab */}
+      <div className="mt-5">
+        <UnifiedPaymentPanel
+          order={order}
+          shop={shop}
+          total={total}
+          back={`/order-status/${order.orderNumber}`}
+        />
+      </div>
+
+      {/* Tombol selesaikan orderan — satu-satunya finalisasi order.
+          COD: wajib jaminan lengkap. QRIS/transfer: wajib bukti tersimpan.
+          Gateway: menunggu pembayaran lunas. Anti salah upload & anti-spam. */}
+      {!order.paymentCompleted && order.status !== "cancelled" && (
+        <div className="mt-6">
+          {(() => {
+            const method = order.paymentMethod ?? "cash";
+            const hasIdentityDoc = order.documents.some((d) => ["ktp", "kartu_pelajar"].includes(d.docType));
+            const hasSelfieDoc = order.documents.some((d) => d.docType === "selfie_ktp");
+            const proofSaved = order.payments.some((p) => p.status === "pending" && p.proofPath);
+            const paid = order.payments.some((p) => p.status === "confirmed") || order.paymentStatus === "paid";
+
+            const isComplete =
+              method === "cash"
+                ? hasIdentityDoc && hasSelfieDoc
+                : method === "qris" || method === "transfer"
+                  ? proofSaved
+                  : paid; // midtrans / gopay
+            return (
+              <form action={completeOrder} className="flex flex-col items-center">
+                <input type="hidden" name="orderId" value={order.id} />
+                <input type="hidden" name="back" value={`/order-status/${order.orderNumber}`} />
+                <input type="hidden" name="paymentMethod" value={method} />
+                <button
+                  type="submit"
+                  disabled={!isComplete}
+                  className={`${
+                    !isComplete
+                      ? "flex w-full max-w-sm items-center justify-center gap-2 rounded-lg bg-muted px-6 py-3 text-base font-semibold text-muted-foreground/80 cursor-not-allowed"
+                      : "flex w-full max-w-sm items-center justify-center gap-2 rounded-lg bg-emerald-600 px-6 py-3 text-base font-semibold hover:bg-emerald-700 text-white"
+                  }`}
+                >
+                  <ShieldCheck className="size-5" aria-hidden />
+                  Selesaikan Orderan
+                </button>
+                {!isComplete && method === "cash" && (
+                  <p className="mt-2 text-center text-xs text-muted-foreground">
+                    Wajib upload jaminan: foto identitas (KTP / kartu pelajar) DAN foto selfie.
+                  </p>
+                )}
+                {!isComplete && (method === "qris" || method === "transfer") && (
+                  <p className="mt-2 text-center text-xs text-muted-foreground">
+                    Simpan bukti pembayaran terlebih dahulu di panel di atas, lalu klik tombol ini.
+                  </p>
+                )}
+                {!isComplete && (method === "midtrans" || method === "gopay") && (
+                  <p className="mt-2 text-center text-xs text-muted-foreground">
+                    Selesaikan pembayaran terlebih dahulu. Setelah lunas, klik tombol ini untuk mengirim pesanan.
+                  </p>
+                )}
+              </form>
+            );
+          })()}
+        </div>
+      )}
       {/* Link Drive foto hasil */}
       {order.photoLink && (
         <Card className="mt-5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Image className="size-4 text-primary" aria-hidden />
-              Foto Hasil
+              <DriveIcon className="size-5" />
+              Foto Hasil Sewa
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -151,23 +245,15 @@ export default async function OrderStatusPage({ params }: PageProps<"/order-stat
               href={order.photoLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1.5 break-all rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/20"
+              className="mt-2 inline-flex items-center gap-2 break-all rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/20"
             >
-              Buka Drive
+              <DriveIcon className="size-5" />
+              Buka Foto di Google Drive
             </a>
           </CardContent>
         </Card>
       )}
-
       <div className="mt-6 flex flex-wrap justify-center gap-3">
-        {order.paymentStatus !== "paid" && (
-          <Link href={`/payment/${order.orderNumber}`}>
-            <Button>
-              <PackageCheck className="size-4" aria-hidden />
-              Lanjutkan Pembayaran
-            </Button>
-          </Link>
-        )}
         <ExternalLink
           href={waLink(shop.whatsapp, waText)}
           label="Tanya via WhatsApp"

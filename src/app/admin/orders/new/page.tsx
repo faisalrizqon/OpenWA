@@ -3,12 +3,16 @@ import { prisma } from "@/lib/db";
 import { OrderForm } from "@/components/OrderForm";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageNotifier, type PageNotification } from "@/components/PageNotifier";
 
 export default async function NewOrderPage({
   searchParams,
 }: PageProps<"/admin/orders/new">) {
   const errorParam = await searchParams;
   const error = Array.isArray(errorParam.error) ? errorParam.error[0] : errorParam.error;
+
+  const notifications: PageNotification[] = [];
+  if (error) notifications.push({ type: "error", message: decodeURIComponent(error) });
 
   // Preview nomor order berikutnya (format lokal ORD-YYYYMMDD-NNN)
   const now = new Date();
@@ -38,12 +42,7 @@ export default async function NewOrderPage({
         description="Harga tier otomatis per durasi — stok dicek live"
         backHref="/admin/orders"
       />
-
-      {error && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-          {decodeURIComponent(error)}
-        </p>
-      )}
+      <PageNotifier notifications={notifications} />
 
       <Card>
         <CardHeader>

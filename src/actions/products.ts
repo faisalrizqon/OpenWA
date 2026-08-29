@@ -8,6 +8,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
+import { compressImage } from "@/lib/image";
+
 export async function createProduct(formData: FormData) {
   const user = await requireAdmin();
   const parsed = productSchema.safeParse(Object.fromEntries(formData));
@@ -41,6 +43,8 @@ export async function createProduct(formData: FormData) {
           price24h: data.price24h,
           price48h: data.price48h,
           stockThreshold: data.stockThreshold,
+          // Jeda charge & istirahat unit setelah rental selesai (default 3 jam)
+          chargingRestHours: Number(data.chargingRestHours ?? 3),
         },
       });
       await logAudit(tx, {
@@ -386,16 +390,18 @@ export async function uploadUnitPhoto(formData: FormData) {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) redirect(`${back}?error=file`);
   const ext = UNIT_PHOTO_MIME_EXT[file.type];
-  if (!ext || file.size > 5 * 1024 * 1024) redirect(`${back}?error=file`);
+  if (!ext || file.size > 20 * 1024 * 1024) redirect(`${back}?error=file`);
 
   const unit = await prisma.unit.findUnique({ where: { id: unitId } });
   if (!unit || unit.productId !== productId) redirect(`${back}?error=invalid`);
 
   // Simpan di public/uploads/units/<productId>/<unitId>-<ts>.<ext>
+  // File > 3 MB dikompres otomatis (≤ 3 MB); ≤ 3 MB disimpan apa adanya.
   const dir = path.join(process.cwd(), "public", "uploads", "units");
   await mkdir(dir, { recursive: true });
-  const fileName = `${productId}-${unitId}-${Date.now()}.${ext}`;
-  await writeFile(path.join(dir, fileName), Buffer.from(await file.arrayBuffer()));
+  const image = await compressImage(Buffer.from(await file.arrayBuffer()), file.type);
+  const fileName = `${productId}-${unitId}-${Date.now()}.${image.ext}`;
+  await writeFile(path.join(dir, fileName), image.buffer);
   const newPath = `/uploads/units/${fileName}`;
 
   // Ganti foto lama (hapus file fisik) lalu simpan path baru
@@ -458,7 +464,7 @@ export async function deleteUnitPhoto(formData: FormData) {
 
 const MAX_PRODUCT_IMAGES = 10;
 
-/** Upload foto galeri produk (admin-only, bisa banyak sekaligus, max 8 per produk). */
+/** Upload foto galeri produk (admin-only, bisa banyak sekaligus, max 10 per produk). */
 export async function uploadProductImages(formData: FormData) {
   const user = await requireAdmin();
   const productIdRaw = String(formData.get("productId") ?? "");
@@ -488,9 +494,11 @@ export async function uploadProductImages(formData: FormData) {
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     const ext = UNIT_PHOTO_MIME_EXT[file.type];
-    if (!ext || file.size > 5 * 1024 * 1024) redirect(`${back}?error=file`);
-    const fileName = `gallery-${Date.now()}-${i}.${ext}`;
-    await writeFile(path.join(dir, fileName), Buffer.from(await file.arrayBuffer()));
+    if (!ext || file.size > 20 * 1024 * 1024) redirect(`${back}?error=file`);
+    // File > 3 MB dikompres otomatis; ≤ 3 MB simpan apa adanya.
+    const image = await compressImage(Buffer.from(await file.arrayBuffer()), file.type);
+    const fileName = `gallery-${Date.now()}-${i}.${image.ext}`;
+    await writeFile(path.join(dir, fileName), image.buffer);
     written.push({
       filePath: `/uploads/products/${productIdRaw}/${fileName}`,
       sortOrder: product.images.length + i,

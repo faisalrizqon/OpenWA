@@ -1,64 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
-import { id as localeId } from "date-fns/locale";
-import {
-  Package,
-  Plus,
-  Trash2,
-  User,
-  Phone,
-  CalendarClock,
-  ListPlus,
-  ShieldCheck,
-  ClipboardPaste,
-  Wand2,
-} from "lucide-react";
 import { createOrder } from "@/actions/orders";
-import { getTierPrice, calcSubtotal, formatRupiah } from "@/lib/pricing";
+import { getTierPrice, calcSubtotal } from "@/lib/pricing";
 import { parseBookingMessage, matchProduct, type ParsedBooking } from "@/lib/parseBooking";
-import { SelectField } from "@/components/SelectField";
-import { DateTimePicker, DatePicker } from "@/components/DateTimePicker";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-interface ProductOption {
-  id: number;
-  name: string;
-  sku: string;
-  price6h: number;
-  price12h: number;
-  price24h: number;
-  price48h: number;
-  availableUnits: number;
-}
-
-interface CustomerOption {
-  id: number;
-  name: string;
-  phone: string;
-  isBlacklisted: boolean;
-}
-
-interface ItemDraft {
-  key: number;
-  productId: number;
-  quantity: number;
-  durationHours: number;
-  unitPriceOverride: string;
-  discountType: "none" | "amount" | "percent";
-  discountValue: string;
-}
-
-const DURATIONS = [6, 12, 24, 48, 72, 96];
-
-function toLocalInputValue(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
-}
+import type { ProductOption, CustomerOption, ItemDraft } from "@/components/order-form/types";
+import { DURATIONS } from "@/components/order-form/constants";
+import {
+  toLocalInputValue,
+  addItem as addItemUtil,
+  updateItem as updateItemUtil,
+  removeItem as removeItemUtil,
+} from "@/components/order-form/hooks/utils";
+import { WaImportSection } from "@/components/order-form/sections/WaImportSection";
+import { CustomerSection } from "@/components/order-form/sections/CustomerSection";
+import { DateSection } from "@/components/order-form/sections/DateSection";
+import { LogisticsSection } from "@/components/order-form/sections/LogisticsSection";
+import { ItemsList, type PricedItem } from "@/components/order-form/sections/ItemsList";
+import { SummarySection } from "@/components/order-form/sections/SummarySection";
 
 export function OrderForm({
   products,
@@ -68,7 +27,6 @@ export function OrderForm({
   customers: CustomerOption[];
 }) {
   const now = useMemo(() => new Date(), []);
-  const plus24h = useMemo(() => new Date(now.getTime() + 24 * 3600_000), [now]);
 
   const [customerId, setCustomerId] = useState<string>(
     customers.length > 0 ? String(customers[0].id) : "new"
@@ -83,6 +41,7 @@ export function OrderForm({
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [waMessage, setWaMessage] = useState("");
   const [waParsed, setWaParsed] = useState<ParsedBooking | null>(null);
+  const [noteOrder, setNoteOrder] = useState("");
   const [items, setItems] = useState<ItemDraft[]>(() =>
     products.length > 0
       ? [
@@ -146,7 +105,7 @@ export function OrderForm({
     };
   }, [uniqueProductIds, startDate, items, JSON.stringify(items.map((i) => i.durationHours))]);
 
-  const pricedItems = items.map((it) => {
+  const pricedItems: PricedItem[] = items.map((it) => {
     const product = products.find((p) => p.id === it.productId);
     const override = it.unitPriceOverride.trim() === "" ? null : Number(it.unitPriceOverride);
     const unitPrice =
@@ -188,26 +147,15 @@ export function OrderForm({
     items.length > 0 && stockErrors.length === 0 && customerValid && !selectedCustomer?.isBlacklisted;
 
   function addItem() {
-    setItems((prev) => [
-      ...prev,
-      {
-        key: Date.now(),
-        productId: products[0]?.id ?? 0,
-        quantity: 1,
-        durationHours: 24,
-        unitPriceOverride: "",
-        discountType: "none",
-        discountValue: "",
-      },
-    ]);
+    setItems((prev) => [...prev, { key: Date.now(), ...addItemUtil(products) }]);
   }
 
   function updateItem(key: number, patch: Partial<ItemDraft>) {
-    setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)));
+    setItems((prev) => updateItemUtil(prev, key, patch));
   }
 
   function removeItem(key: number) {
-    setItems((prev) => prev.filter((it) => it.key !== key));
+    setItems((prev) => removeItemUtil(prev, key));
   }
 
   /** Isi form otomatis dari pesan booking WA yang ditempel. */
@@ -268,393 +216,62 @@ export function OrderForm({
         )}
       />
 
-      {/* Import pesan WA */}
-      <section className="space-y-3 rounded-xl border bg-card p-4">
-        <h2 className="flex items-center gap-2 text-sm font-semibold">
-          <span className="flex size-6 items-center justify-center rounded-md bg-accent text-accent-foreground">
-            <ClipboardPaste className="size-3.5" aria-hidden />
-          </span>
-          Import Pesan Booking WA (opsional)
-        </h2>
-        <textarea
-          value={waMessage}
-          onChange={(e) => setWaMessage(e.target.value)}
-          placeholder={`Tempel pesan booking di sini, mis:\nNama Penyewa : maya okta\nJenis Kamera : canon ps a4000\nDurasi (berapa hari) : 6jam\nJaminan (KTP/SIM) : ktp\nLokasi COD : Weleri\nTanggal Booking/Sewa : 23 agustus 2026,minggu`}
-          className="min-h-28 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={applyBookingMessage}
-            disabled={waMessage.trim().length === 0}
-            className="gap-1.5"
-          >
-            <Wand2 className="size-4" aria-hidden />
-            Isi Otomatis
-          </Button>
-          {waParsed && (
-            <p className="text-xs text-muted-foreground">
-              ✓ Terbaca: {waParsed.nama ?? "—"} · {waParsed.kamera ?? "—"} ·{" "}
-              {waParsed.durasiJam ? `${waParsed.durasiJam} jam` : "—"} ·{" "}
-              {waParsed.tanggal
-                ? format(waParsed.tanggal, "dd MMM yyyy", { locale: localeId })
-                : "—"}
-            </p>
-          )}
-        </div>
-      </section>
-      {/* Customer */}
-      <section className="space-y-4 rounded-xl border bg-card p-4">
-        <h2 className="flex items-center gap-2 text-sm font-semibold">
-          <span className="flex size-6 items-center justify-center rounded-md bg-accent text-accent-foreground">
-            <User className="size-3.5" aria-hidden />
-          </span>
-          Pelanggan
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="customerId">Pilih Pelanggan</Label>
-            <SelectField
-              id="customerId"
-              name="customerId"
-              value={customerId}
-              onValueChange={setCustomerId}
-              options={[
-                ...customers.map((c) => ({
-                  label: `${c.name} (${c.phone})${c.isBlacklisted ? " — BLACKLIST" : ""}`,
-                  value: String(c.id),
-                })),
-                { label: "+ Pelanggan baru", value: "new" },
-              ]}
-            />
-            {/* Nomor HP pelanggan terpilih — selalu terlihat jelas */}
-            {customerId !== "new" && selectedCustomer && (
-              <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm">
-                <Phone className="size-3.5 text-muted-foreground" aria-hidden />
-                <span className="font-medium">{selectedCustomer.name}</span>
-                <span className="font-mono text-muted-foreground">{selectedCustomer.phone}</span>
-              </div>
-            )}
-          </div>
-          {customerId === "new" && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="newName">Nama Pelanggan Baru</Label>
-                <Input
-                  id="newName"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="mis. Citra"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newPhone">Nomor WA Baru</Label>
-                <Input
-                  id="newPhone"
-                  value={newPhone}
-                  onChange={(e) => setNewPhone(e.target.value)}
-                  placeholder="08xxx"
-                />
-              </div>
-            </>
-          )}
-        </div>
-        {customerId === "new" && newName.trim() && newPhone.trim() && !customerValid && (
-          <p className="text-sm text-red-600">
-            Nomor WA tidak valid — format 08xxx (9–14 digit).
-          </p>
-        )}
-        {selectedCustomer?.isBlacklisted && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-            ⚠️ Pelanggan ini di-blacklist: {selectedCustomer.name}. Order tidak bisa dibuat.
-          </p>
-        )}
-        {customerId === "new" && (
-          <input type="hidden" name="newCustomerName" value={newName} />
-        )}
-        {customerId === "new" && <input type="hidden" name="newCustomerPhone" value={newPhone} />}
-      </section>
+      <WaImportSection
+        waMessage={waMessage}
+        setWaMessage={setWaMessage}
+        waParsed={waParsed}
+        onApplyBookingMessage={applyBookingMessage}
+      />
 
-      {/* Start date */}
-      <section className="space-y-4 rounded-xl border bg-card p-4">
-        <h2 className="flex items-center gap-2 text-sm font-semibold">
-          <span className="flex size-6 items-center justify-center rounded-md bg-accent text-accent-foreground">
-            <CalendarClock className="size-3.5" aria-hidden />
-          </span>
-          Waktu Mulai
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="startDate">Mulai</Label>
-            <DateTimePicker
-              id="startDate"
-              name="startDate"
-              value={startDate}
-              onChange={setStartDate}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="rescheduledFrom">Reschedule Dari (opsional)</Label>
-            <DatePicker
-              value={rescheduledFrom}
-              onChange={setRescheduledFrom}
-              placeholder="— tanggal lama —"
-            />
-            {rescheduledFrom && (
-              <input type="hidden" name="rescheduledFrom" value={rescheduledFrom} />
-            )}
-          </div>
-        </div>
-      </section>
+      <CustomerSection
+        customerId={customerId}
+        setCustomerId={setCustomerId}
+        customers={customers}
+        selectedCustomer={selectedCustomer}
+        newName={newName}
+        setNewName={setNewName}
+        newPhone={newPhone}
+        setNewPhone={setNewPhone}
+        customerValid={customerValid}
+      />
 
-      {/* Guarantee & logistics (hasil normalisasi Catatan Notion) */}
-      <section className="space-y-4 rounded-xl border bg-card p-4">
-        <h2 className="flex items-center gap-2 text-sm font-semibold">
-          <span className="flex size-6 items-center justify-center rounded-md bg-accent text-accent-foreground">
-            <ShieldCheck className="size-3.5" aria-hidden />
-          </span>
-          Jaminan & Logistik
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="guaranteeType">Jaminan</Label>
-            <SelectField
-              id="guaranteeType"
-              name="guaranteeType"
-              value={guaranteeType}
-              onValueChange={setGuaranteeType}
-              options={[
-                { label: "— tanpa jaminan —", value: "" },
-                { label: "KTP", value: "ktp" },
-                { label: "SIM", value: "sim" },
-                { label: "Kartu Pelajar", value: "kartu_pelajar" },
-                { label: "Lainnya", value: "lainnya" },
-              ]}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="guaranteeNumber">No. Jaminan (opsional)</Label>
-            <Input
-              id="guaranteeNumber"
-              name="guaranteeNumber"
-              value={guaranteeNumber}
-              onChange={(e) => setGuaranteeNumber(e.target.value)}
-              placeholder="mis. no. KTP / SIM"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="deliveryMode">Metode Pengambilan</Label>
-            <SelectField
-              id="deliveryMode"
-              name="deliveryMode"
-              value={deliveryMode}
-              onValueChange={setDeliveryMode}
-              options={[
-                { label: "Ambil sendiri (pickup)", value: "pickup" },
-                { label: "Diantar kurir (COD)", value: "courier" },
-              ]}
-            />
-          </div>
-          {deliveryMode === "courier" && (
-            <div className="space-y-2">
-              <Label htmlFor="deliveryAddress">Alamat Antar</Label>
-              <Input
-                id="deliveryAddress"
-                name="deliveryAddress"
-                value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
-                placeholder="mis. Weleri"
-              />
-            </div>
-          )}
-          {deliveryMode === "courier" && (
-            <div className="space-y-2">
-              <Label htmlFor="courierFee">Gaji Transport Kurir (Rp)</Label>
-              <Input
-                id="courierFee"
-                name="courierFee"
-                type="number"
-                min={0}
-                defaultValue={5000}
-              />
-            </div>
-          )}
-        </div>
-      </section>
+      <DateSection
+        startDate={startDate}
+        setStartDate={setStartDate}
+        rescheduledFrom={rescheduledFrom}
+        setRescheduledFrom={setRescheduledFrom}
+      />
 
-      {/* Items */}
-      <section className="space-y-4 rounded-xl border bg-card p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex size-6 items-center justify-center rounded-md bg-accent text-accent-foreground">
-              <ListPlus className="size-3.5" aria-hidden />
-            </span>
-            Item
-          </h2>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addItem}
-            disabled={products.length === 0}
-            className="gap-1.5"
-          >
-            <Plus className="size-3.5" aria-hidden />
-            Tambah Item
-          </Button>
-        </div>
+      <LogisticsSection
+        guaranteeType={guaranteeType}
+        setGuaranteeType={setGuaranteeType}
+        guaranteeNumber={guaranteeNumber}
+        setGuaranteeNumber={setGuaranteeNumber}
+        deliveryMode={deliveryMode}
+        setDeliveryMode={setDeliveryMode}
+        deliveryAddress={deliveryAddress}
+        setDeliveryAddress={setDeliveryAddress}
+      />
 
-        {items.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            Belum ada item. Klik &quot;Tambah Item&quot;.
-          </p>
-        )}
+      <ItemsList
+        items={items}
+        products={products}
+        availability={availability}
+        pricedItems={pricedItems}
+        addItem={addItem}
+        updateItem={updateItem}
+        removeItem={removeItem}
+        stockErrors={stockErrors}
+      />
 
-        {pricedItems.map(({ item, product, unitPrice, subtotal }) => {
-          const available = availability[item.productId];
-          const needed =
-            items.filter((it) => it.productId === item.productId).reduce((s, it) => s + it.quantity, 0) -
-            item.quantity +
-            item.quantity;
-          const insufficient = available !== undefined && needed > available;
-          return (
-            <div
-              key={item.key}
-              className={`space-y-3 rounded-xl border p-3 ${
-                insufficient ? "border-red-300 bg-red-50/50" : "border-border bg-muted/40"
-              }`}
-            >
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="space-y-1 md:col-span-2">
-                  <Label>Produk</Label>
-                  <SelectField
-                    value={String(item.productId)}
-                    onValueChange={(v) => updateItem(item.key, { productId: Number(v) })}
-                    options={products.map((p) => ({
-                      label: `${p.name} (${p.sku})`,
-                      value: String(p.id),
-                    }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Qty</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateItem(item.key, { quantity: Math.max(1, Number(e.target.value) || 1) })
-                    }
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Durasi</Label>
-                  <SelectField
-                    value={String(item.durationHours)}
-                    onValueChange={(v) => updateItem(item.key, { durationHours: Number(v) })}
-                    options={DURATIONS.map((d) => ({ label: `${d} jam`, value: String(d) }))}
-                  />
-                </div>
-              </div>
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="space-y-1">
-                  <Label>Harga/unit (opsional)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    placeholder={product ? String(unitPrice) : "0"}
-                    value={item.unitPriceOverride}
-                    onChange={(e) => updateItem(item.key, { unitPriceOverride: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Diskon</Label>
-                  <SelectField
-                    value={item.discountType}
-                    onValueChange={(v) =>
-                      updateItem(item.key, { discountType: v as ItemDraft["discountType"] })
-                    }
-                    options={[
-                      { label: "Tanpa diskon", value: "none" },
-                      { label: "Nominal (Rp)", value: "amount" },
-                      { label: "Persen (%)", value: "percent" },
-                    ]}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Nilai Diskon</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    disabled={item.discountType === "none"}
-                    value={item.discountValue}
-                    onChange={(e) => updateItem(item.key, { discountValue: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Subtotal</Label>
-                  <div className="flex h-8 items-center text-sm font-semibold tabular-nums">
-                    {formatRupiah(subtotal)}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <p
-                  className={`flex items-center gap-1.5 text-xs ${
-                    insufficient ? "font-medium text-red-600" : "text-muted-foreground"
-                  }`}
-                >
-                  <Package className="size-3.5" aria-hidden />
-                  {available === undefined
-                    ? "Memeriksa stok…"
-                    : `sisa ${available} unit${insufficient ? " — stok tidak cukup" : ""}`}
-                </p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeItem(item.key)}
-                  className="gap-1 text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="size-3.5" aria-hidden />
-                  Hapus
-                </Button>
-              </div>
-            </div>
-          );
-        })}
-
-        {stockErrors.length > 0 && (
-          <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {stockErrors.map((e) => (
-              <p key={e}>{e}</p>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Note + total */}
-      <section className="space-y-4 rounded-xl border bg-card p-4">
-        <div className="space-y-2">
-          <Label htmlFor="noteOrder">Catatan Order (opsional)</Label>
-          <textarea
-            id="noteOrder"
-            name="noteOrder"
-            className="min-h-16 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
-          />
-        </div>
-        <div className="flex items-center justify-between border-t pt-3">
-          <span className="text-sm font-medium text-muted-foreground">Total</span>
-          <span className="text-xl font-bold tabular-nums">{formatRupiah(total)}</span>
-        </div>
-        <Button type="submit" disabled={!canSubmit} className="w-full">
-          Simpan Order
-        </Button>
-        {!customerValid && customerId === "new" && (
-          <p className="text-xs text-red-600">Lengkapi nama & nomor WA pelanggan baru.</p>
-        )}
-      </section>
+      <SummarySection
+        noteOrder={noteOrder}
+        setNoteOrder={setNoteOrder}
+        total={total}
+        canSubmit={canSubmit}
+      />
     </form>
   );
 }
+
+export default OrderForm;

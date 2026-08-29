@@ -101,10 +101,10 @@ export function OrderBar({
             <span className="font-medium">{STATUS_LABEL[span.status] ?? span.status}</span>
           </div>
           <p className="text-muted-foreground">
-            {format(start, "EEEE, dd MMM yyyy, HH:mm", { locale: localeId })}
+            {format(start, "EEEE, dd MMMM yyyy, HH:mm", { locale: localeId })}
             {sameDay
               ? ` – ${format(end, "HH:mm", { locale: localeId })}`
-              : ` → ${format(end, "EEEE, dd MMM yyyy, HH:mm", { locale: localeId })}`}
+              : ` → ${format(end, "EEEE, dd MMMM yyyy, HH:mm", { locale: localeId })}`}
           </p>
           {span.clippedStart && (
             <p className="text-muted-foreground/70 italic">Mulai sebelum bulan ini</p>

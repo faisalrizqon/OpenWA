@@ -10,6 +10,8 @@ export interface ReportMetrics {
   ordersLate: number;
   newCustomers: number;
   topProducts: { productName: string; totalQty: number }[];
+  /** Utilisasi sewa per produk: hari-unit terpakai ÷ kapasitas (unit × hari). */
+  utilization: { productName: string; usedUnitDays: number; capacityUnitDays: number; pct: number }[];
   orders: {
     id: string;
     orderNumber: string;
@@ -85,6 +87,46 @@ export async function getReportMetrics(daysRaw: number): Promise<ReportMetrics> 
     .sort((a, b) => b.totalQty - a.totalQty)
     .slice(0, 5);
 
+  // --- Utilisasi produk: total hari-unit tersewa dalam rentang ÷ kapasitas ---
+  const allProducts = await prisma.product.findMany({
+    include: { units: { select: { id: true, status: true } } },
+  });
+  const busyOrders = await prisma.order.findMany({
+    where: {
+      status: { in: ["booking", "active", "late", "completed"] },
+      startDate: { lt: rangeEnd },
+      endDate: { gt: rangeStart },
+    },
+    select: {
+      startDate: true,
+      endDate: true,
+      items: { select: { productId: true, quantity: true } },
+    },
+  });
+  const usedDaysByProduct = new Map<number, number>();
+  for (const o of busyOrders) {
+    const s = o.startDate.getTime() > rangeStart.getTime() ? o.startDate.getTime() : rangeStart.getTime();
+    const rawEnd = o.endDate.getTime();
+    const e = rawEnd < rangeEnd.getTime() ? rawEnd : rangeEnd.getTime();
+    const days = Math.max(0, Math.ceil((e - s) / (24 * 3600_000)));
+    for (const it of o.items) {
+      usedDaysByProduct.set(it.productId, (usedDaysByProduct.get(it.productId) ?? 0) + days * it.quantity);
+    }
+  }
+  const utilization = allProducts
+    .filter((p) => p.units.length > 0)
+    .map((p) => {
+      const capacity = p.units.filter((u) => !["maintenance", "lost"].includes(u.status)).length * days;
+      const used = usedDaysByProduct.get(p.id) ?? 0;
+      return {
+        productName: p.name,
+        usedUnitDays: used,
+        capacityUnitDays: capacity,
+        pct: capacity > 0 ? Math.min(100, Math.round((used / capacity) * 100)) : 0,
+      };
+    })
+    .sort((a, b) => b.pct - a.pct);
+
   const orderRows = ordersInRange.map((o) => {
     const total = o.items.reduce((s, it) => s + it.subtotal, 0);
     const paid = o.payments
@@ -113,6 +155,7 @@ export async function getReportMetrics(daysRaw: number): Promise<ReportMetrics> 
     ordersLate: lateCount,
     newCustomers,
     topProducts,
+    utilization,
     orders: orderRows,
   };
 }

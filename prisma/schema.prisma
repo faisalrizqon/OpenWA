@@ -27,15 +27,18 @@ model Product {
   category       Category @relation(fields: [categoryId], references: [id])
   name           String
   description    String?
-  imagePath      String? // foto produk: /uploads/products/... (null = placeholder ikon)
+  imagePath      String? // DEPRECATED — dulu seed gambar riset; kini NULL, foto dari Unit.photoPath/ProductImage.filePath
   // Price tiers (flat per duration) — rupiah
   price6h        Float    @default(0)
   price12h       Float    @default(0)
   price24h       Float    @default(0) // default basePrice fallback
   price48h       Float    @default(0)
   stockThreshold Int      @default(1)
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
+  active         Boolean      @default(true)
+  // Buffer waktu charge & istirahat unit setelah rental selesai (jam) —
+  // unit/produk yang sama tidak bisa langsung disewa lagi selama jeda ini.
+  chargingRestHours Int        @default(3)
+
 
   units      Unit[]
   images     ProductImage[]
@@ -140,10 +143,17 @@ model Order {
   paymentStatus String  @default("unpaid") // unpaid | pending | paid | partial | refunded
   paymentRef    String? // midtrans order_id / referensi gateway
 
+  // --- Unified payment readiness (customer submit semua syarat) ---
+  paymentCompleted  Boolean   @default(false) // true bila customer sudah submit semua field wajib per metode
+  paymentCompleteAt DateTime? // timestamp saat customer menekan "Selesai & Kirim Data"
+
   // --- Promo ---
   promoCodeId   Int?
   promoCode     PromoCode? @relation(fields: [promoCodeId], references: [id])
   promoDiscount Float      @default(0) // potongan dari kode promo
+  // --- Deposit jaminan (fitur dalam pengembangan) ---
+  depositAmount Float      @default(0) // jumlah deposit yang dititip
+  depositStatus String     @default("none") // none | held | refunded
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -151,12 +161,15 @@ model Order {
   items         OrderItem[]
   payments      Payment[]
   returnPhotos  ReturnPhoto[]
-  handledByUser User?         @relation("OrderHandledBy", fields: [handledById], references: [id])
+  handledByUser User?          @relation("OrderHandledBy", fields: [handledById], references: [id])
   documents     Document[]
   unitEvents    UnitEvent[]
   review        Review?
+  messageLogs   MessageLog[]
+  gopayPayments GopayPayment[]
 
   @@index([status])
+  @@index([paymentCompleted])
   @@index([startDate, endDate])
   @@index([createdAt])
   @@index([handledById])
@@ -199,6 +212,47 @@ model Payment {
 
   @@index([orderId, paidAt])
   @@index([method])
+}
+
+// --- GoPay Merchant (unofficial, paket merchantid) ---
+// Sesi login GoBiz: token OAuth + merchant id + QRIS statis outlet.
+// Baris tunggal id=1. Token auto-refresh; onTokenRefreshed menulis ulang ke sini.
+model GopaySession {
+  id           Int      @id @default(1)
+  sessionJson  String // SessionState merchantid (tokens + deviceId) — sensitif
+  merchantId   String? // mis. "G000000001"
+  merchantName String?
+  staticQris   String? // payload EMVCo QRIS statis outlet
+  phone        String? // nomor HP GoBiz yang login
+  lastLoginAt  DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Pembayaran QRIS dinamis GoPay per order (store untuk PaymentService merchantid).
+// uniqueAmount unik per order aktif => satu transaksi feed hanya melunasi satu order
+// (anti double-claim, pola sama dengan gopay-api-gateaway).
+// Pembayaran QRIS dinamis GoPay per order (store untuk PaymentService merchantid).
+// payment.id adalah primary key unik; orderId bisa diisi setelah order dibuat (tidak @unique)
+// agar polling dapat berjalan bahkan sebelum payment record ter-link ke Order.
+model GopayPayment {
+  id              String    @id // payment id dari PaymentService (unik tiap payment)
+  orderId         String? // Order.id; null saat pertama dibuat store, diisi dari reference
+  order           Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  scope           String? // JSON PaymentScope (provider/account/merchant)
+  baseAmount      Float
+  uniqueOffset    Int       @default(0)
+  uniqueAmount    Float
+  status          String    @default("pending") // pending | paid | expired | cancelled
+  qrString        String? // payload QRIS dinamis (jangan ditulis ke log)
+  reference       String?
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime
+  settledAt       DateTime?
+  transactionJson String? // transaksi feed GoBiz yang melunasi (audit)
+
+  @@index([orderId])
+  @@index([status])
+  @@index([uniqueAmount, status])
 }
 
 // --- Return validation with photos & condition check ---
@@ -251,16 +305,17 @@ model StoreContent {
   ctaSubtitle         String @default("Chat admin kami — kami bantu carikan kamera yang pas dengan kebutuhan & budgetmu.")
 
   // --- Konfigurasi metode pembayaran online ---
-  cashEnabled     Boolean @default(true)
-  qrisEnabled     Boolean @default(true)
-  transferEnabled Boolean @default(false)
+  cashEnabled           Boolean @default(true)
+  qrisEnabled           Boolean @default(true)
+  transferEnabled       Boolean @default(false)
+  gopayEnabled          Boolean @default(false) // QRIS dinamis GoPay Merchant (perlu login GoBiz)
   // QRIS statis (fallback bila Midtrans tidak dikonfigurasi)
-  qrisImagePath    String @default("/qris.png")
-  qrisMerchantName String @default("MudahSewa")
+  qrisImagePath         String  @default("/qris.png")
+  qrisMerchantName      String  @default("MudahSewa")
   // Rekening bank untuk pembayaran transfer manual
-  transferBankName        String @default("")
-  transferAccountNumber   String @default("")
-  transferAccountHolder   String @default("")
+  transferBankName      String  @default("")
+  transferAccountNumber String  @default("")
+  transferAccountHolder String  @default("")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -306,9 +361,9 @@ model VideoContent {
   title       String
   description String   @default("")
   href        String   @default("#") // link video / sosmed
-  sortOrder    Int      @default(0)
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
 }
 
 model User {
@@ -323,7 +378,7 @@ model User {
 
   accounts      Account[]
   sessions      Session[]
-  handledOrders Order[]   @relation("OrderHandledBy")
+  handledOrders Order[]    @relation("OrderHandledBy")
   auditLogs     AuditLog[]
 
   @@index([role])
@@ -416,13 +471,13 @@ model PromoCode {
 // --- Audit Log: jejak perubahan data penting (order/produk/pelanggan/pembayaran/user) ---
 model AuditLog {
   id         Int      @id @default(autoincrement())
-  entityType String   // order | product | customer | unit | payment | user | settings
+  entityType String // order | product | customer | unit | payment | user | settings
   entityId   String
-  action     String   // create | update | delete | status_change
-  summary    String   // ringkasan manusia, mis. "status booking → active"
+  action     String // create | update | delete | status_change
+  summary    String // ringkasan manusia, mis. "status booking → active"
   userId     String?
   user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  detail     String?  // JSON detail tambahan
+  detail     String? // JSON detail tambahan
   createdAt  DateTime @default(now())
 
   @@index([entityType, entityId])
@@ -431,12 +486,31 @@ model AuditLog {
 
 // --- Denda keterlambatan otomatis per produk ---
 model LateFee {
-  id          Int     @id @default(autoincrement())
-  productId   Int     @unique
-  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  feePerDay   Float   @default(0) // denda per hari keterlambatan (Rp)
-  graceHours  Int     @default(0) // jam tenggang setelah endDate sebelum dihitung
-  active      Boolean @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+  productId  Int      @unique
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  feePerDay  Float    @default(0) // denda per hari keterlambatan (Rp)
+  graceHours Int      @default(0) // jam tenggang setelah endDate sebelum dihitung
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// --- Log outgoing WhatsApp messages untuk audit & tracking delivery ---
+model MessageLog {
+  id           Int      @id @default(autoincrement())
+  sessionId    String // OpenWA session ID (session_xxx...)
+  orderId      String? // Optional order relation
+  order        Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  chatId       String // e.g., "628123456789@s.whatsapp.net"
+  type         String // text | image | video | document
+  body         String // first 1000 chars of message body
+  direction    String // sent | received
+  status       String // pending | delivered | read | failed
+  errorMessage String? // error detail bila gagal
+  createdAt    DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([orderId])
+  @@index([createdAt])
 }

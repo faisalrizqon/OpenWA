@@ -3,7 +3,7 @@
 import * as React from "react";
 import { ShieldCheck, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { SelectField } from "@/components/SelectField";
+import { Button } from "@/components/ui/button";
 import { storageUrl } from "@/lib/storage-url";
 import {
   Dialog,
@@ -17,18 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import { deleteGuarantee } from "@/app/(shop)/actions/checkout";
 import { UploadField } from "@/components/UploadField";
-
-const DOC_OPTIONS = [
-  { label: "KTP", value: "ktp" },
-  { label: "Selfie + Identitas", value: "selfie_ktp" },
-  { label: "Kartu Pelajar", value: "kartu_pelajar" },
-  { label: "Lainnya", value: "other" },
-];
+import { SelectField } from "@/components/SelectField";
 
 export const DOC_LABELS: Record<string, string> = {
   ktp: "KTP",
-  selfie_ktp: "Selfie + Identitas",
   kartu_pelajar: "Kartu Pelajar",
+  selfie_ktp: "Selfie Identitas",
   other: "Lainnya",
 };
 
@@ -36,6 +30,8 @@ export interface GuaranteeDoc {
   id: number;
   docType: string;
   filePath: string;
+  fileSize: number;
+  uploadedAt: Date;
 }
 
 /**
@@ -142,35 +138,68 @@ export function GuaranteeUpload({
   /** Halaman kembali setelah upload (mis. /admin/orders/<id>). */
   back?: string;
 }) {
-  const [docType, setDocType] = React.useState("ktp");
+  const [idDocType, setIdDocType] = React.useState("ktp");
 
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="space-y-4">
       <input type="hidden" name="orderId" value={orderId} />
-      <input type="hidden" name="docType" value={docType} />
-      {back && <input type="hidden" name="back" value={back} />}
+      <input type="hidden" name="back" value={back ?? ""} />
 
-      <div className="space-y-1.5">
-        <Label htmlFor="docType">Jenis jaminan (opsional)</Label>
-        <SelectField
-          id="docType"
-          value={docType}
-          onValueChange={setDocType}
-          options={DOC_OPTIONS}
-        />
+      {/* Layout sejajar: dua kolom upload berdampingan */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Kolom kiri: KTP / kartu pelajar */}
+        <div className="flex flex-col gap-3">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-muted-foreground">Dokumen Identitas</p>
+            <p className="text-xs text-muted-foreground">Pilih jenis dokumen yang akan diupload.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="docType">Tipe dokumen</Label>
+            <SelectField
+              id="docType"
+              name="docType"
+              value={idDocType}
+              onValueChange={setIdDocType}
+              options={[
+                { label: "KTP", value: "ktp" },
+                { label: "Kartu Pelajar", value: "kartu_pelajar" },
+              ]}
+              triggerClassName="h-8 text-xs"
+            />
+          </div>
+          <div className="mt-auto space-y-1.5">
+            <Label htmlFor="fileId">Foto identitas ({DOC_LABELS[idDocType]})</Label>
+            <UploadField
+              id="fileId"
+              name="file"
+              required
+              placeholder={DOC_LABELS[idDocType] === "KTP" ? "Upload foto KTP..." : "Upload kartu pelajar..."}
+            />
+          </div>
+        </div>
+
+        {/* Kolom kanan: selfie identitas */}
+        <div className="flex flex-col gap-3">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-muted-foreground">
+              Selfie Identitas{" "}
+              <span className="ml-1 rounded-full bg-red-100 px-2 py-0.5 align-middle text-[10px] font-semibold text-red-700">
+                Wajib
+              </span>
+            </p>
+            <p className="text-xs text-muted-foreground">Wajib diupload sebagai bukti diri.</p>
+          </div>
+          <div className="mt-auto space-y-1.5">
+            <Label htmlFor="fileSelfie">Foto selfie wajah</Label>
+            <UploadField
+              id="fileSelfie"
+              name="selfie"
+              required
+              placeholder="Upload selfie wajah (wajib)..."
+            />
+          </div>
+        </div>
       </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="guaranteeFile">Foto dokumen</Label>
-        <UploadField
-          id="guaranteeFile"
-          name="file"
-          required
-          placeholder="Pilih foto KTP / kartu pelajar…"
-          helper="JPG/PNG/WebP, maksimal 5 MB. Dokumen jaminan hanya pelengkap data — bila salah upload, hapus lewat tombol ✕ pada dokumen lalu upload ulang."
-        />
-      </div>
-
       <Button type="submit" className="h-10 w-full gap-1.5">
         <ShieldCheck className="size-4" aria-hidden />
         Upload Jaminan

@@ -11,10 +11,10 @@ function createPrisma() {
   // Optimasi SQLite untuk concurrency + durability (baremetal single-node).
   // Dijalankan sekali per proses, tidak diblok oleh request pertama.
   const initPromise = client
-    .$executeRawUnsafe("PRAGMA journal_mode = WAL;")
-    .then(() => client.$executeRawUnsafe("PRAGMA foreign_keys = ON;"))
-    .then(() => client.$executeRawUnsafe("PRAGMA synchronous = NORMAL;"))
-    .then(() => client.$executeRawUnsafe("PRAGMA busy_timeout = 5000;"))
+    .$queryRawUnsafe("PRAGMA journal_mode = WAL;")
+    .then(() => client.$queryRawUnsafe("PRAGMA foreign_keys = ON;"))
+    .then(() => client.$queryRawUnsafe("PRAGMA synchronous = NORMAL;"))
+    .then(() => client.$queryRawUnsafe("PRAGMA busy_timeout = 5000;"))
     .catch((e) => {
       console.warn("[db] PRAGMA init warning:", e);
     })

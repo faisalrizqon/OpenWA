@@ -8,14 +8,20 @@
  * - Cash/COD selalu tersedia.
  */
 
-export type PaymentMethod = "cash" | "qris" | "midtrans";
+export type PaymentMethod = "cash" | "qris" | "transfer" | "midtrans" | "gopay";
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "Cash / Bayar di Tempat",
   qris: "QRIS (Scan & Upload Bukti)",
+  transfer: "Transfer Bank (Upload Bukti Transfer)",
   midtrans: "Pembayaran Online (QRIS / E-wallet / VA)",
+  gopay: "GoPay QRIS Dinamis",
 };
 
+/** GoPay Merchant aktif jika enabled + token + static QRIS tersimpan di DB. */
+export function gopayEnabled(): boolean {
+  return Boolean(process.env.GOPAY_ENABLED === "true");
+}
 export const PAYMENT_STATUS_LABELS: Record<string, string> = {
   unpaid: "Belum bayar",
   pending: "Menunggu verifikasi",

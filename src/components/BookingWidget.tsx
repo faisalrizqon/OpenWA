@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, ShoppingBag } from "lucide-react";
+import { CalendarX2, Lightbulb, Minus, Plus, ShoppingBag, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { SelectField } from "@/components/SelectField";
@@ -13,6 +13,16 @@ interface BookingWidgetProps {
   productId: number;
   product: TieredProduct;
   prices: { label: string; hours: number; price: number }[];
+}
+
+interface AvailabilityResponse {
+  available: number;
+  restBufferHours?: number;
+  soldOut?: boolean;
+  alternatives?: {
+    nextAvailableStart?: string | null;
+    otherProducts?: Array<{ id: number; name: string }>;
+  };
 }
 
 /** Format lokal `YYYY-MM-DDTHH:mm` — sama dengan DateTimePicker. */
@@ -35,29 +45,43 @@ export function BookingWidget({ productId, product, prices }: BookingWidgetProps
   const [checking, setChecking] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [restBufferHours, setRestBufferHours] = useState<number | null>(null);
+  const [nextAvailableStart, setNextAvailableStart] = useState<string | null>(null);
+  const [otherProducts, setOtherProducts] = useState<Array<{ id: number; name: string }>>([]);
 
   const start = new Date(startDate);
   const end = new Date(start.getTime() + durationHours * 3600_000);
   const validDate = !isNaN(start.getTime()) && start.getTime() >= now.getTime() - 60_000;
+  const soldOut = available !== null && available < quantity;
 
   // Cek ketersediaan setiap kali rentang berubah
   useEffect(() => {
     if (!validDate) {
       setAvailable(null);
+      setNextAvailableStart(null);
+      setOtherProducts([]);
       return;
     }
     let active = true;
     setChecking(true);
     const url = `/api/availability?productId=${productId}&start=${encodeURIComponent(
       start.toISOString()
-    )}&end=${encodeURIComponent(end.toISOString())}`;
+    )}&end=${encodeURIComponent(end.toISOString())}&quantity=${quantity}`;
     fetch(url)
       .then((r) => (r.ok ? r.json() : { available: 0 }))
-      .then((data: { available: number }) => {
-        if (active) setAvailable(data.available);
+      .then((data: AvailabilityResponse) => {
+        if (!active) return;
+        setAvailable(data.available);
+        setRestBufferHours(data.restBufferHours ?? null);
+        setNextAvailableStart(data.alternatives?.nextAvailableStart ?? null);
+        setOtherProducts(data.alternatives?.otherProducts ?? []);
       })
       .catch(() => {
-        if (active) setAvailable(0);
+        if (active) {
+          setAvailable(0);
+          setNextAvailableStart(null);
+          setOtherProducts([]);
+        }
       })
       .finally(() => {
         if (active) setChecking(false);
@@ -66,7 +90,7 @@ export function BookingWidget({ productId, product, prices }: BookingWidgetProps
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productId, startDate, durationHours, validDate]);
+  }, [productId, startDate, durationHours, quantity, validDate]);
 
   const unitPrice = validDate ? getTierPrice(product, durationHours) : 0;
   const total = unitPrice * quantity;
@@ -169,10 +193,73 @@ export function BookingWidget({ productId, product, prices }: BookingWidgetProps
               </span>
             ) : null}
           </div>
+          {restBufferHours !== null && (
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Termasuk jeda {restBufferHours} jam untuk charge & istirahat unit setelah pengembalian.
+            </p>
+          )}
         </div>
 
         {error && (
           <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</p>
+        )}
+
+        {/* Saran alternatif saat sold out */}
+        {soldOut && !checking && (
+          <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="flex items-start gap-2 text-sm font-semibold text-amber-800">
+              <CalendarX2 className="mt-0.5 size-4 shrink-0" aria-hidden />
+              Stok penuh untuk tanggal tersebut
+            </p>
+
+            {nextAvailableStart && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full justify-between border-amber-300 bg-white text-left hover:bg-amber-100"
+                onClick={() => setStartDate(toLocalInputValue(new Date(nextAvailableStart)))}
+              >
+                <span className="flex items-center gap-2">
+                  <Lightbulb className="size-4 text-amber-600" aria-hidden />
+                  Coba tanggal berikut:{' '}
+                  {new Date(nextAvailableStart).toLocaleString("id-ID", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "short",
+                  })}{' '}
+                  pukul{' '}
+                  {new Date(nextAvailableStart).toLocaleTimeString("id-ID", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+                <ArrowRight className="size-4 shrink-0 text-amber-600" aria-hidden />
+              </Button>
+            )}
+
+            {otherProducts.length > 0 && (
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-amber-800">
+                  Atau pilih produk serupa yang tersedia:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {otherProducts.map((p) => (
+                    <Button
+                      key={p.id}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                      onClick={() => router.push(`/katalog/${p.id}`)}
+                    >
+                      {p.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         <div className="flex items-baseline justify-between border-t pt-4">

@@ -75,8 +75,8 @@ export default async function ProductDetailPage({
   if (error === "sku") notifications.push({ type: "error", message: "SKU sudah dipakai produk lain." });
   if (error === "serial") notifications.push({ type: "error", message: "Nomor seri sudah dipakai unit lain." });
   if (error === "invalid") notifications.push({ type: "error", message: "Data tidak valid — periksa kembali isian form." });
-  if (error === "file") notifications.push({ type: "error", message: "File tidak valid — hanya JPG/PNG/WebP maksimal 5MB." });
-  if (error === "maximages") notifications.push({ type: "error", message: "Maksimal 8 foto galeri per produk." });
+  if (error === "file") notifications.push({ type: "error", message: "File tidak valid — hanya JPG/PNG/WebP maksimal 20MB." });
+  if (error === "maximages") notifications.push({ type: "error", message: "Maksimal 10 foto galeri per produk." });
   if (error && !["sku", "serial", "invalid", "file", "maximages"].includes(error)) notifications.push({ type: "error", message: decodeURIComponent(error) });
   const priceFields: { key: "price6h" | "price12h" | "price24h" | "price48h"; label: string }[] = [
     { key: "price6h", label: "Harga 6 Jam" },
@@ -175,6 +175,19 @@ export default async function ProductDetailPage({
                   min="1"
                   defaultValue={product.stockThreshold}
                 />
+                <p className="text-xs text-muted-foreground">Notifikasi bila unit tersedia tinggal sedikit</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="chargingRestHours">Jeda Charge/Istirahat (jam)</Label>
+                <Input
+                  id="chargingRestHours"
+                  name="chargingRestHours"
+                  type="number"
+                  min="0"
+                  max="24"
+                  defaultValue={product.chargingRestHours ?? 3}
+                />
+                <p className="text-xs text-muted-foreground">Unit tidak bisa langsung disewa lagi setelah pengembalian — butuh waktu untuk charge & istirahat (default 3 jam)</p>
               </div>
               <div className="space-y-2 rounded-lg bg-muted/40 p-3">
                 <p className="text-sm font-medium">Jumlah Unit: {product.units.length}</p>

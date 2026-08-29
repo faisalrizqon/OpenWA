@@ -91,14 +91,7 @@ export function dailyPrice(p: TieredProduct): number {
   }
 }
 
-/** Link WhatsApp ke nomor toko (format 08xx).
- *  Signature lama waLink(text) tetap bekerja — memakai SHOP.whatsapp. */
-export function waLink(whatsappOrText: string, text?: string): string {
-  if (text !== undefined) {
-    return `https://wa.me/62${whatsappOrText.replace(/^0/, "")}?text=${encodeURIComponent(text)}`;
-  }
-  return `https://wa.me/62${SHOP.whatsapp.replace(/^0/, "")}?text=${encodeURIComponent(whatsappOrText)}`;
-}
+export { waLink } from "@/lib/wa";
 
 /** Pesan WA untuk menanyakan/booking sebuah produk.
  *  Signature lama inquiryMessage(productName, sku) tetap bekerja. */

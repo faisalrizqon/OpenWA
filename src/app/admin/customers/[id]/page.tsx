@@ -35,7 +35,7 @@ import {
 
 const DOC_LABELS: Record<string, string> = {
   ktp: "KTP",
-  selfie_ktp: "Selfie + Identitas",
+  selfie_ktp: "Selfie Identitas",
   kartu_pelajar: "Kartu Pelajar",
   other: "Lainnya",
 };
@@ -50,6 +50,7 @@ export default async function CustomerDetailPage({
   const errorParam = await searchParams;
   const error = Array.isArray(errorParam.error) ? errorParam.error[0] : errorParam.error;
   const pwdSet = Array.isArray(errorParam.pwd_set) ? errorParam.pwd_set[0] : errorParam.pwd_set;
+  const newPwd = Array.isArray(errorParam.pwd) ? errorParam.pwd[0] : errorParam.pwd;
   const customerId = Number(id);
   if (!Number.isInteger(customerId)) notFound();
 
@@ -82,7 +83,7 @@ export default async function CustomerDetailPage({
 
   const notifications: PageNotification[] = [];
   if (pwdSet === "1") {
-    notifications.push({ type: "success", message: "Password portal berhasil disimpan. Customer bisa login di /portal." });
+    notifications.push({ type: "success", message: "Password portal berhasil disimpan." });
   }
   if (error === "file") {
     notifications.push({ type: "error", message: "File tidak valid — hanya JPG/PNG/WebP maksimal 5MB." });
@@ -128,6 +129,19 @@ export default async function CustomerDetailPage({
         }
       />
       <PageNotifier notifications={notifications} />
+      {pwdSet === "1" && newPwd && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
+          <p className="font-medium text-emerald-800">
+            Password baru customer:{" "}
+            <code className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono font-semibold text-emerald-900">
+              {newPwd}
+            </code>
+          </p>
+          <p className="text-xs text-emerald-700">
+            Kirim ke customer sekarang — halaman ini tidak menyimpannya lagi setelah refresh.
+          </p>
+        </div>
+      )}
       {customer.isBlacklisted && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           Pelanggan ini di-blacklist: {customer.blacklistReason}
@@ -159,7 +173,7 @@ export default async function CustomerDetailPage({
             <p className="text-xs font-medium text-muted-foreground">Order Terakhir</p>
             <p className="mt-1 text-sm font-bold">
               {lastOrder
-                ? format(new Date(lastOrder.startDate), "dd MMM yyyy", { locale: localeId })
+                ? format(new Date(lastOrder.startDate), "dd MMMM yyyy", { locale: localeId })
                 : "—"}
             </p>
           </CardContent>
@@ -178,30 +192,33 @@ export default async function CustomerDetailPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={setCustomerPassword}>
+            <form action={setCustomerPassword} className="space-y-4">
               <input type="hidden" name="customerId" value={customer.id} />
-              <div className="grid gap-3 sm:grid-cols-[auto_auto_96px]">
-                <div className="space-y-1.5">
-                  <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">
-                    Kata Sandi Portal (min 6 karakter)
-                  </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="h-9"
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-sm font-medium text-muted-foreground">
+                  Kata Sandi Portal
+                </Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Kosongkan untuk generate acak"
+                  className="max-w-sm"
+                />
                 {customer.passwordHash && (
-                  <p className="flex items-center text-xs text-neutral-500">
-                    ✓ Sudah diset ({format(new Date(customer.createdAt), "dd MMM yyyy", { locale: localeId })})
+                  <p className="flex items-center gap-1.5 text-xs text-amber-600">
+                    🔑 Sudah diset ({format(new Date(customer.createdAt), "dd MMMM yyyy", { locale: localeId })})
                   </p>
                 )}
-                <Button type="submit" size="sm">
-                  {customer.passwordHash ? "Ganti Password" : "Set Password"}
-                </Button>
+                <p className="text-xs text-muted-foreground">
+                  💡 Isi untuk set manual, atau biarkan kosong untuk generate password acak.
+                  <br />
+                  Password akan ditampilkan sekali setelah disimpan.
+                </p>
               </div>
+              <Button type="submit" variant={customer.passwordHash ? "outline" : "default"}>
+                {customer.passwordHash ? "Ganti Password" : "Set Password"}
+              </Button>
             </form>
             <p className="mt-2 text-xs text-muted-foreground">
               Customer akan dapat login dengan No. HP + password ini di /portal/login
@@ -256,7 +273,7 @@ export default async function CustomerDetailPage({
               </div>
               <div className="flex items-center gap-2 sm:col-span-2">
                 <Button type="submit">Simpan Perubahan</Button>
-                <BackLink href="/admin/customers" label="Batal" className="h-8 rounded-lg" />
+                <BackLink href="/admin/customers" label="Batal" />
               </div>
             </form>
           </CardContent>
@@ -293,7 +310,7 @@ export default async function CustomerDetailPage({
             <div className="border-t pt-3 text-sm">
               <p className="text-muted-foreground">
                 Terdaftar:{" "}
-                {format(new Date(customer.createdAt), "dd MMM yyyy HH:mm", { locale: localeId })}
+                {format(new Date(customer.createdAt), "dd MMMM yyyy HH:mm", { locale: localeId })}
               </p>
             </div>
           </CardContent>
@@ -334,7 +351,7 @@ export default async function CustomerDetailPage({
                       </Link>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {format(new Date(o.startDate), "dd MMM yyyy", { locale: localeId })}
+                      {format(new Date(o.startDate), "dd MMMM yyyy", { locale: localeId })}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
                       {formatRupiah(o.items.reduce((s, it) => s + it.subtotal, 0))}
@@ -374,7 +391,7 @@ export default async function CustomerDetailPage({
                   />
                   <figcaption className="text-xs text-muted-foreground">
                     {DOC_LABELS[d.docType] ?? d.docType} ·{" "}
-                    {format(new Date(d.uploadedAt), "dd MMM yyyy", { locale: localeId })}
+                    {format(new Date(d.uploadedAt), "dd MMMM yyyy", { locale: localeId })}
                   </figcaption>
                   {isAdmin && (
                     <DeleteDocumentButton documentId={d.id} customerId={customer.id} />

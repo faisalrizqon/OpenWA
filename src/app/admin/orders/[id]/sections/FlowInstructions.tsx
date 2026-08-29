@@ -10,11 +10,10 @@ export function FlowInstructions() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 text-sm text-muted-foreground">
-        <p><strong>Order baru</strong> dibuat otomatis sebagai <span className="font-medium text-foreground">Booking</span>. Admin mengklik tombol <strong>Aktifkan</strong> (atau ubah status via dropdown) saat barang diambil customer — unit akan ter-assign ke stok.</p>
-        <p>Setelah masa sewa habis, tandai <strong>Terlambat</strong> jika memang belum kembali. Klik selesaikan setelah item dikembalikan (tambah foto return & catatan kondisi).</p>
+        <p><strong>Order baru</strong> dibuat otomatis sebagai <span className="font-medium text-foreground">Booking</span>. Ubah status via <span className="font-medium text-foreground">picker berwarna</span> di bagian bawah — pilih Aktif, Terlambat, Selesai, atau Dibatalkan. Unit akan ter-assign saat status menjadi Aktif.</p>
         <p>Pembayaran dicatat: DP saat booking, pelunasan sebelum/sehabis sewa, atau denda kalau telat.</p>
         <hr className="my-2 border-border" />
-        <p><strong>Edit/Hapus</strong> pembayaran bisa langsung lewat kolom Aksi per baris. Semua order bebas diubah statusnya kapan saja (tidak ada batasan workflow). Hapus order hanya jika benar-benar batal dan ingin data hilang permanen.</p>
+        <p><strong>Edit/Hapus</strong> pembayaran bisa langsung lewat kolom Aksi per baris. Semua order bebas diubah statusnya kapan saja (tidak ada batasan workflow). Hapus order hanya jika benar-benar batal dan ingin data hilang permanen — tombolnya ada di sebelah Simpan pada row paling bawah.</p>
       </CardContent>
     </Card>
   );

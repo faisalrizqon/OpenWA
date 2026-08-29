@@ -50,6 +50,40 @@ Lalu buka `http://<IP-komputer-ini>:3000` dari perangkat lain di jaringan yang s
 
 Harga tier diambil dari tier terkecil yang ≥ durasi; di atas 48 jam dihitung kelipatan harian (ceil(jam/24) × harga 24 jam).
 
+---
+
+## Notifikasi WhatsApp (OpenWA)
+
+MudahSewa terintegrasi dengan **OpenWA** untuk mengirim notifikasi otomatis via WhatsApp ke pelanggan:
+
+### Fitur WhatsApp
+
++ ✅ Konfirmasi booking otomatis
++ Pengingat pembayaran & denda
++ Notifikasi pengembalian barang
++ Dokumen rental agreement (PDF)
++ Update status order real-time
+
+### Setup WhatsApp
+
+1. Jalankan OpenWA server:
+   ```bash
+   docker-compose -f docker-compose.openwa.yml up -d
+   ```
+
+2. Scan QR code di http://localhost:8080 dengan WhatsApp Business Anda
+
+3. Simpan auth token di `.env`:
+   ```bash
+   OPENWA_AUTH_TOKEN=your_token_here
+   ```
+
+4. Aktifkan di dashboard admin di bagian **Pengaturan → WhatsApp**
+
+Untuk detail lengkap, lihat [Panduan WhatsApp](./docs/WHATSAPP-INTEGRATION.md).
+
+---
+
 ## FAQ
 
 **Bagaimana pelanggan melakukan pemesanan dari HP sendiri?**

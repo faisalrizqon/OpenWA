@@ -20,6 +20,7 @@ import { BookingWidget } from "@/components/BookingWidget";
 import { BackLink } from "@/components/BackLink";
 import { ExternalLink } from "@/components/LinkButton";
 import { ProductGallery } from "@/components/ProductGallery";
+import { productPhotosOf } from "@/lib/productPhotos";
 export default async function KatalogDetailPage({ params }: PageProps<"/katalog/[id]">) {
   const { id } = await params;
   const productId = Number(id);
@@ -29,14 +30,17 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
     where: { id: productId, active: true },
     include: {
       category: { select: { name: true } },
-      units: { where: { status: { notIn: ["maintenance", "lost"] } }, select: { id: true, photoPath: true, serialNumber: true } },
+      // Ambil semua unit untuk prioritas foto, nanti di-filter di productPhotosOf()
+      units: { select: { id: true, photoPath: true, serialNumber: true } },
       images: { orderBy: { sortOrder: "asc" } },
     },
   });
   if (!product) notFound();
 
   const shop = await getStoreSettings();
-  const unitPhotos = product.units.filter((u) => u.photoPath).slice(0, 4);
+  // Jalur foto: unit (foto produk asli) → galeri (preview) → seed (fallback)
+  const { main, previews } = productPhotosOf(product);
+  const galleryImages = main ? [main, ...previews] : [];
   const available = product.units.length;
   const tiers = PRICE_TIERS.map((t) => ({ ...t, price: product[t.key] as number })).filter(
     (t) => t.price > 0
@@ -72,34 +76,12 @@ export default async function KatalogDetailPage({ params }: PageProps<"/katalog/
         {/* Gallery */}
         <div className="space-y-3">
           {/* Galeri produk — klik thumbnail untuk ganti foto utama */}
-          {product.images.length > 0 ? (
-            <ProductGallery images={product.images.map((img) => ({ src: img.filePath, alt: `Foto ${img.id}` }))} />
+          {galleryImages.length > 0 ? (
+            <ProductGallery images={galleryImages} />
           ) : (
-            <>
-              <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl border bg-muted">
-                {product.imagePath ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={product.imagePath}
-                    alt={product.name}
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  <Camera className="size-24 text-muted-foreground/25" aria-hidden />
-                )}
-              </div>
-              {/* Placeholder grid saat belum ada foto galeri */}
-              <div className="grid grid-cols-4 gap-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex aspect-square items-center justify-center rounded-xl border bg-muted/60"
-                  >
-                    <Camera className="size-6 text-muted-foreground/20" aria-hidden />
-                  </div>
-                ))}
-              </div>
-            </>
+            <div className="flex aspect-square items-center justify-center rounded-xl border bg-muted/60">
+              <Camera className="size-12 text-muted-foreground/30" aria-hidden />
+            </div>
           )}
         </div>
 

@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { format } from "date-fns";
 import { getReportMetrics } from "@/lib/reports";
+import { requireAdmin } from "@/lib/permissions";
 
 export const runtime = "nodejs";
 
@@ -13,8 +14,10 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export async function GET(request: Request) {
+  const _user = await requireAdmin();
   const url = new URL(request.url);
   const daysRaw = Number(url.searchParams.get("days"));
+  const fmt = url.searchParams.get("format") === "csv" ? "csv" : "xlsx";
   const metrics = await getReportMetrics(daysRaw);
   const workbook = new ExcelJS.Workbook();
 
@@ -69,6 +72,49 @@ export async function GET(request: Request) {
     row.getCell("total").numFmt = "#,##0";
     row.getCell("paid").numFmt = "#,##0";
     row.getCell("sisa").numFmt = "#,##0";
+  }
+
+  // --- Mode CSV: satu file pipih (ringkasan + orders), tanpa dependensi Excel ---
+  if (fmt === "csv") {
+    const esc = (v: string | number) => {
+      const s = String(v);
+      return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines: string[] = [];
+    lines.push("JENIS,KOLOM1,KOLOM2");
+    lines.push(`Metrik,Rentang (hari),${metrics.days}`);
+    lines.push(`Metrik,Total Diterima,${metrics.totalReceived}`);
+    lines.push(`Metrik,Nilai Order Dibuat,${metrics.orderValue}`);
+    lines.push(`Metrik,Order Selesai,${metrics.ordersCompleted}`);
+    lines.push(`Metrik,Order Terlambat,${metrics.ordersLate}`);
+    lines.push(`Metrik,Pelanggan Baru,${metrics.newCustomers}`);
+    for (const t of metrics.topProducts) {
+      lines.push(`Produk Terlaris,${esc(t.productName)},${t.totalQty}`);
+    }
+    lines.push("");
+    lines.push("ORDER,Nomor,Tanggal,Pelanggan,Item,Total,Dibayar,Sisa,Status");
+    for (const o of metrics.orders) {
+      lines.push(
+        [
+          "Order",
+          o.orderNumber,
+          format(new Date(o.createdAt), "dd/MM/yyyy"),
+          esc(o.customerName),
+          esc(o.itemSummary),
+          o.total,
+          o.paid,
+          o.sisa,
+          STATUS_LABELS[o.status] ?? o.status,
+        ].join(",")
+      );
+    }
+    const csv = "\uFEFF" + lines.join("\n"); // BOM agar Excel membaca UTF-8
+    return new Response(csv, {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="laporan-${metrics.days}hari.csv"`,
+      },
+    });
   }
 
   const buffer = await workbook.xlsx.writeBuffer();

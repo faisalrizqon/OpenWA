@@ -1,7 +1,8 @@
 import { Sidebar } from "@/components/Sidebar";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-
+import { syncLateOrders } from "@/lib/late";
+import { ResetThemePortalAdmin } from "@/components/ResetThemePortalAdmin";
 export default async function AdminLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
 
@@ -14,8 +15,12 @@ export default async function AdminLayout({ children }: LayoutProps<"/">) {
     redirect("/portal/login?error=forbidden");
   }
 
+  // Auto-transisi active → late untuk order yang lewat tanggal kembali (throttled 1x/menit).
+  await syncLateOrders();
+
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
+      <ResetThemePortalAdmin />
       <Sidebar
         user={{
           name: session.user.name ?? "User",

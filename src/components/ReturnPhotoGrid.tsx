@@ -44,12 +44,12 @@ export function ReturnPhotoGrid({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={storageUrl(p.filePath)}
-              alt={`Foto return ${format(p.uploadedAt, "dd MMM yyyy, HH:mm", { locale: localeId })}`}
+              alt={`Foto return ${format(p.uploadedAt, "dd MMMM yyyy, HH:mm", { locale: localeId })}`}
               className="h-24 w-full rounded-lg border object-cover transition-opacity group-hover:opacity-80"
             />
           </a>
           <p className="mt-1 truncate pr-6 text-xs text-muted-foreground">
-            {format(p.uploadedAt, "dd MMM yyyy, HH:mm", { locale: localeId })}
+            {format(p.uploadedAt, "dd MMMM yyyy, HH:mm", { locale: localeId })}
           </p>
           {/* Tombol hapus (✕) — dialog konfirmasi sebelum delete */}
           <Dialog>

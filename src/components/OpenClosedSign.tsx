@@ -63,16 +63,17 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
     >
       {/* PAKU tengah atas */}
       <span
-        className="z-20 size-3 rounded-full bg-[radial-gradient(circle_at_35%_30%,#f1f5f9,#94a3b8_45%,#475569_90%)] shadow-[0_1px_3px_rgba(0,0,0,0.5)]"
+        className="z-20 size-3 rounded-full bg-[radial-gradient(circle_at_35%_30%,#f1f5f9,#94a3b8_45%,#475569_90%)]"
         aria-hidden
       />
 
       <span
         onAnimationEnd={() => setSwinging(false)}
         className={cn(
-          "relative -mt-1 flex w-[200px] translate-x-[-12px] flex-col items-center",
+          "relative -mt-1 flex w-[200px] flex-col items-center will-change-transform",
           swinging ? "animate-sign-swing" : "animate-sign-sway"
         )}
+        style={{ transformStyle: "preserve-3d" }}
       >
         {/* SATU TALI TENGAH — serat hemp/jute twisted + ring logam penghubung */}
         <svg width="24" height="38" viewBox="0 0 24 38" aria-hidden className="block rope-fluid">
@@ -107,6 +108,7 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
           .rope-fluid {
             animation: rope-wiggle 4s ease-in-out infinite;
             transform-origin: top center;
+            backface-visibility: hidden;
           }
           .twist-mark {
             transition: all 0.4s ease;
@@ -116,19 +118,20 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
           }
         `}</style>
 
-        {/* PAPAN KAYU */}
+        {/* PAPAN KAYU — rounded tipis; overflow-hidden wajib agar overlay serat
+            ter-clip mengikuti radius sudut (tanpa ini, sudut overlay "menonjol"
+            keluar dari radius dan terlihat seperti shadow di ujung papan). */}
         <span
-          className={cn(
-            "relative -mt-1 flex w-[200px] items-center justify-center gap-2 overflow-hidden rounded-lg border-2 px-4 py-3",
-            "shadow-[0_5px_12px_rgba(0,0,0,0.3),inset_0_1px_2px_rgba(255,255,255,0.3),inset_0_-3px_6px_rgba(0,0,0,0.2)]",
-            "border-[#5a3a1e]"
-          )}
+          className="relative -mt-1 flex w-[200px] items-center justify-center gap-2 overflow-hidden rounded-md px-5 py-3"
           style={{
             transform: "rotate(-2deg)",
             transformOrigin: "50% 0%",
+            transformStyle: "preserve-3d",
+            willChange: "transform",
+            boxShadow: "none",
             backgroundImage: open
-              ? "radial-gradient(ellipse at 30% 20%, #d4a06e 0%, #b8845a 55%, #9c6e42 100%)"
-              : "radial-gradient(ellipse at 30% 20%, #c0905e 0%, #a8744a 55%, #8e5e36 100%)",
+              ? "radial-gradient(ellipse at 30% 20%, #d4a06e 0%, #c0905e 70%, #b08050 100%)"
+              : "radial-gradient(ellipse at 30% 20%, #c0905e 0%, #a87850 70%, #986840 100%)",
           }}
         >
           {/* SERAT KAYU — garis horizontal berulang */}
@@ -166,34 +169,58 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
           <span
             className={cn(
               "pointer-events-none absolute inset-0",
-              open ? "bg-emerald-700/10" : "bg-rose-800/12"
+              open ? "bg-emerald-700/8" : "bg-rose-800/10"
             )}
+            aria-hidden
+          />
+          {/* Bingkai dalam — ukiran tepi kayu, radius mengikuti papan */}
+          <span
+            className="pointer-events-none absolute inset-[3px] rounded-[3px] border border-[#3a220c]/20"
             aria-hidden
           />
 
-          {/* Bingkai dalam — ukiran tepi kayu */}
+          {/* BAUT di keempat sudut papan */}
+          {(
+            [
+              { left: "9px", top: "9px" },
+              { right: "9px", top: "9px" },
+              { left: "9px", bottom: "9px" },
+              { right: "9px", bottom: "9px" },
+            ] as const
+          ).map((pos, i) => (
+            <span
+              key={i}
+              className="pointer-events-none absolute z-10"
+              style={{ ...pos, width: 8, height: 8 }}
+              aria-hidden
+            >
+              <svg viewBox="0 0 8 8" className="h-full w-full">
+                <defs>
+                  <radialGradient id={`screwhead-${i}`} cx="35%" cy="30%" r="85%">
+                    <stop offset="0%" stopColor="#eceef0" />
+                    <stop offset="45%" stopColor="#9aa0a8" />
+                    <stop offset="100%" stopColor="#6b7280" />
+                  </radialGradient>
+                </defs>
+                <circle cx="4" cy="4" r="3.4" fill={`url(#screwhead-${i})`} stroke="#4b5563" strokeWidth="0.6" />
+                <path
+                  d="M2 4 H6"
+                  stroke="#374151"
+                  strokeWidth="1"
+                  strokeLinecap="round"
+                  transform={`rotate(${i * 33 + 15} 4 4)`}
+                />
+              </svg>
+            </span>
+          ))}
           <span
-            className="pointer-events-none absolute inset-[3px] rounded-md border border-[#3a220c]/35 shadow-[inset_0_0_3px_rgba(0,0,0,0.25)]"
+            className="relative size-2.5 rounded-full bg-white"
             aria-hidden
           />
-
-          {/* Isi papan: lampu + teks terukir */}
           <span
-            className={cn(
-              "relative size-2.5 rounded-full shadow-inner",
-              open ? "animate-pulse bg-emerald-500" : "bg-rose-500"
-            )}
-            aria-hidden
-          />
-          <span
-            className={cn(
-              "relative text-[15px] font-semibold tracking-[0.14em]",
-              open ? "text-[#2a4d20]" : "text-[#6a1e1e]"
-            )}
+            className="relative pl-[0.3em] text-[16px] tracking-[0.3em] text-white"
             style={{
-              fontFamily: "var(--font-instrument), Georgia, serif",
-              textShadow:
-                "0 1px 0 rgba(255,210,160,0.25), 0 -1px 1px rgba(0,0,0,0.25)",
+              fontFamily: "var(--font-spray), var(--font-instrument), Georgia, serif",
             }}
           >
             {open ? "OPEN" : "CLOSED"}

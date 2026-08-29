@@ -28,7 +28,7 @@ export function ReturnSection({ order, active, assignedUnits }: ReturnSectionPro
   const completed = order.status === "completed";
 
   return (
-    <Card>
+    <Card id="return-penyelesaian" className="scroll-mt-4">
       <CardHeader>
         <CardTitle>Return & Penyelesaian</CardTitle>
         <CardDescription>

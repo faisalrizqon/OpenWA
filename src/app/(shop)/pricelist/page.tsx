@@ -47,7 +47,7 @@ export default async function PricelistPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-8 md:py-10">
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 md:py-10">
       <Link
         href="/"
         className="mb-6 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"

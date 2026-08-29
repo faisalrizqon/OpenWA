@@ -10,6 +10,8 @@ export const productSchema = z.object({
   price24h: z.coerce.number().nonnegative(),
   price48h: z.coerce.number().nonnegative(),
   stockThreshold: z.coerce.number().int().min(1).default(1),
+  // Jeda charge & istirahat unit setelah rental selesai (jam)
+  chargingRestHours: z.coerce.number().int().min(0).max(24).default(3),
   initialUnits: z.coerce.number().int().min(1).optional(),
 });
 

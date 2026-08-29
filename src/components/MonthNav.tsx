@@ -20,7 +20,7 @@ export function MonthNav({ month }: { month: string }) {
   const now = new Date();
   const isCurrentMonth = monthKey(current) === monthKey(now);
 
-  const go = (d: Date) => router.push(`/calendar?month=${monthKey(d)}`);
+  const go = (d: Date) => router.push(`/admin/calendar?month=${monthKey(d)}`);
 
   return (
     <div className="flex flex-wrap items-center gap-3">

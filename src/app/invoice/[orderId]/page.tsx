@@ -12,7 +12,13 @@ const PAYMENT_TYPES_LABELS: Record<string, string> = {
   dp: "DP",
   pelunasan: "Pelunasan",
   denda: "Denda",
-  deposit_refund: "Refund Deposit",
+};
+
+const PAYMENT_METHODS_LABELS: Record<string, string> = {
+  cash: "Cash",
+  qris: "QRIS",
+  midtrans: "Midtrans",
+  transfer: "Transfer Bank",
 };
 
 export const dynamic = "force-dynamic";
@@ -32,7 +38,7 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Dibatalkan",
 };
 
-const dateFmt = (d: Date) => format(d, "dd MMM yyyy HH:mm", { locale: localeId });
+const dateFmt = (d: Date) => format(d, "dd MMMM yyyy HH:mm", { locale: localeId });
 
 /** Invoice print-friendly: route mandiri (di luar layout admin) supaya
  *  sidebar/chrome tidak ikut tercetak. */
@@ -97,7 +103,7 @@ export default async function InvoicePage({
           <p className="text-2xl font-extrabold uppercase tracking-widest">Invoice</p>
           <p className="mt-1 text-sm font-semibold">{order.orderNumber}</p>
           <p className="mt-1 text-xs text-neutral-600">
-            Dicetak: {format(new Date(), "dd MMM yyyy", { locale: localeId })}
+            Dicetak: {format(new Date(), "dd MMMM yyyy", { locale: localeId })}
           </p>
         </div>
       </header>
@@ -219,7 +225,7 @@ export default async function InvoicePage({
                 <tr key={p.id} className="border-b border-neutral-100">
                   <td className="py-1.5">{format(p.paidAt, "dd/MM/yyyy HH:mm")}</td>
                   <td className="py-1.5">{PAYMENT_TYPES_LABELS[p.paymentType] ?? p.paymentType}</td>
-                  <td className="py-1.5">{p.method ?? "—"}</td>
+                  <td className="py-1.5">{p.method ? (PAYMENT_METHODS_LABELS[p.method] ?? p.method) : "—"}</td>
                   <td className="py-1.5">
                     {p.status === "pending" ? "Menunggu" : p.status === "confirmed" ? "Dikonfirmasi" : p.status}
                   </td>

@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { AlertTriangle, ArrowRight, Printer } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { formatBookingWA } from "@/lib/wa";
+import { formatBookingWA, formatReturnReminderWA, formatLateWarningWA } from "@/lib/wa";
+import { computeLateInfo } from "@/lib/late";
 import { StatusBadge } from "@/components/StatusBadge";
 import { BackLink } from "@/components/BackLink";
 import { PageNotifier, type PageNotification } from "@/components/PageNotifier";
@@ -51,6 +52,24 @@ export default async function OrderDetailPage({
   const overdue = order.status === "active" && order.endDate < new Date();
   const active = order.status === "active" || order.status === "late";
 
+  // Saran denda: hanya untuk order yang masih berjalan dan lewat batas (+ tenggang per produk)
+  const lateFee =
+    order.status === "late"
+      ? (() => {
+          const info = computeLateInfo(
+            order.endDate,
+            order.items.map((it) => ({
+              productId: it.productId,
+              quantity: it.quantity,
+              feePerDay: it.product.lateFee?.active ? it.product.lateFee.feePerDay : null,
+              graceHours: it.product.lateFee?.graceHours ?? 0,
+            })),
+            order.returnedAt ?? new Date()
+          );
+          return info.suggestedFine > 0 ? info : null;
+        })()
+      : null;
+
   const bookingWA = formatBookingWA({
     orderNumber: order.orderNumber,
     customerName: order.customer.name,
@@ -65,6 +84,19 @@ export default async function OrderDetailPage({
     sisa: Math.max(0, sisa),
   });
   const reminderWA = `Halo ${order.customer.name}, mohon selesaikan pelunasan order *${order.orderNumber}* sebesar Rp ${Math.max(0, sisa).toLocaleString("id-ID")}. Terima kasih! 🙏`;
+  const returnReminderWA = formatReturnReminderWA({
+    customerName: order.customer.name,
+    orderNumber: order.orderNumber,
+    endDate: order.endDate,
+    productNames: order.items.map((it) => it.product.name),
+  });
+  const lateWarningWA = formatLateWarningWA({
+    customerName: order.customer.name,
+    orderNumber: order.orderNumber,
+    endDate: order.endDate,
+    lateDays: lateFee?.lateDays ?? 0,
+    fine: lateFee?.suggestedFine ?? 0,
+  });
 
   const assignedUnits = order.items
     .filter((it) => it.unit != null)
@@ -79,30 +111,28 @@ export default async function OrderDetailPage({
       <PageNotifier notifications={notifications} />
 
       {/* Navigasi halaman — di luar card */}
-      <div className="flex flex-wrap items-center gap-2">
-        <BackLink href="/admin/orders" label="Daftar Orders" />
-        <Link
-          href="/admin/calendar"
-          className="group inline-flex w-fit items-center gap-2 rounded-full border border-border/70 bg-card/80 px-3 py-1.5 text-sm font-medium text-muted-foreground shadow-md backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-card hover:text-foreground hover:shadow-lg"
-        >
-          Lihat Kalender{" "}
-          <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" aria-hidden />
-        </Link>
-      </div>
-
-      <FlowInstructions />
-
-      {/* Header */}
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-bold tracking-tight md:text-2xl">{order.orderNumber}</h1>
-        <StatusBadge status={order.status} />
-        <span className="text-sm text-muted-foreground">
-          {dateFmt(order.startDate)} → {dateFmt(order.endDate)}
-        </span>
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-card p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <BackLink href="/admin/orders" label="Daftar Orders" />
+          <Link
+            href="/admin/calendar"
+            className="group inline-flex w-fit items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Lihat Kalender{" "}
+            <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" aria-hidden />
+          </Link>
+        </div>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold tracking-tight md:text-2xl">{order.orderNumber}</h1>
+          <StatusBadge status={order.status} />
+          <span className="text-sm text-muted-foreground hidden sm:inline-block">
+            {dateFmt(order.startDate)} → {dateFmt(order.endDate)}
+          </span>
+        </div>
         <Link
           href={`/invoice/${order.id}`}
           target="_blank"
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/80 px-3 py-1.5 text-sm font-medium text-muted-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:bg-card hover:text-foreground hover:shadow-md"
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
         >
           <Printer className="size-3.5" aria-hidden />
           Cetak Invoice
@@ -122,19 +152,21 @@ export default async function OrderDetailPage({
           sisa={sisa}
           bookingWA={bookingWA}
           reminderWA={reminderWA}
+          returnReminderWA={returnReminderWA}
+          lateWarningWA={lateWarningWA}
           isAdmin={isAdmin}
         />
         <FinancialSummary order={order} total={total} paid={paid} sisa={sisa} />
       </div>
 
-      {/* Jaminan + Item — satu section, dua card berdampingan */}
+      {/* Pembayaran dinaikkan di bawah ringkasan, jaminan turun ke bawah */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <GuaranteeSection order={order} />
+        <PaymentSection order={order} isAdmin={isAdmin} lateFee={lateFee} />
         <ItemsSection items={order.items} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <PaymentSection order={order} isAdmin={isAdmin} />
+        <GuaranteeSection order={order} />
         <ReturnSection order={order} active={active} assignedUnits={assignedUnits} />
       </div>
     </div>
