@@ -11,13 +11,13 @@ import { cn } from "@/lib/utils";
 import type { OrderSpan } from "@/lib/calendarSpans";
 
 export type { OrderSpan };
-const STATUS_DOT: Record<string, string> = {
+export const STATUS_DOT: Record<string, string> = {
   booking: "bg-amber-400",
   active: "bg-rose-500",
   late: "bg-rose-600",
 };
 
-const STATUS_LABEL: Record<string, string> = {
+export const STATUS_LABEL: Record<string, string> = {
   booking: "Booking",
   active: "Aktif",
   late: "Terlambat",
@@ -37,9 +37,11 @@ const STATUS_BAR: Record<string, string> = {
 export function OrderBar({
   span,
   gridRow,
+  className,
 }: {
   span: OrderSpan;
   gridRow: number;
+  className?: string;
 }) {
   const start = new Date(span.startIso);
   const end = new Date(span.endIso);
@@ -58,7 +60,8 @@ export function OrderBar({
         className={cn(
           "group relative z-10 mx-[3px] flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ring-1 transition-all",
           "hover:-translate-y-px hover:shadow-md hover:shadow-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
-          STATUS_BAR[span.status] ?? "bg-zinc-100 ring-zinc-300 text-zinc-800"
+          STATUS_BAR[span.status] ?? "bg-zinc-100 ring-zinc-300 text-zinc-800",
+          className
         )}
       >
         {/* Mobile: 2 baris — label status + nama produk (kolom sempit) */}

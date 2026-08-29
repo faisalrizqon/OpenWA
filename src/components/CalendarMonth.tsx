@@ -76,26 +76,31 @@ export function CalendarMonth({ data }: { data: CalendarMonthData }) {
         const cellStyle: CSSProperties = { gridColumn: "span 1", gridRow: 1 };
 
         return (
-          <div
-            key={w}
-            className="relative grid grid-cols-7 gap-1.5"
-          >
+          <div key={w} className="relative grid grid-cols-7 gap-1.5">
             {weekDays.map((d) => (
               <DayCell key={d.iso} data={d} style={cellStyle} />
             ))}
             {bars.length > 0 && (
-              <div
-                className="calendar-bar-overlay absolute inset-x-0 bottom-0 overflow-y-auto overscroll-contain pt-1 [scrollbar-width:thin]"
-              >
-                {/* Grid inner selaras dengan grid sel hari (7 kolom, gap sama) */}
-                <div
-                  className="calendar-bar-grid grid grid-cols-7 content-start gap-x-1.5"
-                >
-                  {bars.map(({ span, lane }, i) => (
-                    <OrderBar key={`${span.orderId}-${i}`} span={span} gridRow={lane + 1} />
+              <>
+                {/* Mobile: batang order tampil sebagai daftar di bawah baris minggu
+                    (tidak menumpuk sel tanggal). */}
+                <div className="col-span-full mt-1 flex flex-col gap-1 md:hidden">
+                  {bars.map(({ span }, i) => (
+                    <OrderBar key={`${span.orderId}-m${i}`} span={span} gridRow={1} />
                   ))}
                 </div>
-              </div>
+                {/* Desktop: overlay absolut dengan lane anti-tabrakan */}
+                <div className="absolute inset-x-0 bottom-0 hidden overflow-y-auto overscroll-contain pt-[50px] md:block [scrollbar-width:thin]">
+                  <div
+                    className="grid grid-cols-7 content-start gap-x-1.5"
+                    style={{ gridAutoRows: "minmax(32px, auto)" }}
+                  >
+                    {bars.map(({ span, lane }, i) => (
+                      <OrderBar key={`${span.orderId}-${i}`} span={span} gridRow={lane + 1} />
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
           </div>
         );

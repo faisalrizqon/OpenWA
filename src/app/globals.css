@@ -755,20 +755,3 @@
 html {
   scroll-behavior: smooth;
 }
-
-/* ===== Kalender admin: overlay batang order responsif ===== */
-/* Mobile: header lebih pendek (nomor hari kecil), baris batang lebih tinggi (2 baris teks) */
-.calendar-bar-overlay {
-  top: 30px;
-}
-.calendar-bar-grid {
-  grid-auto-rows: 44px;
-}
-@media (min-width: 768px) {
-  .calendar-bar-overlay {
-    top: 50px;
-  }
-  .calendar-bar-grid {
-    grid-auto-rows: 32px;
-  }
-}

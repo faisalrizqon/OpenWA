@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Settings2, Save, Users, User, Plus, Trash2 } from "lucide-react";
+import { Settings2, Save, Users, User, Plus, Trash2, MessageCircle, Bell, CalendarClock, AlertTriangle } from "lucide-react";
 import type { ReminderSettings } from "@/lib/reminders/config";
 
 interface ReminderTabProps {
@@ -109,6 +109,29 @@ export function ReminderTab({ settings }: ReminderTabProps) {
       alert(`Scan selesai:\n- Dipindai: ${result.scanned}\n- Terkirim: ${result.sent}\n- Dilewati: ${result.skipped}\n- Gagal: ${result.failed}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menjalankan scan");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTestSend = async (type: "cod" | "return" | "late") => {
+    setLoading(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const response = await fetch("/api/reminders/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Gagal kirim pesan test");
+      const targetLines = (result.sentTo ?? [])
+        .map((s: { phone: string; label: string; ok: boolean }) => `- ${s.label} (${s.phone}): ${s.ok ? "✅ terkirim" : "❌ gagal"}`)
+        .join("\n");
+      alert(`Test kirim ${type.toUpperCase()}:\n\n${result.message}\n\nDetail target:\n${targetLines}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat test kirim");
     } finally {
       setLoading(false);
     }
@@ -277,6 +300,32 @@ export function ReminderTab({ settings }: ReminderTabProps) {
         <Button onClick={handleSubmit} disabled={loading} className="gap-2"><Save className="size-4" /> Simpan Pengaturan</Button>
         <Button onClick={handleTestScan} variant="outline" disabled={loading}>Run Test Scan</Button>
       </div>
+
+      {/* Test Send Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="size-4" /> Test Kirim Langsung
+          </CardTitle>
+          <CardDescription>Kirim pesan test ke semua nomor target yang dituju (customer sample + admin)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={() => handleTestSend("cod")} variant="outline" disabled={loading} className="gap-2">
+              <Bell className="size-4" /> Test COD
+            </Button>
+            <Button onClick={() => handleTestSend("return")} variant="outline" disabled={loading} className="gap-2">
+              <CalendarClock className="size-4" /> Test Return
+            </Button>
+            <Button onClick={() => handleTestSend("late")} variant="outline" disabled={loading} className="gap-2">
+              <AlertTriangle className="size-4" /> Test Late
+            </Button>
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Pesan test dikirim langsung ke nomor WA yang dikonfigurasi di atas. Gunakan ini untuk verifikasi pengaturan sebelum production.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
