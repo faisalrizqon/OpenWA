@@ -87,6 +87,8 @@ export async function getStockSnapshot(opts: {
   productId: number;
   rangeStart: Date;
   rangeEnd: Date;
+  /** Hapus order ID dari hasil agar tidak dihitung double (digunakan untuk reschedule) */
+  excludeOrderId?: string;
 }): Promise<{
   product: { name: string; chargingRestHours: number } | null;
   totalUnits: number;
@@ -94,7 +96,7 @@ export async function getStockSnapshot(opts: {
   available: number;
   restBufferHours: number;
 }> {
-  const { client, productId, rangeStart, rangeEnd } = opts;
+  const { client, productId, rangeStart, rangeEnd, excludeOrderId } = opts;
 
   const [product, totalUnits] = await Promise.all([
     client.product.findUnique({
@@ -118,6 +120,7 @@ export async function getStockSnapshot(opts: {
         status: { in: ["booking", "active", "late"] },
         startDate: { lt: rangeEnd },
         endDate: { gt: queryEndBound },
+        id: excludeOrderId ? { not: excludeOrderId } : undefined,
       },
     },
     select: {
@@ -125,7 +128,6 @@ export async function getStockSnapshot(opts: {
       order: { select: { status: true, startDate: true, endDate: true } },
     },
   });
-
   const busy = countOverlapUnits(
     productId,
     rangeStart,
@@ -151,13 +153,16 @@ export async function getStockSnapshot(opts: {
 
 /** Validasi stok: melempar Error user-facing bila `needed` unit tidak tersedia
  *  untuk rentang [rangeStart, rangeEnd). Dipakai createOrder, extendOrder,
- *  dan checkout online. */
+ *  rescheduleOrder, dan checkout online. */
 export async function ensureStockAvailable(opts: {
   client: StockClient;
   productId: number;
   rangeStart: Date;
   rangeEnd: Date;
   needed: number;
+  /** Exclude satu order dari perhitungan sibuk — dipakai reschedule agar
+   *  order yang sedang dipindah tidak dihitung melawan dirinya sendiri. */
+  excludeOrderId?: string;
 }): Promise<void> {
   const { productId, needed } = opts;
   const snap = await getStockSnapshot(opts);

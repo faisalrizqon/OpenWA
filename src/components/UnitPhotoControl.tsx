@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { Camera, Trash2, Upload } from "lucide-react";
 import { uploadUnitPhoto, deleteUnitPhoto } from "@/actions/products";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 /**
  * Kontrol foto fisik unit di tabel admin produk: thumbnail preview + tombol
@@ -22,16 +23,35 @@ export function UnitPhotoControl({
 
   return (
     <div className="flex items-center gap-2">
-      {/* Thumbnail / placeholder */}
+      {/* Thumbnail / placeholder — klik → zoom di modal */}
       {photoPath ? (
-        <a href={photoPath} target="_blank" rel="noopener noreferrer" title="Klik untuk memperbesar">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={photoPath}
-            alt={`Foto unit #${unitId}`}
-            className="size-10 rounded-md border object-cover"
-          />
-        </a>
+        <Dialog>
+          <DialogTrigger
+            className="cursor-zoom-in"
+            title="Klik untuk memperbesar"
+            aria-label={`Perbesar foto unit #${unitId}`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={photoPath}
+              alt={`Foto unit #${unitId}`}
+              className="size-10 rounded-md border object-cover"
+            />
+          </DialogTrigger>
+          <DialogContent className="max-w-5xl sm:max-w-5xl">
+            <DialogHeader>
+              <DialogTitle>Foto Unit #{unitId}</DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center justify-center bg-muted p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photoPath}
+                alt={`Foto unit #${unitId}`}
+                className="max-h-[75vh] max-w-full object-contain"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
       ) : (
         <span
           className="flex size-10 items-center justify-center rounded-md border bg-muted/50"

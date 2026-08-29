@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -28,7 +29,7 @@ type AdminRole = "admin" | "mitra";
 interface NavItem {
   label: string;
   href: "/admin" | "/admin/orders" | "/admin/products" | "/admin/customers" | "/admin/calendar" | "/admin/payments" | "/admin/receivables" | "/admin/promos" | "/admin/reports" | "/admin/content" | "/admin/users" | "/admin/audit" | "/admin/whatsapp";
-  icon: LucideIcon;
+  icon: React.ElementType;
   adminOnly?: boolean;
 }
 
@@ -63,7 +64,7 @@ const ADMIN_NAV_SECTIONS: NavSection[] = [
       { label: "Konten Toko", href: "/admin/content", icon: Megaphone, adminOnly: true },
       { label: "Pengguna", href: "/admin/users", icon: ShieldCheck, adminOnly: true },
       { label: "Audit Log", href: "/admin/audit", icon: ScrollText, adminOnly: true },
-      { label: "WhatsApp Integration", href: "/admin/whatsapp", icon: Megaphone },
+      { label: "WhatsApp", href: "/admin/whatsapp", icon: WhatsAppIcon },
     ],
   },
 ];

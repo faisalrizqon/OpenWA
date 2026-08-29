@@ -1,46 +1,83 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Dependencies
+/node_modules/
+.pnp*
+.yarn/
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Testing
+/coverage/
 
-# testing
-/coverage
-
-# next.js
+# Next.js build outputs
 /.next/
 /out/
+build/
+dist/
 
-# production
-/build
+# Environment files (keep .env.example committed, but never real secrets)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+!ecosystem.config.js.backup  # backup config is OK to commit with dummy keys
 
-# misc
-.DS_Store
-*.pem
-
-# debug
+# Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# Database files - exclude WAL and shm, keep main DB tracked
+data/*.db-shm
+data/*.db-wal
+!.env.db
 
-# vercel
-.vercel
-
-# typescript
+# Typescript build
 *.tsbuildinfo
-next-env.d.ts
 
-/src/generated/prisma
+# Generated Prisma client (will regenerate on server)
+/src/generated/prisma/
 
-# uploaded files (KTP photos, return photos)
+# Uploaded user data (KTP, photos, etc.)
 /public/uploads/
+
+# Temporary/build folders
+tmp/
+test-upload/
+
+# IDE & Editor configs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Debugging
+.eslintcache
+
+# Deployment artifacts
+deploy/*.log
+deploy/debug-*.json
+
+# === MudahSewa-specific exclusions ===
+# Personal/imported data
+notion/
+openwa-data/
+.hermes/
+.test-upload/
+dev/
+wa-qr.png
+
+# Customer files (KTP, proofs) - never commit
+storage/
+
+# All env files (any suffix) except examples
+.env*
+!.env.example
+!gopay-gateway/.env.example
+!openwa-server/.env.example
+openwa-server/

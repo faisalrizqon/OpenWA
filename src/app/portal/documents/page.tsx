@@ -7,6 +7,7 @@ import { PageNotifier, type PageNotification } from "@/components/PageNotifier";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { storageUrl } from "@/lib/storage-url";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { deletePortalDocument } from "@/app/portal/actions";
 
 export const dynamic = "force-dynamic";
@@ -155,14 +156,24 @@ export default async function PortalDocumentsPage({
                           Uploaded: {new Date(d.uploadedAt).toLocaleDateString("id-ID")}
                         </p>
                       </div>
-                      <a
-                        href={storageUrl(d.filePath)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
-                      >
-                        Lihat
-                      </a>
+                      <Dialog>
+                        <DialogTrigger className="inline-flex cursor-zoom-in rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground">
+                          Lihat
+                        </DialogTrigger>
+                        <DialogContent className="max-w-5xl sm:max-w-5xl">
+                          <DialogHeader>
+                            <DialogTitle>{DOC_LABELS[d.docType]}</DialogTitle>
+                          </DialogHeader>
+                          <div className="flex items-center justify-center bg-muted p-4">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={storageUrl(d.filePath)}
+                              alt={DOC_LABELS[d.docType]}
+                              className="max-h-[75vh] max-w-full object-contain"
+                            />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </div>
                 ))}

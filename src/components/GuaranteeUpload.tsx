@@ -65,19 +65,39 @@ export function GuaranteeDocs({
     <div className={`grid gap-3 ${columns}`}>
       {documents.map((d) => (
         <div key={d.id} className="group relative">
-          <a
-            href={storageUrl(d.filePath)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={storageUrl(d.filePath)}
-              alt={DOC_LABELS[d.docType] ?? d.docType}
-              className="h-24 w-full rounded-lg border object-cover transition-opacity group-hover:opacity-80"
+          {/* Klik gambar → zoom di modal (bukan buka tab baru) */}
+          <Dialog>
+            <DialogTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label={`Perbesar ${DOC_LABELS[d.docType] ?? "dokumen"}`}
+                  className="block w-full cursor-zoom-in"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={storageUrl(d.filePath)}
+                    alt={DOC_LABELS[d.docType] ?? d.docType}
+                    className="h-24 w-full rounded-lg border object-cover transition-opacity group-hover:opacity-80"
+                  />
+                </button>
+              }
             />
-          </a>
+            <DialogContent className="max-w-5xl sm:max-w-5xl">
+              <DialogHeader>
+                <DialogTitle>{DOC_LABELS[d.docType] ?? "Dokumen Jaminan"}</DialogTitle>
+                <DialogDescription>Klik di luar atau tekan ESC untuk menutup</DialogDescription>
+              </DialogHeader>
+              <div className="flex items-center justify-center bg-muted p-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={storageUrl(d.filePath)}
+                  alt={DOC_LABELS[d.docType] ?? d.docType}
+                  className="max-h-[75vh] max-w-full object-contain"
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
           <p className="mt-1 truncate pr-6 text-xs text-muted-foreground">
             {DOC_LABELS[d.docType] ?? d.docType}
           </p>

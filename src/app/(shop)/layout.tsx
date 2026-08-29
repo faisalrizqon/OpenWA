@@ -5,6 +5,8 @@ import { waLink, generalMessage } from "@/lib/shop";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { ShopTheme } from "@/components/ShopTheme";
 import { OpenClosedSign } from "@/components/OpenClosedSign";
+import { OpenClosedBadge } from "@/components/OpenClosedBadge";
+import { MobileNavMenu } from "@/components/MobileNavMenu";
 
 export default async function ShopLayout({ children }: LayoutProps<"/">) {
   const shop = await getStoreSettings();
@@ -26,17 +28,23 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
             </span>
           </Link>
 
+          {/* Kanan mobile: badge BUKA/TUTUP compact + tombol menu hamburger */}
+          <div className="flex items-center gap-2 sm:hidden">
+            <OpenClosedBadge hours={shop.hours} />
+            <MobileNavMenu whatsappUrl={waLink(shop.whatsapp, generalMessage(shop.storeName))} />
+          </div>
+
           {/* Tengah: papan gantung OPEN/CLOSED.
               <lg: jadi baris kedua rata tengah supaya tidak menabrak logo/nav;
               ≥lg: inline di antara logo dan nav. */}
-          <div className="relative order-3 flex basis-full justify-center lg:order-none lg:h-10 lg:basis-auto lg:shrink-0">
+          <div className="relative order-3 hidden basis-full justify-center sm:flex lg:order-none lg:h-10 lg:basis-auto lg:shrink-0">
             <div className="lg:absolute lg:left-1/2 lg:top-[14px] lg:-translate-x-1/2">
               <OpenClosedSign hours={shop.hours} />
             </div>
           </div>
 
           {/* Kanan: nav */}
-          <nav className="flex items-center gap-2 sm:gap-4">
+          <nav className="hidden items-center gap-2 sm:flex sm:gap-4">
             <Link
               href="/"
               className="inline-flex h-9 items-center rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:text-sm"

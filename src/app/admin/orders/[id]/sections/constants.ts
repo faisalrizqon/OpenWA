@@ -31,4 +31,4 @@ export const dateFmt = (d: Date) =>
 
 /** Format tanggal pendek untuk riwayat pembayaran. */
 export const dateFmtDay = (d: Date) =>
-  format(d, "dd MMMM yyyy", { locale: localeId });
+  format(d, "dd MMM yyyy", { locale: localeId });

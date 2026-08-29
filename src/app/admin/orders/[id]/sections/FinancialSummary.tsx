@@ -1,10 +1,6 @@
-import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { confirmOnlinePayment } from "@/app/(shop)/actions/checkout";
 import { formatRupiah } from "@/lib/pricing";
-import { storageUrl } from "@/lib/storage";
 import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, type PaymentMethod } from "@/lib/payment";
-import { Button } from "@/components/ui/button";
 import { DriveIcon } from "@/components/DriveIcon";
 import { PhotoDriveForm } from "@/components/PhotoDriveForm";
 export interface FinancialSummaryProps {
@@ -37,9 +33,6 @@ export function FinancialSummary({
   paid,
   sisa,
 }: FinancialSummaryProps) {
-  const pendingProof = order.payments.find((p) => p.status === "pending" && p.proofPath);
-  const hasPendingPayment = order.payments.some((p) => p.status === "pending");
-
   return (
     <div className="rounded-xl border bg-card p-6 shadow-sm">
       <h2 className="mb-5 text-lg font-semibold tracking-tight text-foreground">Ringkasan Pembayaran</h2>
@@ -126,34 +119,6 @@ export function FinancialSummary({
               </div>
             )}
           </dl>
-
-          {pendingProof && (
-            <div className="mt-3 space-y-2 rounded-lg border border-border bg-muted/40 p-3">
-              <p className="text-xs font-semibold">Bukti transfer customer (perlu verifikasi)</p>
-              <a href={storageUrl(pendingProof.proofPath!)} target="_blank" rel="noopener noreferrer">
-                <img
-                  src={storageUrl(pendingProof.proofPath!)}
-                  alt="Bukti pembayaran"
-                  className="h-32 w-full rounded-md border object-cover"
-                />
-              </a>
-              <form action={confirmOnlinePayment}>
-                <input type="hidden" name="orderId" value={order.id} />
-                <Button type="submit" size="sm" className="w-full gap-1.5">
-                  <CheckCircle2 className="size-4" aria-hidden />
-                  Konfirmasi Pembayaran Ini
-                </Button>
-              </form>
-            </div>
-          )}
-          {!pendingProof && hasPendingPayment && (
-            <form action={confirmOnlinePayment} className="mt-2">
-              <input type="hidden" name="orderId" value={order.id} />
-              <Button type="submit" variant="secondary" size="sm">
-                Konfirmasi pembayaran pending
-              </Button>
-            </form>
-          )}
         </div>
       )}
     </div>

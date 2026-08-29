@@ -166,6 +166,7 @@ model Order {
   unitEvents    UnitEvent[]
   review        Review?
   messageLogs   MessageLog[]
+  codReminders  CodReminder[]
   gopayPayments GopayPayment[]
 
   @@index([status])
@@ -513,4 +514,20 @@ model MessageLog {
   @@index([sessionId])
   @@index([orderId])
   @@index([createdAt])
+}
+// --- Reminder COD otomatis via WhatsApp (3 jam / 1 jam / 30 menit / 5 menit
+//     sebelum waktu pengambilan order). Satu baris per order per slot. ---
+model CodReminder {
+  id        Int       @id @default(autoincrement())
+  orderId   String
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  slot      String // "3h" | "1h" | "30m" | "5m" — jarak sebelum waktu ambil
+  sentAt    DateTime? // null = belum terkirim
+  status    String    @default("pending") // pending | sent | skipped
+  error     String? // detail bila kirim gagal
+  createdAt DateTime  @default(now())
+
+  @@unique([orderId, slot])
+  @@index([status])
+  @@index([sentAt])
 }

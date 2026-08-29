@@ -1,0 +1,16 @@
+# Logrotate config for MudahSewa app + PM2 logs
+/www/wwwroot/dagdigdugdigicam.store/logs/*.log
+/www/wwwroot/gopay-gateway/logs/*.log
+/www/wwwroot/openwa-server/logs/*.log
+/home/www/.pm2/logs/*.log
+{
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    dateext
+    dateformat -%Y%m%d
+}

@@ -241,47 +241,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                         )}
                       </div>
 
-                      {/* Right: Proof + Actions */}
-                      <div className="flex flex-col items-end gap-2">
-                        {payment.proofPath && (
-                          <>
-                            <Dialog>
-                              <DialogTrigger className="group relative block cursor-pointer overflow-hidden rounded-lg border bg-muted transition-transform hover:scale-[1.02]">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={storageUrl(payment.proofPath)}
-                                  alt="Bukti pembayaran — klik untuk lihat ukuran penuh"
-                                  className="h-48 w-auto object-cover"
-                                />
-                                <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
-                                  <span className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black shadow">
-                                    <ZoomIn className="size-4" aria-hidden />
-                                    Lihat Bukti Pembayaran
-                                  </span>
-                                </div>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-5xl sm:max-w-5xl">
-                                <DialogHeader>
-                                  <DialogTitle>Bukti Pembayaran — {payment.order?.orderNumber ?? payment.orderId}</DialogTitle>
-                                </DialogHeader>
-                                <div className="flex items-center justify-center bg-muted p-4">
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img
-                                    src={storageUrl(payment.proofPath)}
-                                    alt="Bukti pembayaran ukuran penuh"
-                                    className="max-h-[75vh] max-w-full object-contain"
-                                  />
-                                </div>
-                                <p className="px-4 pb-4 text-center text-xs text-muted-foreground">
-                                  Tekan ESC atau tombol tutup untuk menutup
-                                </p>
-                              </DialogContent>
-                            </Dialog>
-                            <p className="text-xs text-muted-foreground">
-                              Klik gambar untuk lihat bukti pembayaran
-                            </p>
-                          </>
-                        )}
+                      {/* Right: Actions + Proof */}
+                      <div className="flex flex-col items-end gap-3">
                         <div className="flex gap-2">
                           <form action={approvePayment}>
                             <input type="hidden" name="paymentId" value={payment.id} />
@@ -292,6 +253,39 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                           </form>
                           <RejectPaymentForm paymentId={payment.id} />
                         </div>
+                        {payment.proofPath && (
+                          <Dialog>
+                            <DialogTrigger className="group relative cursor-zoom-in overflow-hidden rounded-lg border transition-transform hover:scale-[1.02]">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={storageUrl(payment.proofPath)}
+                                alt="Bukti pembayaran — klik untuk lihat ukuran penuh"
+                                className="h-32 w-auto object-cover"
+                              />
+                              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                                <span className="flex size-8 items-center justify-center rounded-full bg-white text-black shadow">
+                                  <ZoomIn className="size-4" aria-hidden />
+                                </span>
+                              </div>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-5xl sm:max-w-5xl">
+                              <DialogHeader>
+                                <DialogTitle>Bukti Pembayaran — {payment.order?.orderNumber ?? payment.orderId}</DialogTitle>
+                              </DialogHeader>
+                              <div className="flex items-center justify-center bg-muted p-4">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={storageUrl(payment.proofPath)}
+                                  alt="Bukti pembayaran ukuran penuh"
+                                  className="max-h-[75vh] max-w-full object-contain"
+                                />
+                              </div>
+                              <p className="px-4 pb-4 text-center text-xs text-muted-foreground">
+                                Tekan ESC atau tombol tutup untuk menutup
+                              </p>
+                            </DialogContent>
+                          </Dialog>
+                        )}
                       </div>
                     </div>
                   </li>

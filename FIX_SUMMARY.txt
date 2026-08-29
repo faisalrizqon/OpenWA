@@ -1,0 +1,1 @@
+Root cause fixed: Payment.status now defaults to 'pending' instead of 'confirmed'

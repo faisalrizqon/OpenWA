@@ -6,12 +6,15 @@ import { Button } from "@/components/ui/button";
 import { SelectField } from "@/components/SelectField";
 import { PaymentRowActions } from "@/components/OrderAdminActions";
 import { UploadField } from "@/components/UploadField";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { PAYMENT_TYPES, METHODS, dateFmtDay } from "./constants";
+import { Eye } from "lucide-react";
 import { LateFeeSuggestion } from "./LateFeeSuggestion";
 
 export interface PaymentSectionProps {
   order: {
     id: string;
+    orderNumber: string;
     payments: Array<{
       id: number;
       paymentType: string;
@@ -28,12 +31,15 @@ export interface PaymentSectionProps {
   lateFee?: { suggestedFine: number; lateDays: number } | null;
 }
 
-/** Form catat pembayaran + riwayat pembayaran per order. */
+/** Form catat pembayaran + riwayat pembayaran per order.
+ *  Bukti pembayaran tampil di samping field upload bukti (thumbnail klik → modal zoom). */
 export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps) {
+  const paymentsWithProof = order.payments.filter((p) => p.proofPath);
+
   return (
     <div id="catat-pembayaran" className="rounded-xl border bg-card p-6 shadow-sm scroll-mt-4">
       <h2 className="mb-5 text-lg font-semibold tracking-tight text-foreground">Catat Pembayaran</h2>
-      
+
       {/* Late fee suggestion */}
       {lateFee && (
         <div className="mb-6">
@@ -46,7 +52,7 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
       )}
 
       {/* Form tambah pembayaran */}
-      <form action={addPayment} className="grid gap-3 sm:grid-cols-2 mb-6">
+      <form action={addPayment} className="mb-6 grid gap-4 sm:grid-cols-2">
         <input type="hidden" name="orderId" value={order.id} />
         <div className="space-y-1">
           <label htmlFor="amount" className="text-xs font-medium text-muted-foreground">
@@ -59,7 +65,7 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
             min="1"
             required
             placeholder="30000"
-            className="h-8 w-full rounded-lg border border-input px-2 text-sm tabular-nums"
+            className="h-9 w-full rounded-lg border border-input px-3 text-sm tabular-nums"
           />
         </div>
         <div className="space-y-1">
@@ -94,17 +100,63 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
           <input
             id="note"
             name="note"
-            className="h-8 w-full rounded-lg border border-input px-2 text-sm"
+            className="h-9 w-full rounded-lg border border-input px-3 text-sm"
           />
         </div>
-        <div className="space-y-1">
-          <UploadField
-            id="proof"
-            name="proof"
-            placeholder="Klik untuk pilih file…"
-            helper="Foto bukti transfer atau QRIS (JPG/PNG/WebP, maks 5MB)"
-          />
+
+        {/* Upload bukti (kiri) + bukti pembayaran yang sudah ada (kanan) */}
+        <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-start">
+          <div className="min-w-0 flex-1 space-y-1">
+            <UploadField
+              id="proof"
+              name="proof"
+              placeholder="Klik untuk pilih file…"
+              helper="Foto bukti transfer atau QRIS (JPG/PNG/WebP, maks 5MB)"
+            />
+          </div>
+          {paymentsWithProof.length > 0 && (
+            <div className="min-w-0 flex-1">
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">Bukti Pembayaran</p>
+              <div className="flex flex-wrap gap-2">
+                {paymentsWithProof.map((p) => (
+                  <Dialog key={p.id}>
+                    <DialogTrigger
+                      className="cursor-zoom-in overflow-hidden rounded-lg border transition-transform hover:scale-[1.03]"
+                      title={`${PAYMENT_TYPES[p.paymentType] ?? p.paymentType} · ${formatRupiah(p.amount)} — klik untuk lihat`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={storageUrl(p.proofPath!)}
+                        alt={`Bukti ${PAYMENT_TYPES[p.paymentType] ?? p.paymentType}`}
+                        className="h-24 w-24 object-cover"
+                      />
+                    </DialogTrigger>
+                    <DialogContent className="max-w-5xl sm:max-w-5xl">
+                      <DialogHeader>
+                        <DialogTitle>Bukti Pembayaran — {order.orderNumber}</DialogTitle>
+                        <DialogDescription>
+                          {PAYMENT_TYPES[p.paymentType] ?? p.paymentType} · {formatRupiah(p.amount)} · {dateFmtDay(new Date(p.paidAt))}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="flex items-center justify-center bg-muted p-4">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={storageUrl(p.proofPath!)}
+                          alt="Bukti pembayaran ukuran penuh"
+                          className="max-h-[75vh] max-w-full object-contain"
+                        />
+                      </div>
+                      <p className="px-4 pb-4 text-center text-xs text-muted-foreground">
+                        Tekan ESC atau tombol tutup untuk menutup
+                      </p>
+                    </DialogContent>
+                  </Dialog>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+
         <div className="sm:col-span-2">
           <Button type="submit" variant="secondary">
             Catat Pembayaran
@@ -112,24 +164,25 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
         </div>
       </form>
 
-      {/* Payment history table - simplified borders */}
+      {/* Riwayat pembayaran — bisa di-scroll menyamping bila kolom tidak muat */}
       {order.payments.length > 0 && (
-        <div className="border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full whitespace-nowrap text-sm">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
                 <th className="px-4 py-2 text-left font-medium">Tanggal</th>
                 <th className="px-4 py-2 text-left font-medium">Jenis</th>
                 <th className="px-4 py-2 text-left font-medium">Metode</th>
                 <th className="px-4 py-2 text-left font-medium">Status</th>
+                <th className="px-4 py-2 text-center font-medium">Bukti</th>
                 <th className="px-4 py-2 text-right font-medium">Jumlah</th>
-                <th className="px-4 py-2 w-[90px]"></th>
+                <th className="w-[90px] px-4 py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {order.payments.map((p) => (
                 <tr key={p.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                     {dateFmtDay(new Date(p.paidAt))}
                   </td>
                   <td className="px-4 py-3">{PAYMENT_TYPES[p.paymentType] ?? p.paymentType}</td>
@@ -149,27 +202,39 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
                     >
                       {p.status === "confirmed" ? "Terverifikasi" : p.status === "pending" ? "Menunggu" : "Gagal"}
                     </span>
-                    {p.proofPath && (
-                      <a
-                        href={storageUrl(p.proofPath)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-1.5 block"
-                        title="Klik untuk lihat ukuran penuh"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={storageUrl(p.proofPath)}
-                          alt="Bukti pembayaran"
-                          className="h-10 w-auto rounded border object-cover transition-transform hover:scale-105"
-                        />
-                        <span className="mt-0.5 block text-[10px] text-primary underline underline-offset-2">
-                          Lihat bukti
-                        </span>
-                      </a>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {p.proofPath ? (
+                      <Dialog>
+                        <DialogTrigger
+                          className="cursor-zoom-in text-muted-foreground transition-colors hover:text-primary"
+                          title="Lihat bukti pembayaran"
+                          aria-label={`Lihat bukti pembayaran ${PAYMENT_TYPES[p.paymentType] ?? p.paymentType}`}
+                        >
+                          <Eye className="size-4" aria-hidden />
+                        </DialogTrigger>
+                        <DialogContent className="max-w-5xl sm:max-w-5xl">
+                          <DialogHeader>
+                            <DialogTitle>Bukti Pembayaran — {order.orderNumber}</DialogTitle>
+                            <DialogDescription>
+                              {PAYMENT_TYPES[p.paymentType] ?? p.paymentType} · {formatRupiah(p.amount)} · {dateFmtDay(new Date(p.paidAt))}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="flex items-center justify-center bg-muted p-4">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={storageUrl(p.proofPath)}
+                              alt="Bukti pembayaran ukuran penuh"
+                              className="max-h-[75vh] max-w-full object-contain"
+                            />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    ) : (
+                      <span className="text-xs italic text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right font-medium tabular-nums whitespace-nowrap">
+                  <td className="px-4 py-3 text-right font-medium whitespace-nowrap tabular-nums">
                     {formatRupiah(p.amount)}
                   </td>
                   <td className="px-4 py-3">
@@ -188,4 +253,3 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
     </div>
   );
 }
-

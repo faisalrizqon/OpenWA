@@ -13,6 +13,7 @@ import { CustomerSection } from "./sections/CustomerSection";
 import { FinancialSummary } from "./sections/FinancialSummary";
 import { GuaranteeSection } from "./sections/GuaranteeSection";
 import { ItemsSection } from "./sections/ItemsSection";
+import { OrderActionsSection } from "./sections/OrderActionsSection";
 import { PaymentSection } from "./sections/PaymentSection";
 import { ReturnSection } from "./sections/ReturnSection";
 import { dateFmt } from "./sections/constants";
@@ -25,14 +26,17 @@ export default async function OrderDetailPage({
   const { id } = await params;
   const errorParam = await searchParams;
   const error = Array.isArray(errorParam.error) ? errorParam.error[0] : errorParam.error;
+  const success = Array.isArray(errorParam.success) ? errorParam.success[0] : errorParam.success;
 
   const notifications: PageNotification[] = [];
   if (error === "payment") notifications.push({ type: "error", message: "Pembayaran tidak valid — jumlah harus lebih dari 0." });
   if (error === "file") notifications.push({ type: "error", message: "File tidak valid — hanya JPG/PNG/WebP maksimal 5MB." });
   if (error === "return") notifications.push({ type: "error", message: "Data return tidak valid." });
-  if (error && !["payment", "file", "return"].includes(error)) {
+  if (error === "reschedule") notifications.push({ type: "error", message: "Gagal mengubah tanggal — pastikan tanggal valid dan stok unit tersedia di rentang baru." });
+  if (error && !["payment", "file", "return", "reschedule"].includes(error)) {
     notifications.push({ type: "error", message: decodeURIComponent(error) });
   }
+  if (success === "rescheduled") notifications.push({ type: "success", message: "Tanggal sewa berhasil diubah." });
 
   const session = await auth();
   const isAdmin = session?.user?.role === "admin";
@@ -122,12 +126,19 @@ export default async function OrderDetailPage({
             <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" aria-hidden />
           </Link>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-bold tracking-tight md:text-2xl">{order.orderNumber}</h1>
           <StatusBadge status={order.status} />
           <span className="text-sm text-muted-foreground hidden sm:inline-block">
             {dateFmt(order.startDate)} → {dateFmt(order.endDate)}
           </span>
+          {isAdmin && (
+            <OrderActionsSection
+              orderId={order.id}
+              initialStartDate={order.startDate}
+              initialEndDate={order.endDate}
+            />
+          )}
         </div>
         <Link
           href={`/invoice/${order.id}`}

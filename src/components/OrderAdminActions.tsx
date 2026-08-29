@@ -211,13 +211,8 @@ export function PaymentRowActions({
         </DialogContent>
       </Dialog>
 
-      {isAdmin && payment.status !== "pending" && (
-        <form
-          action={deletePayment}
-          onSubmit={(e) => {
-            if (!window.confirm("Hapus pembayaran ini?")) e.preventDefault();
-          }}
-        >
+      {isAdmin && (
+        <form action={deletePayment}>
           <input type="hidden" name="paymentId" value={payment.id} />
           <input type="hidden" name="orderId" value={orderId} />
           <button

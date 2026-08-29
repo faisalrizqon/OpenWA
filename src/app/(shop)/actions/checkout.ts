@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { ensureStockAvailable } from "@/lib/availability";
 import { calcSubtotal, getTierPrice } from "@/lib/pricing";
 import { generateOrderNumber } from "@/lib/orderNumber";
+import { ensureCodReminders } from "@/lib/reminders/scheduler";
 import { calcPromoDiscount, checkPromoEligibility } from "@/lib/promo";
 import { saveUpload, resolveStoragePath } from "@/lib/storage";
 import { createMidtransTransaction, midtransConfigured, type PaymentMethod } from "@/lib/payment";
@@ -212,6 +213,9 @@ export async function checkoutOrder(
     const msg = e instanceof Error ? e.message : "Gagal membuat pesanan";
     failCheckout(first, startDateRaw, msg, checkoutPage);
   }
+
+  // Slot reminder COD disiapkan SETELAH transaksi commit (hindari nested-tx SQLite)
+  await ensureCodReminders(orderId);
 
   // Midtrans: buat transaksi Snap lalu arahkan customer ke halaman pembayaran
   if (paymentMethod === "midtrans") {

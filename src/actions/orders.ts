@@ -5,9 +5,10 @@ import path from "path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { generateOrderNumber } from "@/lib/orderNumber";
 import { ensureStockAvailable } from "@/lib/availability";
+import { generateOrderNumber } from "@/lib/orderNumber";
 import { calcSubtotal, getTierPrice } from "@/lib/pricing";
+import { ensureCodReminders } from "@/lib/reminders/scheduler";
 import { saveUpload, deleteStoredFile } from "@/lib/storage";
 import { requireAdmin, requireMitraOrAdmin } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
@@ -172,6 +173,9 @@ export async function createOrder(formData: FormData) {
     const msg = e instanceof Error ? e.message : "Gagal membuat order";
     redirect(`/admin/orders/new?error=${encodeURIComponent(msg)}`);
   }
+
+  // Slot reminder COD disiapkan SETELAH transaksi commit (hindari nested-tx SQLite)
+  await ensureCodReminders(orderId);
 
   revalidatePath("/admin/orders");
   revalidatePath("/admin");
@@ -893,4 +897,56 @@ export async function confirmPendingOrder(formData: FormData) {
   revalidateOrderPaths(orderId);
   revalidatePath("/admin/orders");
   redirect(`${back}?pending=${action}`);
+}
+
+
+/** Reschedule existing order to new dates (admin only). Validates stock availability. */
+export async function rescheduleOrder(formData: FormData) {
+  const _user = await requireAdmin();
+  const orderId = String(formData.get("orderId") ?? "");
+  const startDateRaw = String(formData.get("startDate") ?? "");
+  const endDateRaw = String(formData.get("endDate") ?? "");
+
+  if (!orderId || !startDateRaw || !endDateRaw) redirect(`/admin/orders?error=reschedule`);
+
+  const newStartDate = new Date(startDateRaw);
+  const newEndDate = new Date(endDateRaw);
+
+  if (newEndDate <= newStartDate) {
+    redirect(`/admin/orders/${orderId}?error=reschedule`);
+  }
+
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { select: { productId: true, quantity: true } } },
+    });
+    if (!order) redirect("/admin/orders?error=payment");
+
+    await prisma.$transaction(async (tx) => {
+      // Validate each item's stock availability for new dates (exclude this order)
+      for (const item of order.items) {
+        await ensureStockAvailable({
+          client: tx,
+          productId: item.productId,
+          rangeStart: newStartDate,
+          rangeEnd: newEndDate,
+          needed: item.quantity,
+          excludeOrderId: orderId,
+        });
+      }
+
+      await tx.order.update({
+        where: { id: orderId },
+        data: { startDate: newStartDate, endDate: newEndDate },
+      });
+    });
+
+    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders");
+    redirect(`/admin/orders/${orderId}?success=rescheduled`);
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
+    redirect(`/admin/orders/${orderId}?error=reschedule`);
+  }
 }
