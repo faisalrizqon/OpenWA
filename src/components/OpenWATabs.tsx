@@ -1,9 +1,8 @@
 /**
  * Tab navigasi untuk Admin WhatsApp — pola sama dengan ContentTabs
  */
-
 import Link from "next/link";
-import { MessageSquare, Settings } from "lucide-react";
+import { Bell, MessageSquare, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
@@ -16,6 +15,7 @@ export interface OpenWANavItem {
 export const OPENWA_TABS: OpenWANavItem[] = [
   { id: "dashboard", label: "Dashboard WA", icon: MessageSquare },
   { id: "setup", label: "Setup & Konfigurasi", icon: Settings },
+  { id: "reminder", label: "Reminder COD", icon: Bell },
 ];
 
 export const OPENWA_TAB_IDS = OPENWA_TABS.map((t) => t.id);

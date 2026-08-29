@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Phone, CheckCircle2, QrCode, ExternalLink, BookOpen } from "lucide-react";
 import { GatewayToggleForm } from "@/components/GatewayToggleForm";
 import { OpenWAManagement } from "@/components/OpenWAManagement";
+import { ReminderTab } from "@/components/ReminderTab";
+import { getReminderSettings } from "@/lib/reminders/config";
 
 export default async function AdminWhatsAppPage({ searchParams }: PageProps<"/admin/whatsapp">) {
   const session = await auth();
@@ -80,6 +82,7 @@ export default async function AdminWhatsAppPage({ searchParams }: PageProps<"/ad
       <div className="mt-4 space-y-6">
         {tab === "dashboard" && <DashboardTab />}
         {tab === "setup" && <SetupTab />}
+        {tab === "reminder" && <ReminderTabWrapper />}
       </div>
     </div>
   );
@@ -268,4 +271,10 @@ async function SetupTab() {
 
     </div>
   );
+}
+
+// --- Tab 3: Reminder COD (pengaturan advance) ---
+async function ReminderTabWrapper() {
+  const settings = await getReminderSettings();
+  return <ReminderTab settings={settings} />;
 }

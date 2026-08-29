@@ -103,14 +103,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                     <Reveal key={p.id} delay={0.2 + catIdx * 0.15 + prodIdx * 0.08}>
                       <div className="group film-frame-hover flash-hover flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/10">
                         <Link href={`/katalog/${p.id}`} className="flex flex-col">
-                          <div className="film-sprockets h-4 w-full bg-foreground/85" aria-hidden />
+                          <div className="film-sprockets h-3 w-full bg-foreground/85 sm:h-4" aria-hidden />
                           <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
                             {main ? (
                               <Image
                                 src={main.src}
                                 alt={`${p.name} — foto produk`}
                                 fill
-                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
                                 className="object-cover transition-transform duration-300 group-hover:scale-105"
                               />
                             ) : (
@@ -142,13 +142,13 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                               </div>
                             )}
                           </div>
-                          <div className="flex flex-col p-4 pb-3">
+                          <div className="flex flex-col p-3 pb-2 sm:p-4 sm:pb-3">
                             <p className="text-xs font-medium text-muted-foreground">{p.category.name}</p>
                             <p className="mt-0.5 font-semibold leading-tight group-hover:text-primary">
                               {p.name}
                             </p>
                             {p.description && (
-                              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                              <p className="mt-1 hidden line-clamp-2 text-sm text-muted-foreground sm:block">
                                 {p.description}
                               </p>
                             )}
@@ -156,7 +156,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                               <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                                 mulai dari
                               </p>
-                              <p className="text-lg font-bold tracking-tight tabular-nums">
+                              <p className="text-base font-bold tracking-tight tabular-nums sm:text-lg">
                                 {lowestPrice(p) > 0 ? formatRupiah(lowestPrice(p)) : "Hubungi kami"}
                               </p>
                               {dailyPrice(p) > 0 && (
@@ -167,7 +167,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                             </div>
                           </div>
                         </Link>
-                        <div className="mt-auto border-t border-border/60 p-3">
+                        <div className="mt-auto border-t border-border/60 p-2.5 sm:p-3">
                           <Link
                             href={`/checkout?productId=${p.id}`}
                             className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
