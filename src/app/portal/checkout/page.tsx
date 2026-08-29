@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { getTierPrice } from "@/lib/pricing";
+import { productPhotosOf } from "@/lib/productPhotos";
+import { storageUrl } from "@/lib/storage-url";
 import { CheckoutForm } from "@/components/CheckoutForm";
 import { BackLink } from "@/components/BackLink";
 import { PageNotifier, type PageNotification } from "@/components/PageNotifier";
@@ -38,13 +40,19 @@ export default async function PortalCheckoutPage({ searchParams }: PageProps<"/p
   const end = new Date(start.getTime() + durationHours * 3600_000);
   if (isNaN(start.getTime())) redirect("/portal/catalog");
 
-  const product = await prisma.product.findFirst({ where: { id: productId, active: true } });
+  const product = await prisma.product.findFirst({
+    where: { id: productId, active: true },
+    include: {
+      units: { select: { id: true, photoPath: true, serialNumber: true } },
+      images: { orderBy: { sortOrder: "asc" } },
+    },
+  });
   if (!product) notFound();
 
-  // Prefill data pemesan dari profil customer yang login
-  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
-
   const unitPrice = getTierPrice(product, durationHours);
+  // Foto produk untuk preview di panel Ringkasan (jalur unit → galeri)
+  const { main } = productPhotosOf(product);
+  const productImageUrl = main ? storageUrl(main.src) : undefined;
 
   return (
     <div className="space-y-6">
@@ -69,6 +77,7 @@ export default async function PortalCheckoutPage({ searchParams }: PageProps<"/p
         unitPrice={unitPrice}
         defaultCourierFee={DEFAULT_COURIER_FEE}
         action={checkoutOrderPortal}
+        productImageUrl={productImageUrl}
       />
     </div>
   );

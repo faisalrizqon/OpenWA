@@ -22,6 +22,8 @@ interface CheckoutFormProps {
   unitPrice: number;
   defaultCourierFee: number;
   action: (formData: FormData) => void;
+  /** URL foto produk untuk preview di panel Ringkasan (opsional). */
+  productImageUrl?: string;
 }
 
 export function CheckoutForm({
@@ -35,6 +37,7 @@ export function CheckoutForm({
   unitPrice,
   defaultCourierFee,
   action,
+  productImageUrl,
 }: CheckoutFormProps) {
   const [deliveryMode, setDeliveryMode] = React.useState<"pickup" | "courier">("pickup");
   const [courierFee, setCourierFee] = React.useState(defaultCourierFee);
@@ -248,12 +251,21 @@ export function CheckoutForm({
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex items-center gap-3">
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-2xl font-bold">
-                ×{quantity}
-              </span>
+              {productImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={productImageUrl}
+                  alt={productName}
+                  className="size-14 shrink-0 rounded-xl border object-cover"
+                />
+              ) : (
+                <span className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-muted text-xl font-bold">
+                  ×{quantity}
+                </span>
+              )}
               <div>
                 <p className="font-semibold leading-tight">{productName}</p>
-                <p className="text-muted-foreground">{durationHours} jam sewa</p>
+                <p className="text-muted-foreground">{durationHours} jam sewa{quantity > 1 ? ` × ${quantity}` : ""}</p>
               </div>
             </div>
 
