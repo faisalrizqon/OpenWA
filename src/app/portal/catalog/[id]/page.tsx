@@ -11,6 +11,8 @@ import { BookingWidget } from "@/components/BookingWidget";
 import { ExternalLink } from "@/components/LinkButton";
 import { ProductGallery } from "@/components/ProductGallery";
 import { productPhotosOf } from "@/lib/productPhotos";
+import { RelatedProductCard } from "@/components/RelatedProductCard";
+import { storageUrl } from "@/lib/storage-url";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +69,12 @@ export default async function PortalCatalogDetailPage({ params }: PageProps<"/po
   const related = await prisma.product.findMany({
     where: { active: true, categoryId: product.categoryId, id: { not: product.id } },
     take: 3,
-    include: { category: { select: { name: true } } },
+    include: {
+      category: { select: { name: true } },
+      // Foto untuk kartu "Produk serupa" — jalur sama dengan PortalProductCard
+      units: { select: { id: true, photoPath: true, serialNumber: true } },
+      images: { orderBy: { sortOrder: "asc" } },
+    },
   });
 
   return (
@@ -230,25 +237,25 @@ export default async function PortalCatalogDetailPage({ params }: PageProps<"/po
         </div>
       )}
 
-      {/* Produk serupa */}
+      {/* Produk serupa — ukuran compact default, thumbnail foto mengikuti produk */}
       {related.length > 0 && (
         <div className="mt-14">
           <h2 className="mb-4 text-lg font-bold tracking-tight">Produk serupa</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             {related.map((r) => (
-              <Link
+              <RelatedProductCard
                 key={r.id}
-                href={`/portal/catalog/${r.id}`}
-                className="group flex items-center gap-3 rounded-2xl border bg-card p-3 transition-colors hover:bg-muted/50"
-              >
-                <span className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-muted">
-                  <Camera className="size-6 text-muted-foreground/40" aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">{r.category.name}</p>
-                  <p className="truncate font-medium group-hover:text-primary">{r.name}</p>
-                </div>
-              </Link>
+                id={r.id}
+                name={r.name}
+                categoryName={r.category.name}
+                price6h={r.price6h}
+                price12h={r.price12h}
+                price24h={r.price24h}
+                price48h={r.price48h}
+                units={r.units ?? []}
+                images={r.images ?? []}
+                hrefPrefix="/portal/catalog"
+              />
             ))}
           </div>
         </div>
