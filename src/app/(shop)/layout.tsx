@@ -29,9 +29,9 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
 
           {/* Kanan mobile: badge BUKA/TUTUP compact + tombol menu hamburger */}
           <div className="flex items-center gap-2 sm:hidden">
-            {/* Papan kayu OPEN/CLOSED versi kecil (animasi ayun tetap ada) */}
-            <div className="relative h-12 w-[90px] shrink-0">
-              <div className="absolute left-[-55px] top-0 origin-top scale-[0.45]">
+            {/* Papan kayu OPEN/CLOSED versi besar (animasi ayun tetap ada) */}
+            <div className="relative h-16 w-[150px] shrink-0">
+              <div className="absolute left-[-25px] top-0 origin-top scale-[0.60]">
                 <OpenClosedSign hours={shop.hours} />
               </div>
             </div>

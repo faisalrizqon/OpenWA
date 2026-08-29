@@ -35,10 +35,10 @@ export function ItemsSection({ items }: ItemsSectionProps) {
           <TableHeader>
             <TableRow className="text-xs">
               <TableHead className="py-1.5">Produk</TableHead>
-              <TableHead className="py-1.5 text-center">Qty</TableHead>
-              <TableHead className="py-1.5 text-center">Durasi</TableHead>
-              <TableHead className="py-1.5 text-right">Harga</TableHead>
-              <TableHead className="py-1.5 text-right">Diskon</TableHead>
+              <TableHead className="hidden py-1.5 text-center sm:table-cell">Qty</TableHead>
+              <TableHead className="hidden py-1.5 text-center sm:table-cell">Durasi</TableHead>
+              <TableHead className="hidden py-1.5 text-right sm:table-cell">Harga</TableHead>
+              <TableHead className="hidden py-1.5 text-right sm:table-cell">Diskon</TableHead>
               <TableHead className="py-1.5 text-right">Subtotal</TableHead>
             </TableRow>
           </TableHeader>
@@ -53,14 +53,16 @@ export function ItemsSection({ items }: ItemsSectionProps) {
                     </p>
                   )}
                 </TableCell>
-                <TableCell className="py-2 text-center tabular-nums">{it.quantity}</TableCell>
-                <TableCell className="py-2 text-center text-xs text-muted-foreground">
+                <TableCell className="hidden py-2 text-center sm:table-cell sm:text-xs tabular-nums">
+                  {it.quantity}
+                </TableCell>
+                <TableCell className="hidden py-2 text-center sm:table-cell text-xs text-muted-foreground">
                   {it.durationHours} jam
                 </TableCell>
-                <TableCell className="py-2 text-right text-xs tabular-nums">
+                <TableCell className="hidden py-2 text-right sm:table-cell text-xs tabular-nums">
                   {formatRupiah(it.unitPrice)}
                 </TableCell>
-                <TableCell className="py-2 text-right text-xs text-muted-foreground">
+                <TableCell className="hidden py-2 text-right sm:table-cell text-xs text-muted-foreground">
                   {it.discountType === "amount"
                     ? `-${formatRupiah(it.discountValue)}`
                     : it.discountType === "percent"

@@ -14,10 +14,6 @@ export interface CalendarMonthData {
   weeks: number;
 }
 
-// Posisi overlay batang: di bawah nomor hari dengan jarak yang nyaman.
-const HEADER_OFFSET = 50; // Jarak dari atas sel ke bar pertama (clear nomor hari + gap nyaman)
-const BAR_HEIGHT = 24;    // Tinggi batang itu sendiri
-const BAR_GAP = 8;        // Jarak antar-bar agar tidak berdempetan
 
 /**
  * Alokasikan lane anti-tabrakan per minggu tanpa batas jumlah lane.
@@ -83,20 +79,17 @@ export function CalendarMonth({ data }: { data: CalendarMonthData }) {
           <div
             key={w}
             className="relative grid grid-cols-7 gap-1.5"
-            style={{ gridTemplateRows: "minmax(96px, auto)" }}
           >
             {weekDays.map((d) => (
               <DayCell key={d.iso} data={d} style={cellStyle} />
             ))}
             {bars.length > 0 && (
               <div
-                className="absolute inset-x-0 overflow-y-auto overscroll-contain pt-1 [scrollbar-width:thin]"
-                style={{ top: HEADER_OFFSET, bottom: 0 }}
+                className="calendar-bar-overlay absolute inset-x-0 bottom-0 overflow-y-auto overscroll-contain pt-1 [scrollbar-width:thin]"
               >
                 {/* Grid inner selaras dengan grid sel hari (7 kolom, gap sama) */}
                 <div
-                  className="grid grid-cols-7 content-start gap-x-1.5"
-                  style={{ gridAutoRows: BAR_HEIGHT + BAR_GAP }}
+                  className="calendar-bar-grid grid grid-cols-7 content-start gap-x-1.5"
                 >
                   {bars.map(({ span, lane }, i) => (
                     <OrderBar key={`${span.orderId}-${i}`} span={span} gridRow={lane + 1} />

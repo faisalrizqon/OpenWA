@@ -75,6 +75,9 @@ export async function POST(request: NextRequest) {
         repeatIntervalDays: Math.max(1, num(data.late?.repeatIntervalDays, current.late.repeatIntervalDays)),
       },
       scanIntervalSeconds: Math.max(15, num(data.scanIntervalSeconds, current.scanIntervalSeconds)),
+      sendToCustomer: data.sendToCustomer ?? current.sendToCustomer,
+      sendToAdmin: data.sendToAdmin ?? current.sendToAdmin,
+      adminPhones: typeof data.adminPhones === "string" ? (data.adminPhones.trim() || null) : current.adminPhones,
       notifyAdmin: data.notifyAdmin ?? current.notifyAdmin,
       adminPhone: typeof data.adminPhone === "string" ? (data.adminPhone.trim() || null) : current.adminPhone,
     };

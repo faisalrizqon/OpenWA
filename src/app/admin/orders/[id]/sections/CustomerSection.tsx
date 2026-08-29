@@ -46,7 +46,7 @@ export function CustomerSection({
   isAdmin,
 }: CustomerSectionProps) {
   return (
-    <div className="rounded-xl border bg-card p-6 shadow-sm">
+    <div className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-6">
       <h2 className="mb-5 text-lg font-semibold tracking-tight text-foreground">Pelanggan & Aksi</h2>
 
       {/* Anti-spam: order online masih pending — terima/tolak sebelum diproses */}

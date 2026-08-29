@@ -599,10 +599,18 @@
     background-size: 200% auto;
     animation: shine 3.5s linear infinite;
   }
+  .animate-slide-in-left {
+    animation: slide-in-left 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: var(--stagger-delay, 0s);
+  }
 
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(18px); }
   to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-14px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 @keyframes fade-in {
   from { opacity: 0; }
@@ -732,4 +740,35 @@
 /* Pause ayunan saat hover agar terasa responsif */
 .group:hover .animate-sign-sway {
   animation-play-state: paused;
+}
+
+/* ===== Aksesibilitas: hormati preferensi reduced-motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ===== Kalender admin: overlay batang order responsif ===== */
+/* Mobile: header lebih pendek (nomor hari kecil), baris batang lebih tinggi (2 baris teks) */
+.calendar-bar-overlay {
+  top: 30px;
+}
+.calendar-bar-grid {
+  grid-auto-rows: 44px;
+}
+@media (min-width: 768px) {
+  .calendar-bar-overlay {
+    top: 50px;
+  }
+  .calendar-bar-grid {
+    grid-auto-rows: 32px;
+  }
 }

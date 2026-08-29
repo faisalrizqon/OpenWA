@@ -28,7 +28,7 @@ export function ReturnSection({ order, active, assignedUnits }: ReturnSectionPro
   const completed = order.status === "completed";
 
   return (
-    <Card id="return-penyelesaian" className="scroll-mt-4">
+    <Card id="return-penyelesaian" className="scroll-mt-4 min-w-0">
       <CardHeader>
         <CardTitle>Return & Penyelesaian</CardTitle>
         <CardDescription>
@@ -39,7 +39,7 @@ export function ReturnSection({ order, active, assignedUnits }: ReturnSectionPro
               : "Tersedia saat order aktif / terlambat"}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 overflow-x-auto px-3 py-3 sm:px-6 sm:py-4">
         {active && <ReturnForm orderId={order.id} units={assignedUnits} />}
         <ReturnPhotoGrid orderId={order.id} photos={order.returnPhotos} />
         {completed && (

@@ -37,7 +37,7 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
   const paymentsWithProof = order.payments.filter((p) => p.proofPath);
 
   return (
-    <div id="catat-pembayaran" className="rounded-xl border bg-card p-6 shadow-sm scroll-mt-4">
+    <div id="catat-pembayaran" className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-6 scroll-mt-4">
       <h2 className="mb-5 text-lg font-semibold tracking-tight text-foreground">Catat Pembayaran</h2>
 
       {/* Late fee suggestion */}
@@ -167,29 +167,29 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
       {/* Riwayat pembayaran — bisa di-scroll menyamping bila kolom tidak muat */}
       {order.payments.length > 0 && (
         <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full whitespace-nowrap text-sm">
+          <table className="w-full text-sm">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
-                <th className="px-4 py-2 text-left font-medium">Tanggal</th>
-                <th className="px-4 py-2 text-left font-medium">Jenis</th>
-                <th className="px-4 py-2 text-left font-medium">Metode</th>
-                <th className="px-4 py-2 text-left font-medium">Status</th>
-                <th className="px-4 py-2 text-center font-medium">Bukti</th>
-                <th className="px-4 py-2 text-right font-medium">Jumlah</th>
-                <th className="w-[90px] px-4 py-2"></th>
+                <th className="whitespace-nowrap px-3 py-2 text-left font-medium">Tanggal</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left font-medium">Jenis</th>
+                <th className="hidden whitespace-nowrap px-3 py-2 text-left font-medium sm:table-cell">Metode</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left font-medium">Status</th>
+                <th className="px-3 py-2 text-center font-medium">Bukti</th>
+                <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Jumlah</th>
+                <th className="w-[84px] px-3 py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {order.payments.map((p) => (
                 <tr key={p.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                  <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">
                     {dateFmtDay(new Date(p.paidAt))}
                   </td>
-                  <td className="px-4 py-3">{PAYMENT_TYPES[p.paymentType] ?? p.paymentType}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  <td className="px-3 py-3">{PAYMENT_TYPES[p.paymentType] ?? p.paymentType}</td>
+                  <td className="hidden px-3 py-3 text-muted-foreground sm:table-cell">
                     {p.method ? (METHODS[p.method] ?? p.method) : "—"}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3">
                     <span
                       className={cn(
                         "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
@@ -203,7 +203,7 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
                       {p.status === "confirmed" ? "Terverifikasi" : p.status === "pending" ? "Menunggu" : "Gagal"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     {p.proofPath ? (
                       <Dialog>
                         <DialogTrigger
@@ -234,10 +234,10 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
                       <span className="text-xs italic text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right font-medium whitespace-nowrap tabular-nums">
+                  <td className="whitespace-nowrap px-3 py-3 text-right font-medium tabular-nums">
                     {formatRupiah(p.amount)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3">
                     <PaymentRowActions
                       orderId={order.id}
                       isAdmin={isAdmin}

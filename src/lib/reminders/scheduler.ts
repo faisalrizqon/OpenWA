@@ -19,7 +19,7 @@ import {
   resolveSessionId,
   openwaConfigured,
 } from "@/lib/openwa-api-client";
-import { getReminderSettings, minutesToLabel, type ReminderType } from "@/lib/reminders/config";
+import { getReminderSettings, parseAdminPhones, minutesToLabel, type ReminderType } from "@/lib/reminders/config";
 import { formatReturnReminderWA, formatLateWarningWA } from "@/lib/wa";
 import { computeLateInfo, loadLateFeeItems } from "@/lib/late";
 
@@ -253,9 +253,32 @@ async function runScan(now: Date): Promise<ReminderScanResult> {
       });
     }
 
-    const chatId = phoneToChatId(rem.order.customer.phone);
-    await logMessage({ sessionId, chatId, body: message.slice(0, 1000), status: "pending", orderId: rem.order.id });
-    const sendResult = await sendMessage(sessionId, { chatId, text: message });
+    // --- Tentukan penerima berdasarkan pengaturan ---
+    const recipients: string[] = [];
+    if (settings.sendToCustomer) {
+      recipients.push(phoneToChatId(rem.order.customer.phone));
+    }
+    if (settings.sendToAdmin) {
+      const adminPhones = parseAdminPhones(settings.adminPhones);
+      for (const phone of adminPhones) {
+        recipients.push(phoneToChatId(phone));
+      }
+    }
+    if (recipients.length === 0) continue; // Tidak ada target → skip
+
+    let anyOk = false;
+    let lastError: string | null = null;
+    for (const chatId of recipients) {
+      await logMessage({ sessionId, chatId, body: message.slice(0, 1000), status: "pending", orderId: rem.order.id });
+      const sendResult = await sendMessage(sessionId, { chatId, text: message });
+      if (sendResult.ok) {
+        anyOk = true;
+      } else {
+        lastError = sendResult.error ?? "gagal kirim";
+      }
+    }
+
+    const sendResult = { ok: anyOk, error: lastError };
 
     if (sendResult.ok) {
       await prisma.reminder.update({
@@ -362,6 +385,5 @@ export async function getReminderStatusSummary(): Promise<{
 
 // Alias kompatibilitas untuk kode lama (endpoint /api/cron/reminders)
 export const processCodReminders = processAllReminders;
-export const startCodReminderLoop = startReminderLoop;
 export const getCodReminderStatus = getReminderStatusSummary;
-export { minutesToLabel };
+export const startCodReminderLoop = startReminderLoop;

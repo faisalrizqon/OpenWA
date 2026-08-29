@@ -19,7 +19,7 @@ export function GuaranteeSection({
   order,
 }: GuaranteeSectionProps) {
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle>Jaminan</CardTitle>
         <CardDescription>
@@ -27,7 +27,7 @@ export function GuaranteeSection({
           Klik ✕ untuk menghapus bila salah upload.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-3 py-3 sm:px-6 sm:py-4 overflow-x-auto">
         <GuaranteeDocs
           orderId={order.id}
           documents={order.documents}

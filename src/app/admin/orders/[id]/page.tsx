@@ -158,6 +158,7 @@ export default async function OrderDetailPage({
           lateWarningWA={lateWarningWA}
           isAdmin={isAdmin}
         />
+        <FinancialSummary order={order} total={total} paid={paid} sisa={sisa} />
       </div>
 
       {/* Pembayaran dinaikkan di bawah ringkasan, jaminan turun ke bawah */}

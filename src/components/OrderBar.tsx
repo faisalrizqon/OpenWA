@@ -49,7 +49,6 @@ export function OrderBar({
     gridColumnStart: span.colStart,
     gridColumnEnd: `span ${span.colSpan}`,
     gridRow,
-    height: "24px",
   };
 
   return (
@@ -62,11 +61,17 @@ export function OrderBar({
           STATUS_BAR[span.status] ?? "bg-zinc-100 ring-zinc-300 text-zinc-800"
         )}
       >
-        <span
-          className={cn("size-1.5 shrink-0 rounded-full", STATUS_DOT[span.status] ?? "bg-zinc-400")}
-          aria-hidden
-        />
-        <span className="min-w-0 flex-1 truncate">
+        {/* Mobile: 2 baris — label status + nama produk (kolom sempit) */}
+        <span className="flex min-w-0 flex-col leading-tight md:hidden">
+          <span className="flex items-center gap-1">
+            <span className={cn("size-1 shrink-0 rounded-full", STATUS_DOT[span.status] ?? "bg-zinc-400")} aria-hidden />
+            <span className="truncate">{STATUS_LABEL[span.status] ?? span.status}</span>
+          </span>
+          <span className="truncate opacity-80">{span.products}</span>
+        </span>
+        {/* Desktop: 1 baris — dot + nama customer · produk */}
+        <span className={cn("hidden shrink-0 size-1.5 rounded-full md:block", STATUS_DOT[span.status] ?? "bg-zinc-400")} aria-hidden />
+        <span className="hidden min-w-0 flex-1 truncate md:block">
           {span.customerName} · {span.products}
         </span>
         {span.clippedStart && (

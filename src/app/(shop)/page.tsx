@@ -100,10 +100,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                     // Jalur foto: upload admin (galeri→unit) = foto utama; sisanya preview kotak kecil
                     const { main, previews } = productPhotosOf(p);
                     return (
-                    <Reveal key={p.id} delay={0.2 + catIdx * 0.15 + prodIdx * 0.08}>
-                      <div className="group film-frame-hover flash-hover flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/10">
-                        <Link href={`/katalog/${p.id}`} className="flex flex-col">
-                          <div className="film-sprockets h-3 w-full bg-foreground/85 sm:h-4" aria-hidden />
+                    <Reveal key={p.id} delay={0.2 + catIdx * 0.15 + prodIdx * 0.08} className="h-full">
+                      <div className="group film-frame-hover flash-hover flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/10">
+                        <Link href={`/katalog/${p.id}`} className="flex flex-1 flex-col">
                           <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
                             {main ? (
                               <Image
@@ -144,7 +143,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                           </div>
                           <div className="flex flex-col p-3 pb-2 sm:p-4 sm:pb-3">
                             <p className="text-xs font-medium text-muted-foreground">{p.category.name}</p>
-                            <p className="mt-0.5 font-semibold leading-tight group-hover:text-primary">
+                            <p className="mt-0.5 line-clamp-2 font-semibold leading-tight group-hover:text-primary">
                               {p.name}
                             </p>
                             {p.description && (
@@ -152,7 +151,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                                 {p.description}
                               </p>
                             )}
-                            <div className="mt-3">
+                            <div className="mt-auto pt-3">
                               <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                                 mulai dari
                               </p>

@@ -34,8 +34,8 @@ export function DayCell({ data, style }: { data: DayData; style?: CSSProperties 
   return (
     <div
       className={cn(
-        "relative z-0 flex flex-col gap-1 rounded-xl border p-2",
-        "min-h-[180px]",
+        "relative z-0 flex flex-col gap-1 rounded-xl border p-1.5 sm:p-2",
+        "min-h-[64px] md:min-h-[160px]",
         inMonth ? loadClasses(busy, total) : "bg-muted/30",
         isToday ? "border-primary ring-2 ring-primary/30" : "border-border/60"
       )}
@@ -43,7 +43,7 @@ export function DayCell({ data, style }: { data: DayData; style?: CSSProperties 
       <div className="flex items-center justify-between">
         <span
           className={cn(
-            "flex size-6 items-center justify-center rounded-lg text-xs font-semibold tabular-nums",
+            "flex size-5 items-center justify-center rounded-lg text-[10px] font-semibold tabular-nums sm:size-6 sm:text-xs",
             isToday
               ? "bg-primary text-primary-foreground shadow-sm"
               : inMonth

@@ -34,7 +34,7 @@ export function FinancialSummary({
   sisa,
 }: FinancialSummaryProps) {
   return (
-    <div className="rounded-xl border bg-card p-6 shadow-sm">
+    <div className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-6">
       <h2 className="mb-5 text-lg font-semibold tracking-tight text-foreground">Ringkasan Pembayaran</h2>
 
       {/* Total / Dibayar / Sisa — baris bersih tanpa garis pemisah */}
