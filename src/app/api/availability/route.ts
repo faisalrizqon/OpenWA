@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/db";
-import { countOverlapUnits, findNextAvailableStart } from "@/lib/availability";
+import { findNextAvailableStart, getStockSnapshot } from "@/lib/availability";
 
 /** Ketersediaan unit untuk rentang waktu — dengan jeda charge/istirahat unit
  *  (Product.chargingRestHours, default 3 jam) dan saran alternatif saat sold out:
- *  tanggal berikutnya yang tersedia + produk lain dalam kategori yang sama. */
+ *  tanggal berikutnya yang tersedia + produk lain dalam kategori yang sama.
+ *
+ *  Logika stok inti ada di getStockSnapshot (satu sumber kebenaran). */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const productId = Number(url.searchParams.get("productId"));
@@ -27,54 +29,23 @@ export async function GET(request: Request) {
   }
 
   try {
-    const [product, totalUnits, busyItems] = await Promise.all([
-      prisma.product.findUnique({ where: { id: productId } }),
-      prisma.unit.count({
-        where: { productId, status: { notIn: ["maintenance", "lost"] } },
-      }),
-      prisma.orderItem.findMany({
-        where: {
-          productId,
-          order: {
-            status: { in: ["booking", "active", "late"] },
-            // Jeda charge/istirahat (default 3 jam) ikut overlap — ambil order
-            // yang berakhir hingga restBuffer setelah `start`
-            endDate: { gt: new Date(start.getTime() - 3 * 3600_000) },
-            startDate: { lt: end },
-          },
-        },
-        select: {
-          quantity: true,
-          order: { select: { status: true, startDate: true, endDate: true } },
-        },
-      }),
-    ]);
-
-    if (!product) return Response.json({ available: 0 });
-
-    const restBufferHours = product.chargingRestHours ?? 3;
-    const busy = countOverlapUnits(
+    const snap = await getStockSnapshot({
+      client: prisma,
       productId,
-      start,
-      end,
-      busyItems.map((it) => ({
-        status: it.order.status,
-        startDate: it.order.startDate,
-        endDate: it.order.endDate,
-        productId,
-        quantity: it.quantity,
-      })),
-      restBufferHours
-    );
-    const available = Math.max(0, totalUnits - busy);
+      rangeStart: start,
+      rangeEnd: end,
+    });
+
+    if (!snap.product) return Response.json({ available: 0 });
 
     // Cukup stok → respons sederhana
-    if (available >= quantity) {
-      return Response.json({ available, restBufferHours });
+    if (snap.available >= quantity) {
+      return Response.json({ available: snap.available, restBufferHours: snap.restBufferHours });
     }
 
     // --- Sold out: hitung saran alternatif ---
     const durationHours = Math.max(1, Math.round((end.getTime() - start.getTime()) / 3600_000));
+    const restBufferHours = snap.restBufferHours;
 
     // 1) Tanggal berikutnya untuk produk yang sama (maju hari demi hari, maks 30 hari)
     const horizonOrders = await prisma.orderItem.findMany({
@@ -95,7 +66,7 @@ export async function GET(request: Request) {
       start,
       durationHours,
       quantity,
-      totalUnits,
+      snap.totalUnits,
       horizonOrders.map((it) => ({
         status: it.order.status,
         startDate: it.order.startDate,
@@ -107,49 +78,29 @@ export async function GET(request: Request) {
     );
 
     // 2) Produk lain dalam kategori yang sama yang tersedia di tanggal & jam yang sama
-    const siblings = await prisma.product.findMany({
-      where: { categoryId: product.categoryId, active: true, id: { not: productId } },
-      select: { id: true, name: true, sku: true },
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { categoryId: true },
     });
+    const siblings = product
+      ? await prisma.product.findMany({
+          where: { categoryId: product.categoryId, active: true, id: { not: productId } },
+          select: { id: true, name: true },
+        })
+      : [];
     const otherProducts: { id: number; name: string }[] = [];
     for (const sib of siblings) {
-      const [sibTotal, sibBusyItems] = await Promise.all([
-        prisma.unit.count({
-          where: { productId: sib.id, status: { notIn: ["maintenance", "lost"] } },
-        }),
-        prisma.orderItem.findMany({
-          where: {
-            productId: sib.id,
-            order: {
-              status: { in: ["booking", "active", "late"] },
-              endDate: { gt: new Date(start.getTime() - 3 * 3600_000) },
-              startDate: { lt: end },
-            },
-          },
-          select: {
-            quantity: true,
-            order: { select: { status: true, startDate: true, endDate: true } },
-          },
-        }),
-      ]);
-      const sibBusy = countOverlapUnits(
-        sib.id,
-        start,
-        end,
-        sibBusyItems.map((it) => ({
-          status: it.order.status,
-          startDate: it.order.startDate,
-          endDate: it.order.endDate,
-          productId: sib.id,
-          quantity: it.quantity,
-        })),
-        restBufferHours
-      );
-      if (sibTotal - sibBusy >= quantity) otherProducts.push({ id: sib.id, name: sib.name });
+      const sibSnap = await getStockSnapshot({
+        client: prisma,
+        productId: sib.id,
+        rangeStart: start,
+        rangeEnd: end,
+      });
+      if (sibSnap.available >= quantity) otherProducts.push({ id: sib.id, name: sib.name });
     }
 
     return Response.json({
-      available,
+      available: snap.available,
       restBufferHours,
       soldOut: true,
       alternatives: {

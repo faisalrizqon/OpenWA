@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { nextOrderNumber } from "@/lib/orderNumber"
-import { countOverlapUnits } from "@/lib/availability";
+import { ensureStockAvailable } from "@/lib/availability";
 import { calcSubtotal, getTierPrice } from "@/lib/pricing";
 import { saveUpload, deleteStoredFile } from "@/lib/storage";
 import { requireAdmin, requireMitraOrAdmin } from "@/lib/permissions";
@@ -96,54 +96,23 @@ export async function createOrder(formData: FormData) {
         customerId = upserted.id;
       }
 
-      // Stock check per product within transaction — with rest buffer
+      // Stock check per product within transaction — satu sumber kebenaran
+      // logika stok: ensureStockAvailable (termasuk jeda charge/istirahat).
       const productIds = Array.from(new Set(items.map((it) => it.productId)));
       const maxDuration = Math.max(...items.map((it) => it.durationHours));
       const endDate = new Date(startDate.getTime() + maxDuration * 3600_000);
 
       for (const pid of productIds) {
-        const [product, totalUnits] = await Promise.all([
-          tx.product.findUnique({ where: { id: pid } }),
-          tx.unit.count({
-            where: { productId: pid, status: { notIn: ["maintenance", "lost"] } },
-          }),
-        ]);
-        
-        const restBufferHours = product?.chargingRestHours ?? 3;
-        const endDateFilter = new Date(startDate.getTime() - (restBufferHours * 3600_000));
-        
-        const busyItems = await tx.orderItem.findMany({
-          where: {
-            productId: pid,
-            order: {
-              status: { in: ["booking", "active", "late"] },
-              startDate: { lt: endDate },
-              endDate: { gt: endDateFilter },
-            },
-          },
-          select: {
-            quantity: true,
-            order: { select: { status: true, startDate: true, endDate: true } },
-          },
+        const needed = items
+          .filter((it) => it.productId === pid)
+          .reduce((s, it) => s + it.quantity, 0);
+        await ensureStockAvailable({
+          client: tx,
+          productId: pid,
+          rangeStart: startDate,
+          rangeEnd: endDate,
+          needed,
         });
-        
-        const busy = countOverlapUnits(
-          pid,
-          startDate,
-          endDate,
-          busyItems.map((it) => ({
-            status: it.order.status,
-            startDate: it.order.startDate,
-            endDate: it.order.endDate,
-            productId: pid,
-            quantity: it.quantity,
-          })),
-          restBufferHours
-        );
-        const needed = items.filter((it) => it.productId === pid).reduce((s, it) => s + it.quantity, 0);
-        if (needed > totalUnits - busy) {
-          throw new Error(`Stok tidak cukup untuk ${product?.name ?? pid}. Unit masih dalam masa charge/istirahat.`);
-        }
       }
 
       // Order number: count orders created today (local)
@@ -782,49 +751,16 @@ export async function extendOrder(formData: FormData) {
       const oldEnd = new Date(order.endDate);
       const newEnd = new Date(oldEnd.getTime() + extraDays * 24 * 3600_000);
 
-      // Cek stok tiap produk untuk jendela tambahan [oldEnd, newEnd)
-      // Cek stok tiap produk untuk jendela tambahan [oldEnd, newEnd) — dengan rest buffer
+      // Cek stok tiap produk untuk jendela tambahan [oldEnd, newEnd) —
+      // satu sumber kebenaran logika stok: ensureStockAvailable.
       for (const item of order.items) {
-        const [product, totalUnits] = await Promise.all([
-          tx.product.findUnique({ where: { id: item.productId } }),
-          tx.unit.count({
-            where: { productId: item.productId, status: { notIn: ["maintenance", "lost"] } },
-          }),
-        ]);
-        
-        const restBufferHours = product?.chargingRestHours ?? 3;
-        const endDateFilter = new Date(oldEnd.getTime() - (restBufferHours * 3600_000));
-        
-        const busyItems = await tx.orderItem.findMany({
-          where: {
-            productId: item.productId,
-            order: {
-              status: { in: ["booking", "active", "late"] },
-              startDate: { lt: newEnd },
-              endDate: { gt: endDateFilter },
-            },
-          },
-          select: {
-            quantity: true,
-            order: { select: { status: true, startDate: true, endDate: true } },
-          },
+        await ensureStockAvailable({
+          client: tx,
+          productId: item.productId,
+          rangeStart: oldEnd,
+          rangeEnd: newEnd,
+          needed: item.quantity,
         });
-        const busy = countOverlapUnits(
-          item.productId,
-          oldEnd,
-          newEnd,
-          busyItems.map((it) => ({
-            status: it.order.status,
-            startDate: it.order.startDate,
-            endDate: it.order.endDate,
-            productId: item.productId,
-            quantity: it.quantity,
-          })),
-          restBufferHours
-        );
-        if (item.quantity > totalUnits - busy) {
-          throw new Error(`Stok tidak cukup untuk perpanjangan: ${item.product.name}. Unit masih dalam masa charge/istirahat.`);
-        }
       }
 
       // Durasi + harga diperbarui mengikuti tier durasi baru (harga flat per durasi)

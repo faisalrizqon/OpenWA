@@ -1,3 +1,5 @@
+import type { Prisma, PrismaClient } from "@prisma/client";
+
 /** Overlap dua rentang waktu [aStart,aEnd) dan [bStart,bEnd). */
 export function rangesOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return aStart < bEnd && bStart < aEnd;
@@ -70,4 +72,100 @@ export function findNextAvailableStart(
     if (totalUnits - busy >= quantity) return candidate;
   }
   return null;
+}
+
+/** Client DB yang diterima helper stok: prisma langsung atau tx transaksi.
+ *  Memakai tipe resmi Prisma agar kompatibel keduanya tanpa cast. */
+export type StockClient = PrismaClient | Prisma.TransactionClient;
+
+/** Snapshot stok satu produk dalam rentang [rangeStart, rangeEnd) dari DB,
+ *  termasuk jeda charge/istirahat unit. Mengembalikan data mentah sehingga
+ *  bisa dipakai action (melempar error) maupun API (return angka).
+ *  SATU sumber kebenaran logika ketersediaan stok. */
+export async function getStockSnapshot(opts: {
+  client: StockClient;
+  productId: number;
+  rangeStart: Date;
+  rangeEnd: Date;
+}): Promise<{
+  product: { name: string; chargingRestHours: number } | null;
+  totalUnits: number;
+  busy: number;
+  available: number;
+  restBufferHours: number;
+}> {
+  const { client, productId, rangeStart, rangeEnd } = opts;
+
+  const [product, totalUnits] = await Promise.all([
+    client.product.findUnique({
+      where: { id: productId },
+      select: { name: true, chargingRestHours: true },
+    }),
+    client.unit.count({
+      where: { productId, status: { notIn: ["maintenance", "lost"] } },
+    }),
+  ]);
+
+  const restBufferHours = product?.chargingRestHours ?? 3;
+  // Order yang berakhir hingga restBuffer sebelum rangeStart tetap relevan:
+  // unitnya masih dalam masa charge/istirahat.
+  const queryEndBound = new Date(rangeStart.getTime() - restBufferHours * 3600_000);
+
+  const busyItems = await client.orderItem.findMany({
+    where: {
+      productId,
+      order: {
+        status: { in: ["booking", "active", "late"] },
+        startDate: { lt: rangeEnd },
+        endDate: { gt: queryEndBound },
+      },
+    },
+    select: {
+      quantity: true,
+      order: { select: { status: true, startDate: true, endDate: true } },
+    },
+  });
+
+  const busy = countOverlapUnits(
+    productId,
+    rangeStart,
+    rangeEnd,
+    busyItems.map((it) => ({
+      status: it.order.status,
+      startDate: it.order.startDate,
+      endDate: it.order.endDate,
+      productId,
+      quantity: it.quantity,
+    })),
+    restBufferHours
+  );
+
+  return {
+    product,
+    totalUnits,
+    busy,
+    available: Math.max(0, totalUnits - busy),
+    restBufferHours,
+  };
+}
+
+/** Validasi stok: melempar Error user-facing bila `needed` unit tidak tersedia
+ *  untuk rentang [rangeStart, rangeEnd). Dipakai createOrder, extendOrder,
+ *  dan checkout online. */
+export async function ensureStockAvailable(opts: {
+  client: StockClient;
+  productId: number;
+  rangeStart: Date;
+  rangeEnd: Date;
+  needed: number;
+}): Promise<void> {
+  const { productId, needed } = opts;
+  const snap = await getStockSnapshot(opts);
+
+  if (needed > snap.available) {
+    throw new Error(
+      `Stok tidak cukup untuk ${snap.product?.name ?? `produk #${productId}`}. ` +
+        `Unit masih dalam masa charge/istirahat (${snap.restBufferHours} jam setelah kembali).`
+    );
+  }
 }

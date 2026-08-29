@@ -5,7 +5,7 @@ import path from "path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { countOverlapUnits } from "@/lib/availability";
+import { ensureStockAvailable } from "@/lib/availability";
 import { calcSubtotal, getTierPrice } from "@/lib/pricing";
 import { nextOrderNumber } from "@/lib/orderNumber";
 import { calcPromoDiscount, checkPromoEligibility } from "@/lib/promo";
@@ -130,46 +130,14 @@ export async function checkoutOrder(formData: FormData) {
       }
 
       for (const pid of productIds) {
-        const [product, totalUnits] = await Promise.all([
-          tx.product.findUnique({ where: { id: pid } }),
-          tx.unit.count({ where: { productId: pid, status: { notIn: ["maintenance", "lost"] } } }),
-        ]);
-        
-        const restBufferHours = product?.chargingRestHours ?? 3;
-        const endDateFilter = new Date(startDate.getTime() - (restBufferHours * 3600_000));
-        
-        const busyItems = await tx.orderItem.findMany({
-          where: {
-            productId: pid,
-            order: {
-              status: { in: ["booking", "active", "late"] },
-              startDate: { lt: endDate },
-              endDate: { gt: endDateFilter },
-            },
-          },
-          select: {
-            quantity: true,
-            order: { select: { status: true, startDate: true, endDate: true } },
-          },
-        });
-        
-        const busy = countOverlapUnits(
-          pid,
-          startDate,
-          endDate,
-          busyItems.map((b) => ({
-            status: b.order.status,
-            startDate: b.order.startDate,
-            endDate: b.order.endDate,
-            productId: pid,
-            quantity: b.quantity,
-          })),
-          restBufferHours
-        );
         const needed = items.filter((it) => it.productId === pid).reduce((s, it) => s + it.quantity, 0);
-        if (needed > totalUnits - busy) {
-          throw new Error(`Stok tidak cukup untuk ${product?.name}. Unit masih dalam masa charge/istirahat.`);
-        }
+        await ensureStockAvailable({
+          client: tx,
+          productId: pid,
+          rangeStart: startDate,
+          rangeEnd: endDate,
+          needed,
+        });
       }
 
       // 3) Nomor order
