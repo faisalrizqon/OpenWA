@@ -50,3 +50,48 @@ Referensi implementasi: `src/components/CalendarProductFilter.tsx`,
 `src/components/OrderAdminActions.tsx` (picker status order).
 
 <!-- END:mudahsewa-ui-conventions -->
+
+<!-- BEGIN:mudahsewa-domain-conventions -->
+
+# Domain Conventions — Stok & Server Action (WAJIB diikuti)
+
+## Cek stok unit
+
+SATU sumber kebenaran logika ketersediaan stok: `src/lib/availability.ts`.
+JANGAN menulis ulang query `unit.count` + `orderItem.findMany` + overlap manual.
+
+- `getStockSnapshot({ client, productId, rangeStart, rangeEnd })` → return
+  `{ product, totalUnits, busy, available, restBufferHours }`. Dipakai kalau
+  butuh angkanya (API, UI).
+- `ensureStockAvailable({ ..., needed })` → throw Error user-facing bila stok
+  kurang. Dipakai di server action (createOrder, extendOrder, checkout).
+- Keduanya menerima `client: PrismaClient | Prisma.TransactionClient` —
+  panggil di dalam `prisma.$transaction(async (tx) => ...)` dengan `client: tx`.
+- Semua cek stok WAJIB memperhitungkan `Product.chargingRestHours` (jeda charge
+  & istirahat unit setelah kembali, default 3 jam). Helper sudah menanganinya.
+- Order `pending` tidak mengunci stok; hanya `booking | active | late`.
+
+## Server action — redirect error
+
+Kecelakaan lama: action redirect ke halaman ber-param tanpa membawa param-nya,
+lalu halaman itu `redirect("/")` → user terlempar ke landing page.
+
+Rules:
+1. Redirect error dari server action WAJIB membawa kembali SEMUA param yang
+   dibutuhkan halaman target (contoh: `failCheckout()` di
+   `src/app/(shop)/actions/checkout.ts` mempertahankan productId/quantity/
+   durationHours/startDate).
+2. Helper redirect-error yang selalu berakhir dengan `redirect()` diberi return
+   type `: never` supaya TypeScript men-narrow variabel setelahnya.
+3. Validasi input yang gagal di action → redirect balik ke form asal dengan
+   `?error=<pesan>`, jangan pernah ke `/` kecuali memang tidak ada konteks.
+
+## Git hygiene
+
+Setiap kali selesai fitur/fix yang berfungsi: **commit** dengan pesan
+konvensional (`feat:`, `fix:`, `refactor:`). Jangan menumpuk perubahan besar
+tanpa commit — recovery lewat `git stash` di repo dengan file DB biner rawan
+konflik. Jangan pernah `git stash` / `git checkout -- .` saat dev server aktif
+(mengunci `data/mudahsewa.db`).
+
+<!-- END:mudahsewa-domain-conventions -->
