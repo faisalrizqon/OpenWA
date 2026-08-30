@@ -57,7 +57,7 @@ export function FinancialSummary({
               sisa > 0 ? "text-red-600" : "text-emerald-600"
             )}
           >
-            {formatRupiah(sisa)}
+            {formatRupiah(Math.max(0, sisa))}
           </span>
         </div>
       </div>

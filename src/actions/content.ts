@@ -32,50 +32,28 @@ function revalidateStorefront() {
 export async function updateStoreSettings(formData: FormData) {
   const _user = await requireAdmin();
   const fields = [
-    "storeName",
-    "tagline",
-    "whatsapp",
-    "location",
-    "hours",
-    "theme",
-    "heroVariant",
-    "heroTitleBefore",
-    "heroAccent",
-    "heroTitleAfter",
-    "heroSubtitle",
-    "trustBadge1",
-    "trustBadge2",
-    "trustBadge3",
-    "catalogTitle",
-    "testimonialTitle",
-    "testimonialSubtitle",
-    "videoTitle",
-    "videoSubtitle",
-    "ctaTitle",
-    "ctaSubtitle",
-    "qrisImagePath",
-    "qrisMerchantName",
+    "storeName", "tagline", "whatsapp", "location", "hours", "theme", "heroVariant",
+    "heroTitleBefore", "heroAccent", "heroTitleAfter", "heroSubtitle", "trustBadge1",
+    "trustBadge2", "trustBadge3", "catalogTitle", "testimonialTitle", "testimonialSubtitle",
+    "videoTitle", "videoSubtitle", "ctaTitle", "ctaSubtitle", "qrisImagePath", "qrisMerchantName",
+    "logoPath",
   ] as const;
-
   const data: Record<string, string> = {};
-  for (const f of fields) {
-    data[f] = String(formData.get(f) ?? "").trim();
-  }
-
-  if (!data.storeName || !data.whatsapp) {
-    redirect(back("settings") + "&error=invalid");
-  }
-
+  for (const f of fields) data[f] = String(formData.get(f) ?? "").trim();
+  const logo = formData.get("logo");
+  if (logo instanceof File && logo.size > 0) {
+    try {
+      data.logoPath = await saveLogo(logo);
+    } catch {
+      redirect(back("settings") + "&error=file");
+    }
+  } else data.logoPath = String(formData.get("logoPath") ?? "").trim();
+  if (!data.storeName || !data.whatsapp) redirect(back("settings") + "&error=invalid");
   try {
-    await prisma.storeContent.upsert({
-      where: { id: 1 },
-      update: data,
-      create: { id: 1, ...data },
-    });
+    await prisma.storeContent.upsert({ where: { id: 1 }, update: data, create: { id: 1, ...data } });
   } catch {
     redirect(back("settings") + "&error=invalid");
   }
-
   revalidateStorefront();
   redirect(back("settings") + "&saved=1");
 }
@@ -95,6 +73,16 @@ async function saveImage(file: File): Promise<string> {
   const fileName = `hero-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${image.ext}`;
   await writeFile(path.join(dir, fileName), image.buffer);
   return `/uploads/hero/${fileName}`;
+}
+async function saveLogo(file: File): Promise<string> {
+  const ext = MIME_EXT[file.type];
+  if (!ext || file.size > MAX_UPLOAD_BYTES) throw new Error("file");
+  const image = await compressImage(Buffer.from(await file.arrayBuffer()), file.type);
+  const dir = path.join(process.cwd(), "public", "uploads", "logo");
+  await mkdir(dir, { recursive: true });
+  const fileName = `logo-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${image.ext}`;
+  await writeFile(path.join(dir, fileName), image.buffer);
+  return `/uploads/logo/${fileName}`;
 }
 
 export async function createHeroImage(formData: FormData) {

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 export const DEFAULT_SETTINGS = {
   storeName: "MudahSewa",
   tagline: "Sewa Kamera & Digicam Harian",
+  logoPath: "",
   whatsapp: "081234567890",
   location: "Weleri, Kendal",
   hours: "Setiap hari · 08.00 – 21.00",

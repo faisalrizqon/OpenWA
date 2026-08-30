@@ -12,7 +12,7 @@ export function LogoutButton({ label = "Keluar", redirectTo = "/login" }: { labe
       type="button"
       disabled={pending}
       onClick={() => startTransition(() => signOut({ redirectTo }))}
-      className="flex w-full items-center gap-2.5 rounded-xl border border-border/70 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-60"
+      className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-border/70 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? (
         <Loader2 className="size-4 animate-spin" aria-hidden />

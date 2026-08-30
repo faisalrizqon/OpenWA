@@ -278,6 +278,7 @@ model StoreContent {
   // Identitas toko (header, footer, kontak)
   storeName String @default("MudahSewa")
   tagline   String @default("Sewa Kamera & Digicam Harian")
+  logoPath  String  @default("") // logo toko: /uploads/logo/...
   whatsapp  String @default("081234567890")
   location  String @default("Weleri, Kendal")
   hours     String @default("Setiap hari · 08.00 – 21.00")

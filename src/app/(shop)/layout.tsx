@@ -18,9 +18,15 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
         <div className="relative mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-x-2 px-3 py-1.5 sm:gap-x-4 sm:px-4 sm:py-2 md:px-8">
           {/* Kiri: logo */}
           <Link href="/" className="flex shrink-0 items-center gap-2">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-              <Camera className="size-5" aria-hidden />
-            </span>
+            {shop.logoPath ? (
+              <span className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-card shadow-sm">
+                <img src={shop.logoPath} alt="Logo toko" className="size-full object-contain" />
+              </span>
+            ) : (
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                <Camera className="size-5" aria-hidden />
+              </span>
+            )}
             <span className="leading-tight">
               <span className="block text-[15px] font-extrabold tracking-tight">{shop.storeName}</span>
               <span className="hidden text-xs text-muted-foreground sm:block">{shop.tagline}</span>

@@ -1,4 +1,5 @@
-import { Save } from "lucide-react";
+import Image from "next/image";
+import { Save, Upload } from "lucide-react";
 import { updateStoreSettings } from "@/actions/content";
 import { HERO_VARIANTS, THEMES, type StoreSettings } from "@/lib/content";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,23 @@ export function SettingsTab({ settings }: { settings: StoreSettings }) {
             <input type="hidden" name="ctaSubtitle" value={settings.ctaSubtitle} />
             <input type="hidden" name="qrisImagePath" value={settings.qrisImagePath} />
             <input type="hidden" name="qrisMerchantName" value={settings.qrisMerchantName} />
+            <input type="hidden" name="logoPath" value={settings.logoPath} />
+            <div className="space-y-2 rounded-xl border border-dashed bg-muted/20 p-3">
+              <Label htmlFor="logo">Logo Toko</Label>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-card">
+                  {settings.logoPath ? (
+                    <Image src={settings.logoPath} alt="Logo toko saat ini" width={64} height={64} className="size-full object-contain" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Belum ada</span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp" className="cursor-pointer" />
+                  <p className="text-xs text-muted-foreground">Pilih logo baru untuk mengganti logo saat ini. JPG, PNG, atau WebP maksimal 5MB.</p>
+                </div>
+              </div>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="storeName">Nama Toko</Label>

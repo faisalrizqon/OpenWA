@@ -191,7 +191,7 @@ export function OrdersBulkTable({ rows }: { rows: OrderRow[] }) {
                     sisa > 0 ? "font-semibold text-red-600" : "text-muted-foreground"
                   )}
                 >
-                  {formatRupiah(sisa)}
+                  {formatRupiah(Math.max(0, sisa))}
                 </TableCell>
                 <TableCell className="text-center">
                   {o.paymentCompleted ? (
