@@ -122,7 +122,7 @@ export function ReminderTab({ settings }: ReminderTabProps) {
       const response = await fetch("/api/reminders/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type }),
+        body: JSON.stringify({ type, sendToCustomer: formData.sendToCustomer, sendToAdmin: formData.sendToAdmin, adminPhones: JSON.stringify(adminPhoneList) }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Gagal kirim pesan test");

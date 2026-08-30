@@ -50,10 +50,20 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = (await request.json().catch(() => ({}))) as { type?: string };
+    const body = (await request.json().catch(() => ({}))) as {
+      type?: string;
+      /** Override dari form saat ini (belum disimpan) — agar test memakai nomor yang dituju sekarang. */
+      sendToCustomer?: boolean;
+      sendToAdmin?: boolean;
+      adminPhones?: string | null;
+    };
     const type = body.type === "return" || body.type === "late" ? body.type : "cod";
 
     const settings = await getReminderSettings();
+    // Prefer nilai dari form (belum disimpan) bila dikirim; fallback ke DB.
+    const sendToCustomer = body.sendToCustomer ?? settings.sendToCustomer;
+    const sendToAdmin = body.sendToAdmin ?? settings.sendToAdmin;
+    const adminPhonesRaw = body.adminPhones !== undefined ? body.adminPhones : settings.adminPhones;
 
     if (!openwaConfigured()) {
       return NextResponse.json(
@@ -71,9 +81,9 @@ export async function POST(request: NextRequest) {
 
     // Kumpulkan nomor target sesuai pengaturan
     const targets: Array<{ phone: string; label: string }> = [];
-    const adminPhones = parseAdminPhones(settings.adminPhones);
+    const adminPhones = parseAdminPhones(adminPhonesRaw);
 
-    if (settings.sendToCustomer) {
+    if (sendToCustomer) {
       // Pakai nomor pemesan terbaru sebagai sample (test tidak butuh order nyata)
       const sampleOrder = await prisma.order.findFirst({
         orderBy: { createdAt: "desc" },
@@ -83,7 +93,7 @@ export async function POST(request: NextRequest) {
         targets.push({ phone: sampleOrder.customer.phone, label: "customer (sample)" });
       }
     }
-    if (settings.sendToAdmin) {
+    if (sendToAdmin) {
       for (const phone of adminPhones) {
         targets.push({ phone, label: "admin" });
       }
