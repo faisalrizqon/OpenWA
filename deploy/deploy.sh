@@ -26,7 +26,7 @@ echo "[4/5] Building Next.js..."
 sudo -u www npx next build
 
 echo "[5/5] Restarting services..."
-$PM2 restart mudahsewa-app
+$PM2 restart mudahsewa_app
 $PM2 save
 
 echo ""
