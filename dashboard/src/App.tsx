@@ -11,6 +11,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { API_BASE_URL } from './services/api';
 import { clearActorState, isUserRole, resolveStartupValidation } from './utils/authLifecycle';
 import './App.css';
+import { getApiKey, setApiKey as storeSetApiKey, clearApiKey } from './utils/apiKeyStore';
 
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -39,14 +40,17 @@ function AppContent() {
   // handleLogin stores a fresh key would re-fire the startup re-validation effect below and
   // double the /auth/validate request on every sign-in — the effect is for genuine page
   // refreshes with a saved key only.
-  const [savedKey] = useState(() => sessionStorage.getItem('openwa_api_key'));
+  const [savedKey] = useState(() => getApiKey());
   const [isAuthenticated, setIsAuthenticated] = useState(!!savedKey);
   const [, setApiKey] = useState(savedKey || '');
   const { setRole, role } = useRole();
 
   const handleLogin = (key: string, validatedRole?: string) => {
+    // Persist the key FIRST (sessionStorage + localStorage), then flip auth state. Skipping the
+    // store write left a "logged in" session that evaporated on any refresh, bouncing back to
+    // the login page with no error — the reported "valid key just reloads" symptom.
+    storeSetApiKey(key);
     setApiKey(key);
-    sessionStorage.setItem('openwa_api_key', key);
 
     // The login page's validate response already carried the role, so no second /auth/validate
     // round-trip is needed here. An absent or unrecognized role falls back to viewer, the
@@ -60,7 +64,7 @@ function AppContent() {
     setApiKey('');
     setIsAuthenticated(false);
     setRole(null);
-    sessionStorage.removeItem('openwa_api_key');
+    clearApiKey();
     // Wipe the React Query cache too: it is keyed by resource, not actor, so without a full
     // clear a logout → login in the same tab with a different key/scope shows the previous
     // actor's sessions/messages/apiKeys/audit rows.
