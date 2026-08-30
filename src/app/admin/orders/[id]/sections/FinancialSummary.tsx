@@ -3,11 +3,13 @@ import { formatRupiah } from "@/lib/pricing";
 import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, type PaymentMethod } from "@/lib/payment";
 import { DriveIcon } from "@/components/DriveIcon";
 import { PhotoDriveForm } from "@/components/PhotoDriveForm";
+import { FeesEditForm } from "./FeesEditForm";
 export interface FinancialSummaryProps {
   order: {
     id: string;
     courierFee: number;
     tipAmount: number;
+    deliveryMode?: string | null;
     photoLink?: string | null;
     source: string;
     paymentMethod?: string | null;
@@ -21,27 +23,55 @@ export interface FinancialSummaryProps {
       proofPath?: string | null;
     }>;
   };
-  total: number;
+  /** Subtotal item (tanpa ongkir & tip). */
+  itemsSubtotal: number;
   paid: number;
+  /** sisa = (itemsSubtotal + ongkir + tip) - paid, sudah dihitung halaman. */
   sisa: number;
 }
 
-/** Ringkasan pembayaran, link Drive foto hasil, dan info online checkout. */
+/** Ringkasan pembayaran, link Drive foto hasil, dan info online checkout.
+ *  Ongkir & tip bisa diedit inline lewat FeesEditForm. */
 export function FinancialSummary({
   order,
-  total,
+  itemsSubtotal,
   paid,
   sisa,
 }: FinancialSummaryProps) {
+  const grandTotal = itemsSubtotal + order.courierFee + order.tipAmount;
   return (
     <div className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-6">
-      <h2 className="mb-5 text-lg font-semibold tracking-tight text-foreground">Ringkasan Pembayaran</h2>
+      <div className="mb-5 flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">Ringkasan Pembayaran</h2>
+        <FeesEditForm
+          orderId={order.id}
+          initialCourierFee={order.courierFee}
+          initialTipAmount={order.tipAmount}
+          deliveryMode={order.deliveryMode ?? null}
+        />
+      </div>
 
-      {/* Total / Dibayar / Sisa — baris bersih tanpa garis pemisah */}
+      {/* Breakdown total */}
       <div className="space-y-2.5">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Subtotal item</span>
+          <span className="font-medium tabular-nums">{formatRupiah(itemsSubtotal)}</span>
+        </div>
+        {order.courierFee > 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Ongkos antar</span>
+            <span className="font-medium tabular-nums">{formatRupiah(order.courierFee)}</span>
+          </div>
+        )}
+        {order.tipAmount > 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Tip</span>
+            <span className="font-medium tabular-nums">{formatRupiah(order.tipAmount)}</span>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Total</span>
-          <span className="text-xl font-bold tabular-nums">{formatRupiah(total)}</span>
+          <span className="text-xl font-bold tabular-nums">{formatRupiah(grandTotal)}</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Dibayar</span>
@@ -61,28 +91,6 @@ export function FinancialSummary({
           </span>
         </div>
       </div>
-
-      {/* Additional fees */}
-      {(order.courierFee > 0 || order.tipAmount > 0) && (
-        <div className="mt-4 space-y-1.5 text-sm text-muted-foreground">
-          {order.courierFee > 0 && (
-            <div className="flex justify-between gap-2">
-              <span>Ongkos antar</span>
-              <span className="font-medium tabular-nums text-foreground">{formatRupiah(order.courierFee)}</span>
-            </div>
-          )}
-          {order.tipAmount > 0 && (
-            <div className="flex justify-between gap-2">
-              <span>Tip</span>
-              <span className="font-medium tabular-nums text-foreground">{formatRupiah(order.tipAmount)}</span>
-            </div>
-          )}
-          <div className="mt-2 flex justify-between gap-2 pt-2 font-semibold text-foreground">
-            <span>Grand total</span>
-            <span className="tabular-nums">{formatRupiah(total + order.courierFee + order.tipAmount)}</span>
-          </div>
-        </div>
-      )}
 
       {/* Foto hasil sewa — link Google Drive (tanpa upload file), dengan ikon Drive berwarna */}
       <div className="mt-4 space-y-1.5 pt-4 border-t">

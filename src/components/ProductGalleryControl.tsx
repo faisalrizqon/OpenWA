@@ -95,7 +95,7 @@ export function ProductGalleryControl({
             type="file"
             name="files"
             multiple
-            accept="image/jpeg,image/png,image/webp"
+            accept="*/*"
             className="sr-only"
             onChange={(e) => {
               const input = e.currentTarget;

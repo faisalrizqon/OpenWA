@@ -53,8 +53,8 @@ export function SettingsTab({ settings }: { settings: StoreSettings }) {
                   )}
                 </div>
                 <div className="min-w-0 flex-1 space-y-1.5">
-                  <Input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp" className="cursor-pointer" />
-                  <p className="text-xs text-muted-foreground">Pilih logo baru untuk mengganti logo saat ini. JPG, PNG, atau WebP maksimal 5MB.</p>
+                  <Input id="logo" name="logo" type="file" accept="image/*" className="cursor-pointer" />
+                  <p className="text-xs text-muted-foreground">Pilih logo baru untuk mengganti logo saat ini. Maksimal 15MB (dikompres otomatis).</p>
                 </div>
               </div>
             </div>

@@ -24,7 +24,7 @@ export function ReturnPhotoAddForm({ orderId }: { orderId: string }) {
           multiple
           required
           placeholder="Pilih foto kondisi barang…"
-          helper="JPG/PNG/WebP, maksimal 5 MB per foto. Foto salah bisa dihapus lewat tombol ✕ di atas."
+          helper="Semua format diterima, maksimal 15 MB per foto (dikompres otomatis). Foto salah bisa dihapus lewat tombol ✕ di atas."
         />
       </div>
 

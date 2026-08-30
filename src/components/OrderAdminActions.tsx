@@ -191,12 +191,12 @@ export function PaymentRowActions({
             </div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">
-                Ganti Bukti Transfer (JPG/PNG/WebP maks 5MB)
+                Ganti Bukti Transfer (maks 15MB, dikompres otomatis)
               </label>
               <input
                 name="proof"
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="*/*"
                 className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm file:mr-2 file:rounded-md file:border-0 file:bg-muted file:text-sm file:font-medium file:text-foreground hover:file:bg-accent"
               />
               <p className="mt-1 text-xs text-muted-foreground">

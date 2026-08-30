@@ -56,9 +56,9 @@ export default async function PortalOrderDetailPage({ params, searchParams }: Pa
       "missing-guarantee": "Jaminan belum lengkap — wajib upload foto identitas (KTP / kartu pelajar) DAN foto selfie untuk metode cash.",
       "missing-proof": "Pilih file bukti terlebih dahulu (foto/screenshot).",
       nofile: "Pilih file terlebih dahulu.",
-      file: "File tidak valid — maksimal 5MB (akan otomatis dikompres).",
+      file: "File tidak valid — maksimal 15MB (file di atas 3MB dikompres otomatis).",
       "file-type-invalid": "Format file tidak didukung.",
-      "file-size-exceeded": "Ukuran file terlalu besar. Maksimal 5MB (auto-kompresi aktif).",
+      "file-size-exceeded": "Ukuran file terlalu besar. Maksimal 15MB (auto-kompresi aktif).",
       "invalid-method": "Metode pembayaran tidak valid.",
     };
     notifications.push({ type: "error", message: errorMessages[errorParam] ?? "Terjadi kesalahan. Silakan coba lagi." });

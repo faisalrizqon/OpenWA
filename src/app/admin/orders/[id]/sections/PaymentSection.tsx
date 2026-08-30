@@ -111,7 +111,7 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
               id="proof"
               name="proof"
               placeholder="Klik untuk pilih file…"
-              helper="Foto bukti transfer atau QRIS (JPG/PNG/WebP, maks 5MB)"
+              helper="Bukti transfer atau QRIS — semua format diterima, maks 15MB (dikompres otomatis)"
             />
           </div>
           {paymentsWithProof.length > 0 && (

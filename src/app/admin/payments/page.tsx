@@ -110,7 +110,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const errKey = Array.isArray(sp.error) ? sp.error[0] : sp.error;
     const errMessages: Record<string, string> = {
       "qris-format": "Format QRIS harus PNG.",
-      "qris-size": "Ukuran gambar QRIS maksimal 5 MB.",
+      "qris-size": "Ukuran gambar QRIS maksimal 15 MB.",
       invalid: "Data konfigurasi tidak valid.",
       none: "Minimal satu metode pembayaran harus aktif.",
     };
@@ -451,7 +451,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 )}
                 <div className="flex-1 space-y-2">
                   <Label htmlFor="qrisImage" className="text-xs font-medium">
-                    Upload gambar QRIS baru (PNG, maks 5 MB)
+                    Upload gambar QRIS baru (PNG, maks 15 MB)
                   </Label>
                   <input
                     id="qrisImage"

@@ -29,7 +29,7 @@ export default async function OrderDetailPage({
 
   const notifications: PageNotification[] = [];
   if (error === "payment") notifications.push({ type: "error", message: "Pembayaran tidak valid — jumlah harus lebih dari 0." });
-  if (error === "file") notifications.push({ type: "error", message: "File tidak valid — hanya JPG/PNG/WebP maksimal 5MB." });
+  if (error === "file") notifications.push({ type: "error", message: "File tidak valid — maksimal 15MB (file di atas 3MB dikompres otomatis)." });
   if (error === "return") notifications.push({ type: "error", message: "Data return tidak valid." });
   if (error === "reschedule") notifications.push({ type: "error", message: "Gagal mengubah tanggal — pastikan tanggal valid dan stok unit tersedia di rentang baru." });
   if (error && !["payment", "file", "return", "reschedule"].includes(error)) {
@@ -46,12 +46,15 @@ export default async function OrderDetailPage({
   });
   if (!order) notFound();
 
-  const total = order.items.reduce((s, it) => s + it.subtotal, 0);
+  const itemsSubtotal = order.items.reduce((s, it) => s + it.subtotal, 0);
+  /** Grand total termasuk ongkos antar & tip dari customer. */
+  const grandTotal =
+    itemsSubtotal + (order.courierFee ?? 0) + (order.tipAmount ?? 0);
   // Hanya pembayaran confirmed yang dihitung lunas; pending (bukti belum diverifikasi) tidak ikut
   const paid = order.payments
     .filter((p) => ["dp", "pelunasan", "denda"].includes(p.paymentType) && p.status !== "pending")
     .reduce((s, p) => s + p.amount, 0);
-  const sisa = total - paid;
+  const sisa = grandTotal - paid;
   const overdue = order.status === "active" && order.endDate < new Date();
   const active = order.status === "active" || order.status === "late";
 
@@ -83,7 +86,7 @@ export default async function OrderDetailPage({
     })),
     startDate: order.startDate,
     endDate: order.endDate,
-    total,
+    total: grandTotal,
     sisa: Math.max(0, sisa),
   });
   const reminderWA = `Halo ${order.customer.name}, mohon selesaikan pelunasan order *${order.orderNumber}* sebesar Rp ${Math.max(0, sisa).toLocaleString("id-ID")}. Terima kasih! 🙏`;
@@ -158,7 +161,7 @@ export default async function OrderDetailPage({
           lateWarningWA={lateWarningWA}
           isAdmin={isAdmin}
         />
-        <FinancialSummary order={order} total={total} paid={paid} sisa={sisa} />
+        <FinancialSummary order={order} itemsSubtotal={itemsSubtotal} paid={paid} sisa={sisa} />
       </div>
 
       {/* Pembayaran dinaikkan di bawah ringkasan, jaminan turun ke bawah */}

@@ -31,8 +31,8 @@ export function HeroTab({ images }: { images: HeroImageRow[] }) {
               <Input id="hero-ts" name="timestamp" placeholder="23 · 08 · 26" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="hero-img">Foto (JPG/PNG/WebP, maks 5MB)</Label>
-              <input id="hero-img" name="image" type="file" accept="image/jpeg,image/png,image/webp" className={fileInputCls} />
+              <Label htmlFor="hero-img">Foto (maks 15MB, dikompres otomatis)</Label>
+              <input id="hero-img" name="image" type="file" accept="*/*" className={fileInputCls} />
             </div>
             <div className="flex items-end">
               <Button type="submit" className="gap-1.5">
@@ -80,7 +80,7 @@ export function HeroTab({ images }: { images: HeroImageRow[] }) {
                   <input
                     type="file"
                     name="image"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/*"
                     aria-label="Ganti foto"
                     className={fileInputCls}
                   />

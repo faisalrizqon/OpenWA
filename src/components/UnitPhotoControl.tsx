@@ -69,7 +69,7 @@ export function UnitPhotoControl({
           ref={inputRef}
           type="file"
           name="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="*/*"
           className="sr-only"
           onChange={(e) => {
             if (e.target.files && e.target.files.length > 0) {

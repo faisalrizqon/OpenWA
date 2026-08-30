@@ -28,7 +28,7 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
       type: "error",
       message:
         error === "file"
-          ? "File tidak valid — hanya JPG/PNG/WebP maksimal 5MB."
+          ? "File tidak valid — maksimal 15MB (file di atas 3MB dikompres otomatis)."
           : error === "none"
             ? "Minimal satu metode pembayaran harus aktif."
             : "Data tidak valid — periksa kembali isian form.",

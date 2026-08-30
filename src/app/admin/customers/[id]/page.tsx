@@ -86,7 +86,7 @@ export default async function CustomerDetailPage({
     notifications.push({ type: "success", message: "Password portal berhasil disimpan." });
   }
   if (error === "file") {
-    notifications.push({ type: "error", message: "File tidak valid — hanya JPG/PNG/WebP maksimal 5MB." });
+    notifications.push({ type: "error", message: "File tidak valid — maksimal 15MB (file di atas 3MB dikompres otomatis)." });
   }
   if (error === "pwd") {
     notifications.push({ type: "error", message: "Password minimal 6 karakter." });

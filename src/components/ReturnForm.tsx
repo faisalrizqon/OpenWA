@@ -79,7 +79,7 @@ export function ReturnForm({ orderId, units }: { orderId: string; units: ReturnU
           name="photos"
           multiple
           placeholder="Pilih foto kondisi barang…"
-          helper="JPG/PNG/WebP, maksimal 5 MB per foto."
+          helper="Semua format diterima, maksimal 15 MB per foto (dikompres otomatis)."
         />
       </div>
 
