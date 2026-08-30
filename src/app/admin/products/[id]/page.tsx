@@ -75,7 +75,7 @@ export default async function ProductDetailPage({
   if (error === "sku") notifications.push({ type: "error", message: "SKU sudah dipakai produk lain." });
   if (error === "serial") notifications.push({ type: "error", message: "Nomor seri sudah dipakai unit lain." });
   if (error === "invalid") notifications.push({ type: "error", message: "Data tidak valid — periksa kembali isian form." });
-  if (error === "file") notifications.push({ type: "error", message: "File tidak valid — hanya JPG/PNG/WebP maksimal 20MB." });
+  if (error === "file") notifications.push({ type: "error", message: "File tidak valid — maksimal 15MB (file di atas 3MB dikompres otomatis)." });
   if (error === "maximages") notifications.push({ type: "error", message: "Maksimal 10 foto galeri per produk." });
   if (error && !["sku", "serial", "invalid", "file", "maximages"].includes(error)) notifications.push({ type: "error", message: decodeURIComponent(error) });
   const priceFields: { key: "price6h" | "price12h" | "price24h" | "price48h"; label: string }[] = [

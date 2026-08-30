@@ -1,5 +1,6 @@
 import { formatRupiah } from "@/lib/pricing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ItemPricesForm } from "./ItemPricesForm";
 import {
   Table,
   TableBody,
@@ -10,6 +11,7 @@ import {
 } from "@/components/ui/table";
 
 export interface ItemsSectionProps {
+  orderId: string;
   items: Array<{
     id: number;
     product: { name: string };
@@ -23,12 +25,24 @@ export interface ItemsSectionProps {
   }>;
 }
 
-/** Tabel item yang disewa pada order ini. */
-export function ItemsSection({ items }: ItemsSectionProps) {
+/** Tabel item yang disewa pada order ini — harga satuan bisa direvisi admin. */
+export function ItemsSection({ orderId, items }: ItemsSectionProps) {
   return (
     <Card className="min-w-0">
       <CardHeader>
-        <CardTitle>Item</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle>Item</CardTitle>
+          <ItemPricesForm
+            orderId={orderId}
+            items={items.map((it) => ({
+              id: it.id,
+              quantity: it.quantity,
+              unitPrice: it.unitPrice,
+              discountType: it.discountType,
+              discountValue: it.discountValue,
+            }))}
+          />
+        </div>
       </CardHeader>
       <CardContent>
         <Table>

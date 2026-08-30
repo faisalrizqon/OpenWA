@@ -21,7 +21,7 @@ const MAX_IMAGES = 10;
 // Batas ukuran per file (sama dengan validasi server di uploadProductImages).
 // Validasi client-side penting: jika total body melebihi proxyClientMaxBodySize,
 // Next.js memotong stream request dan busboy gagal parse multipart
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // Updated to match server
 
 
 export interface ProductImageItem {
@@ -113,10 +113,10 @@ export function ProductGalleryControl({
                 return;
               }
 
-              // Validasi ukuran per file (maks 20MB, sama dengan aturan server).
+              // Validasi ukuran per file (maks 15MB, sama dengan aturan server).
               const oversized = Array.from(files).filter((f) => f.size > MAX_FILE_SIZE);
               if (oversized.length > 0) {
-                toast.error("Ada file melebihi batas 20MB — tidak diupload", {
+                toast.error("Ada file melebihi batas 15MB — tidak diupload", {
                   description: oversized.map((f) => `• ${f.name}`).join("\n"),
                 });
                 input.value = "";
@@ -138,7 +138,7 @@ export function ProductGalleryControl({
             )}
             {images.length > 0 ? "Tambah Foto" : "Upload Foto Produk"}
             <span className="text-xs text-muted-foreground">
-              sisa {remaining} slot · JPG/PNG/WebP maks 20MB
+              sisa {remaining} slot · semua format, maks 15MB (dikompres otomatis)
             </span>
           </button>
         </form>

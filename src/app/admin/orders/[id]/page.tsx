@@ -167,7 +167,7 @@ export default async function OrderDetailPage({
       {/* Pembayaran dinaikkan di bawah ringkasan, jaminan turun ke bawah */}
       <div className="grid gap-4 lg:grid-cols-2">
         <PaymentSection order={order} isAdmin={isAdmin} lateFee={lateFee} />
-        <ItemsSection items={order.items} />
+        <ItemsSection orderId={order.id} items={order.items} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
