@@ -42,6 +42,8 @@ export function OrderForm({
   const [waMessage, setWaMessage] = useState("");
   const [waParsed, setWaParsed] = useState<ParsedBooking | null>(null);
   const [noteOrder, setNoteOrder] = useState("");
+  const [tip, setTip] = useState(0);
+  const [courierFee, setCourierFee] = useState(5000);
   const [items, setItems] = useState<ItemDraft[]>(() =>
     products.length > 0
       ? [
@@ -121,8 +123,9 @@ export function OrderForm({
     });
     return { item: it, product, unitPrice, subtotal };
   });
-
   const total = pricedItems.reduce((s, p) => s + p.subtotal, 0);
+  const grandTotal =
+    total + (deliveryMode === "courier" ? courierFee : 0) + Math.max(0, tip || 0);
 
   const stockErrors = useMemo(() => {
     const errors: string[] = [];
@@ -251,6 +254,8 @@ export function OrderForm({
         setDeliveryMode={setDeliveryMode}
         deliveryAddress={deliveryAddress}
         setDeliveryAddress={setDeliveryAddress}
+        courierFee={courierFee}
+        setCourierFee={setCourierFee}
       />
 
       <ItemsList
@@ -267,8 +272,12 @@ export function OrderForm({
       <SummarySection
         noteOrder={noteOrder}
         setNoteOrder={setNoteOrder}
-        total={total}
+        total={grandTotal}
         canSubmit={canSubmit}
+        tip={tip}
+        setTip={setTip}
+        courierFee={deliveryMode === "courier" ? courierFee : 0}
+        itemsTotal={total}
       />
     </form>
   );

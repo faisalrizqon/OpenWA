@@ -34,6 +34,7 @@ export async function createOrder(formData: FormData) {
   const deliveryModeRaw = String(formData.get("deliveryMode") ?? "pickup").trim();
   const deliveryAddress = String(formData.get("deliveryAddress") ?? "").trim();
   const courierFeeRaw = Number(formData.get("courierFee"));
+  const tipRaw = Number(formData.get("tip"));
   const rescheduledFromRaw = String(formData.get("rescheduledFrom") ?? "").trim();
 
   let items: ItemInput[] = [];
@@ -69,6 +70,7 @@ export async function createOrder(formData: FormData) {
     deliveryMode === "courier" && Number.isFinite(courierFeeRaw) && courierFeeRaw >= 0
       ? courierFeeRaw
       : 0;
+  const tip = Number.isFinite(tipRaw) && tipRaw >= 0 ? tipRaw : 0;
   const rescheduledFrom =
     rescheduledFromRaw !== "" && !isNaN(new Date(`${rescheduledFromRaw}T00:00`).getTime())
       ? new Date(`${rescheduledFromRaw}T00:00`)
@@ -134,6 +136,7 @@ export async function createOrder(formData: FormData) {
           deliveryMode,
           deliveryAddress: deliveryMode === "courier" ? deliveryAddress || null : null,
           courierFee,
+          tipAmount: tip,
           rescheduledFrom,
           handledById: user.id,
         },

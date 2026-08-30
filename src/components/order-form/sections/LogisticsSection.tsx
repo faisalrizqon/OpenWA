@@ -14,6 +14,8 @@ export interface LogisticsSectionProps {
   setDeliveryMode: (value: string) => void;
   deliveryAddress: string;
   setDeliveryAddress: (value: string) => void;
+  courierFee: number;
+  setCourierFee: (value: number) => void;
 }
 
 /** Guarantee & logistics section. */
@@ -26,6 +28,8 @@ export function LogisticsSection({
   setDeliveryMode,
   deliveryAddress,
   setDeliveryAddress,
+  courierFee,
+  setCourierFee,
 }: LogisticsSectionProps) {
   return (
     <section className="space-y-4 rounded-xl border bg-card p-4">
@@ -95,7 +99,8 @@ export function LogisticsSection({
               name="courierFee"
               type="number"
               min={0}
-              defaultValue={5000}
+              value={courierFee}
+              onChange={(e) => setCourierFee(Math.max(0, Number(e.target.value) || 0))}
             />
           </div>
         )}
