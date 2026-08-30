@@ -25,13 +25,13 @@ export function KtpUpload({ customerId }: { customerId: number }) {
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor="ktp-file">File (JPG/PNG/WebP, maks 5MB)</Label>
+        <Label htmlFor="ktp-file">File (maks 15MB, dikompres otomatis)</Label>
         <input
           id="ktp-file"
           name="file"
           type="file"
           required
-          accept="image/jpeg,image/png,image/webp"
+          accept="*/*"
           className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-accent-foreground hover:file:bg-accent/80"
         />
       </div>

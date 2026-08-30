@@ -72,7 +72,7 @@ export function UploadField({
         type="file"
         multiple={multiple}
         required={required}
-        accept="image/jpeg,image/png,image/webp"
+        accept="*/*"
         className="sr-only"
         onChange={(e) => addFiles(e.target.files)}
       />

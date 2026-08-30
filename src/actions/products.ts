@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
-import { compressImage } from "@/lib/image";
+import { processUploadFile } from "@/lib/image";
 
 export async function createProduct(formData: FormData) {
   const user = await requireAdmin();
@@ -368,12 +368,6 @@ export async function saveLateFee(formData: FormData) {
   redirect(back);
 }
 
-const UNIT_PHOTO_MIME_EXT: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
-
 /** Upload foto fisik unit (admin-only). Mengganti foto lama bila ada. */
 export async function uploadUnitPhoto(formData: FormData) {
   const user = await requireAdmin();
@@ -389,19 +383,18 @@ export async function uploadUnitPhoto(formData: FormData) {
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) redirect(`${back}?error=file`);
-  const ext = UNIT_PHOTO_MIME_EXT[file.type];
-  if (!ext || file.size > 20 * 1024 * 1024) redirect(`${back}?error=file`);
 
   const unit = await prisma.unit.findUnique({ where: { id: unitId } });
   if (!unit || unit.productId !== productId) redirect(`${back}?error=invalid`);
 
   // Simpan di public/uploads/units/<productId>/<unitId>-<ts>.<ext>
-  // File > 3 MB dikompres otomatis (≤ 3 MB); ≤ 3 MB disimpan apa adanya.
+  // Terima semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
+  const processed = await processUploadFile(file);
+  if (!processed) redirect(`${back}?error=file`);
   const dir = path.join(process.cwd(), "public", "uploads", "units");
   await mkdir(dir, { recursive: true });
-  const image = await compressImage(Buffer.from(await file.arrayBuffer()), file.type);
-  const fileName = `${productId}-${unitId}-${Date.now()}.${image.ext}`;
-  await writeFile(path.join(dir, fileName), image.buffer);
+  const fileName = `${productId}-${unitId}-${Date.now()}.${processed.ext}`;
+  await writeFile(path.join(dir, fileName), processed.buffer);
   const newPath = `/uploads/units/${fileName}`;
 
   // Ganti foto lama (hapus file fisik) lalu simpan path baru
@@ -492,13 +485,11 @@ export async function uploadProductImages(formData: FormData) {
 
   const written: { filePath: string; sortOrder: number }[] = [];
   for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const ext = UNIT_PHOTO_MIME_EXT[file.type];
-    if (!ext || file.size > 20 * 1024 * 1024) redirect(`${back}?error=file`);
-    // File > 3 MB dikompres otomatis; ≤ 3 MB simpan apa adanya.
-    const image = await compressImage(Buffer.from(await file.arrayBuffer()), file.type);
-    const fileName = `gallery-${Date.now()}-${i}.${image.ext}`;
-    await writeFile(path.join(dir, fileName), image.buffer);
+    // Terima semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
+    const processed = await processUploadFile(files[i]);
+    if (!processed) redirect(`${back}?error=file`);
+    const fileName = `gallery-${Date.now()}-${i}.${processed.ext}`;
+    await writeFile(path.join(dir, fileName), processed.buffer);
     written.push({
       filePath: `/uploads/products/${productIdRaw}/${fileName}`,
       sortOrder: product.images.length + i,

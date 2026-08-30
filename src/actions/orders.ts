@@ -952,3 +952,125 @@ export async function rescheduleOrder(formData: FormData) {
     redirect(`/admin/orders/${orderId}?error=reschedule`);
   }
 }
+
+
+/** Edit data order di halaman detail (form inline per card). Field yang ada di
+ *  FormData-lah yang diupdate — tiap card hanya mengirim field miliknya:
+ *  - Ringkasan Pembayaran: courierFee, tipAmount
+ *  - Pelanggan & Aksi: guaranteeType, guaranteeNumber, deliveryMode, deliveryAddress, noteOrder
+ *  Perubahan dicatat di AuditLog. */
+export async function updateOrderFees(formData: FormData) {
+  const user = await requireMitraOrAdmin();
+  const orderId = String(formData.get("orderId") ?? "");
+  const back = `/admin/orders/${orderId}`;
+  if (!orderId) redirect("/admin/orders");
+
+  const before = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      courierFee: true,
+      tipAmount: true,
+      deliveryMode: true,
+      deliveryAddress: true,
+      guaranteeType: true,
+      guaranteeNumber: true,
+      noteOrder: true,
+    },
+  });
+  if (!before) redirect(`${back}?error=edit`);
+
+  const data: Parameters<typeof prisma.order.update>[0]["data"] = {};
+
+  if (formData.has("courierFee")) {
+    const v = Number(formData.get("courierFee"));
+    if (!Number.isFinite(v) || v < 0) redirect(`${back}?error=edit`);
+    data.courierFee = v;
+  }
+  if (formData.has("tipAmount")) {
+    const v = Number(formData.get("tipAmount"));
+    if (!Number.isFinite(v) || v < 0) redirect(`${back}?error=edit`);
+    data.tipAmount = v;
+  }
+  if (formData.has("deliveryMode")) {
+    const mode = String(formData.get("deliveryMode") ?? "");
+    data.deliveryMode = mode === "courier" ? "courier" : "pickup";
+    if (data.deliveryMode === "pickup") data.deliveryAddress = null;
+  }
+  if (formData.has("deliveryAddress")) {
+    const addr = String(formData.get("deliveryAddress") ?? "").trim();
+    data.deliveryAddress = addr || null;
+  }
+  if (formData.has("guaranteeType")) {
+    const g = String(formData.get("guaranteeType") ?? "").trim();
+    data.guaranteeType = ["ktp", "sim", "kartu_pelajar", "lainnya"].includes(g) ? g : null;
+  }
+  if (formData.has("guaranteeNumber")) {
+    data.guaranteeNumber = String(formData.get("guaranteeNumber") ?? "").trim() || null;
+  }
+  if (formData.has("noteOrder")) {
+    data.noteOrder = String(formData.get("noteOrder") ?? "").trim() || null;
+  }
+
+  await prisma.order.update({ where: { id: orderId }, data });
+
+  await logAudit(prisma, {
+    entityType: "order",
+    entityId: orderId,
+    action: "update",
+    summary: `Data order diperbarui (${Object.keys(data).join(", ")})`,
+    userId: user.id,
+  });
+
+  revalidateOrderPaths(orderId);
+  redirect(`${back}?edited=1`);
+}
+
+/** Edit harga satuan item order — subtotal dihitung ulang otomatis (qty & diskon tetap).
+ *  Harga item terkunci saat order dibuat; aksi ini adalah revisi admin bila ada salah harga. */
+export async function updateItemPrices(formData: FormData) {
+  const user = await requireMitraOrAdmin();
+  const orderId = String(formData.get("orderId") ?? "");
+  const back = `/admin/orders/${orderId}`;
+  if (!orderId) redirect("/admin/orders");
+
+  const itemIds = formData.getAll("itemId").map((v) => Number(v));
+  const prices = formData.getAll("unitPrice").map((v) => Number(v));
+  if (itemIds.length === 0 || itemIds.length !== prices.length) redirect(`${back}?error=items`);
+  if (prices.some((p) => !Number.isFinite(p) || p < 0)) redirect(`${back}?error=items`);
+
+  let changed = 0;
+  await prisma.$transaction(async (tx) => {
+    const items = await tx.orderItem.findMany({ where: { orderId } });
+    for (let i = 0; i < itemIds.length; i++) {
+      const item = items.find((it) => it.id === itemIds[i]);
+      if (!item) continue;
+      const unitPrice = prices[i];
+      if (item.unitPrice === unitPrice) continue; // tanpa perubahan — skip
+      const subtotal = calcSubtotal({
+        unitPrice,
+        quantity: item.quantity,
+        discountType:
+          item.discountType === "amount" || item.discountType === "percent"
+            ? item.discountType
+            : null,
+        discountValue: item.discountValue,
+      });
+      await tx.orderItem.update({
+        where: { id: item.id },
+        data: { unitPrice, subtotal },
+      });
+      await logAudit(tx, {
+        entityType: "order",
+        entityId: orderId,
+        action: "update",
+        summary: `Harga item diubah: Rp ${item.unitPrice.toLocaleString("id-ID")} → Rp ${unitPrice.toLocaleString("id-ID")}`,
+        userId: user.id,
+        detail: { itemId: item.id },
+      });
+      changed++;
+    }
+  });
+
+  revalidateOrderPaths(orderId);
+  redirect(`${back}?items=${changed > 0 ? "updated" : "unchanged"}`);
+}
