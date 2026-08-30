@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface OpenClosedSignProps {
@@ -36,6 +36,10 @@ function computeOpen(hours: string): boolean {
 export function OpenClosedSign({ hours }: OpenClosedSignProps) {
   const [actualOpen, setActualOpen] = useState<boolean | null>(null);
   const [swinging, setSwinging] = useState(false);
+  // Id unik per instance untuk gradient SVG — mencegah dua papan (mobile &
+  // desktop) berbagi id yang sama; id duplikat membuat gradient diambil dari
+  // instance tersembunyi sehingga tali gagal render di desktop.
+  const gradientId = useId();
 
   useEffect(() => {
     const check = () => setActualOpen(computeOpen(hours));
@@ -78,14 +82,14 @@ export function OpenClosedSign({ hours }: OpenClosedSignProps) {
         {/* SATU TALI TENGAH — serat hemp/jute twisted + ring logam penghubung */}
         <svg width="24" height="38" viewBox="0 0 24 38" aria-hidden className="block rope-fluid">
           <defs>
-            <linearGradient id="ropeShade" x1="0" y1="0" x2="1" y2="0">
+            <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="#8e7544" />
               <stop offset="45%" stopColor="#e0cda0" />
               <stop offset="100%" stopColor="#8e7544" />
             </linearGradient>
           </defs>
           {/* Tali utama — vertikal dengan sedikit lengkung S natural */}
-          <path d="M12,1 Q10,12 12,20 Q14,27 12,33" stroke="url(#ropeShade)" strokeWidth="4.5" fill="none" strokeLinecap="round" />
+          <path d="M12,1 Q10,12 12,20 Q14,27 12,33" stroke={`url(#${gradientId})`} strokeWidth="4.5" fill="none" strokeLinecap="round" />
           {/* Highlight 3D — sisi kiri tali */}
           <path d="M11,1 Q9,12 11,20 Q13,27 11,33" stroke="#f0e0b8" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.5" />
           {/* Twist marks — serat anyaman melintang */}

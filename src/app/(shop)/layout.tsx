@@ -15,7 +15,7 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
       <ShopTheme />
       <header className="glass sticky top-0 z-30 border-b border-border/70">
         {/* Top bar: logo kiri, papan OPEN/CLOSED, nav kanan */}
-        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-x-2 px-3 py-2 sm:gap-x-4 sm:px-4 md:px-8">
+        <div className="relative mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-x-2 px-3 py-1.5 sm:gap-x-4 sm:px-4 sm:py-2 md:px-8">
           {/* Kiri: logo */}
           <Link href="/" className="flex shrink-0 items-center gap-2">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
@@ -27,15 +27,16 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
             </span>
           </Link>
 
-          {/* Kanan mobile: badge BUKA/TUTUP compact + tombol menu hamburger */}
+          {/* Kanan mobile: tombol menu hamburger saja (papan kayu digantung terpisah sebagai overlay) */}
           <div className="flex items-center gap-2 sm:hidden">
-            {/* Papan kayu OPEN/CLOSED versi besar (animasi ayun tetap ada) */}
-            <div className="relative h-16 w-[150px] shrink-0">
-              <div className="absolute left-[-25px] top-0 origin-top scale-[0.60]">
-                <OpenClosedSign hours={shop.hours} />
-              </div>
-            </div>
             <MobileNavMenu whatsappUrl={waLink(shop.whatsapp, generalMessage(shop.storeName))} />
+          </div>
+
+          {/* Papan kayu OPEN/CLOSED mobile — menggantung melewati (overlay) bawah top bar */}
+          <div className="pointer-events-none absolute right-10 top-5 z-40 sm:hidden">
+            <div className="pointer-events-auto scale-[0.68]" style={{ transformOrigin: "top right" }}>
+              <OpenClosedSign hours={shop.hours} />
+            </div>
           </div>
 
           {/* Tengah: papan gantung OPEN/CLOSED.

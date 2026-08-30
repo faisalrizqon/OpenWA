@@ -10,10 +10,10 @@ import { TrustChips } from "./TrustChips";
 export function PolaroidHero({ products, settings }: { products: HeroProduct[]; settings: StoreSettings }) {
   const rotations = ["-6deg", "4deg", "-3deg", "7deg"];
   const offsets = [
-    "top-0 left-2 md:-left-4",
-    "top-10 right-0 md:right-6",
-    "top-36 left-8 md:left-16",
-    "top-40 right-4 md:right-10",
+    "md:top-0 md:-left-4",
+    "md:top-10 md:right-6",
+    "md:top-36 md:left-16",
+    "md:top-40 md:right-10",
   ];
   return (
     <section className={cn("flex items-center overflow-hidden py-10", HERO_MIN_H)}>
@@ -32,12 +32,14 @@ export function PolaroidHero({ products, settings }: { products: HeroProduct[]; 
           </div>
         </div>
 
-        {/* Polaroid collage — tiap foto melayang pelan dengan fase berbeda */}
-        <div className="relative mx-auto hidden h-[420px] w-full max-w-md md:block">
+        {/* Polaroid collage.
+            Desktop: kolase foto melayang (posisi absolut).
+            Mobile: grid 2x2 rapi agar tidak tumpang tindih. */}
+        <div className="mx-auto grid w-full max-w-md grid-cols-2 gap-3 md:relative md:block md:h-[420px]">
           {products.slice(0, 4).map((p, i) => (
             <figure
               key={p.name}
-              className={cn("animate-fade-in polaroid absolute w-48", offsets[i])}
+              className={cn("animate-fade-in polaroid md:absolute md:w-48", offsets[i])}
               style={{
                 transform: `rotate(${rotations[i]})`,
                 animationDelay: `${0.2 + i * 0.15}s`,

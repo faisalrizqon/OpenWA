@@ -9,6 +9,7 @@ import { ensureStockAvailable } from "@/lib/availability";
 import { generateOrderNumber } from "@/lib/orderNumber";
 import { calcSubtotal, getTierPrice } from "@/lib/pricing";
 import { ensureOrderReminders } from "@/lib/reminders/scheduler";
+import { notifyOrderIncoming } from "@/lib/notify-order-incoming";
 import { saveUpload, deleteStoredFile } from "@/lib/storage";
 import { requireAdmin, requireMitraOrAdmin } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
@@ -176,6 +177,9 @@ export async function createOrder(formData: FormData) {
 
   // Slot reminder COD disiapkan SETELAH transaksi commit (hindari nested-tx SQLite)
   await ensureOrderReminders(orderId);
+
+  // Notifikasi order masuk (admin & customer) setelah transaksi commit
+  void notifyOrderIncoming(orderId);
 
   revalidatePath("/admin/orders");
   revalidatePath("/admin");
@@ -894,12 +898,15 @@ export async function confirmPendingOrder(formData: FormData) {
     await applyStatusChange(tx, orderId, newStatus, user.id);
   });
 
+  // Order pending diterima → kabari customer & admin bahwa pesanan diproses
+  if (action === "accept") {
+    await notifyOrderIncoming(orderId);
+  }
+
   revalidateOrderPaths(orderId);
   revalidatePath("/admin/orders");
   redirect(`${back}?pending=${action}`);
 }
-
-
 /** Reschedule existing order to new dates (admin only). Validates stock availability. */
 export async function rescheduleOrder(formData: FormData) {
   const _user = await requireAdmin();

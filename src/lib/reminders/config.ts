@@ -54,6 +54,15 @@ export interface ReminderSettings {
   /** Daftar nomor WA admin tujuan (format 08xx), disimpan sebagai JSON string. */
   adminPhones: string | null;
 
+  /** Notifikasi order masuk — WA otomatis saat order baru dibuat (admin / online checkout). */
+  orderIncoming: {
+    enabled: boolean;
+    /** Kirim ke daftar nomor WA admin (adminPhones). */
+    toAdmin: boolean;
+    /** Kirim konfirmasi "pesanan diterima" ke nomor WA customer. */
+    toCustomer: boolean;
+  };
+
   /** @deprecated pakai sendToAdmin + adminPhones */
   notifyAdmin: boolean;
   /** @deprecated pakai adminPhones */
@@ -69,6 +78,7 @@ export const DEFAULT_SETTINGS: ReminderSettings = {
   sendToCustomer: false,
   sendToAdmin: true,
   adminPhones: null,
+  orderIncoming: { enabled: true, toAdmin: true, toCustomer: false },
   notifyAdmin: false,
   adminPhone: null,
 };
@@ -130,6 +140,20 @@ export async function ensureReminderConfigTable(): Promise<void> {
     )
   `);
   await prisma.$executeRawUnsafe(`INSERT OR IGNORE INTO "ReminderConfig" ("id") VALUES (1)`);
+
+  // Kolom tambahan versi baru — ALTER aman & idempoten (error "duplicate column" diabaikan).
+  const NEW_COLUMNS: Array<[string, string]> = [
+    ["orderIncomingEnabled", "BOOLEAN NOT NULL DEFAULT 1"],
+    ["orderIncomingToAdmin", "BOOLEAN NOT NULL DEFAULT 1"],
+    ["orderIncomingToCustomer", "BOOLEAN NOT NULL DEFAULT 0"],
+  ];
+  for (const [col, def] of NEW_COLUMNS) {
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "ReminderConfig" ADD COLUMN "${col}" ${def}`);
+    } catch {
+      /* kolom sudah ada — abaikan */
+    }
+  }
 }
 
 type ConfigRow = Record<string, number | string | null>;
@@ -179,6 +203,11 @@ function buildSettingsFromRow(row: ConfigRow | undefined): ReminderSettings {
     sendToCustomer: bool(row.sendToCustomer, false),
     sendToAdmin: bool(row.sendToAdmin, true),
     adminPhones: typeof row.adminPhones === "string" && row.adminPhones.trim() ? row.adminPhones.trim() : null,
+    orderIncoming: {
+      enabled: bool(row.orderIncomingEnabled, true),
+      toAdmin: bool(row.orderIncomingToAdmin, true),
+      toCustomer: bool(row.orderIncomingToCustomer, false),
+    },
     notifyAdmin: bool(row.notifyAdmin, false),
     adminPhone: typeof row.adminPhone === "string" && row.adminPhone.trim() ? row.adminPhone.trim() : null,
   };
@@ -226,6 +255,9 @@ export async function saveReminderSettings(s: ReminderSettings): Promise<void> {
       "returnGraceMinutes" = ${Math.floor(s.return.graceMinutes)},
       "lateEnabled" = ${s.late.enabled ? 1 : 0},
       "lateInitialDelayHours" = ${Math.floor(s.late.initialDelayHours)},
+      "orderIncomingEnabled" = ${s.orderIncoming.enabled ? 1 : 0},
+      "orderIncomingToAdmin" = ${s.orderIncoming.toAdmin ? 1 : 0},
+      "orderIncomingToCustomer" = ${s.orderIncoming.toCustomer ? 1 : 0},
       "lateRepeatIntervalDays" = ${Math.floor(s.late.repeatIntervalDays)},
       "updatedAt" = CURRENT_TIMESTAMP
     WHERE "id" = 1

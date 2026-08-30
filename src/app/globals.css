@@ -518,17 +518,24 @@
     box-shadow: 0 18px 44px -10px rgb(0 0 0 / 0.22);
   }
 
-  /* 3D flip card */
+  /* 3D flip card — flip via hover (desktop) atau tap (mobile, class .is-flipped) */
   .flip-scene {
     perspective: 1100px;
+    cursor: pointer;
   }
   .flip-card {
     position: relative;
     transform-style: preserve-3d;
     transition: transform 0.65s cubic-bezier(0.3, 0.9, 0.3, 1);
   }
-  .flip-scene:hover .flip-card {
+  .flip-scene:hover .flip-card:not(.is-flipped) {
     transform: rotateY(180deg);
+  }
+  .flip-card.is-flipped {
+    transform: rotateY(180deg);
+  }
+  .flip-scene:hover .flip-card.is-flipped {
+    transform: rotateY(0deg);
   }
   .flip-face {
     position: absolute;

@@ -51,6 +51,12 @@ function laneBySpan(spans: OrderSpan[], weeks: number): number[] {
   return result;
 }
 
+const OVERLAY_TOP_PX = 40;   // overlay starts below day-number header
+const LANE_H_PX = 28;        // one bar row height
+const LANE_GAP_PX = 4;       // gap between bar rows
+const ROW_BASE_PX = 160;     // current desktop min cell height
+const ROW_PAD_PX = 10;       // bottom padding below last lane
+
 /**
  * Kalender bulan: tiap minggu = satu grid CSS 7-kolom berisi sel tanggal
  * (DayCell), plus overlay batang order (OrderBar) yang menumpang di atas sel
@@ -74,9 +80,14 @@ export function CalendarMonth({ data }: { data: CalendarMonthData }) {
       {byWeek.map((bars, w) => {
         const weekDays = days.slice(w * 7, w * 7 + 7);
         const cellStyle: CSSProperties = { gridColumn: "span 1", gridRow: 1 };
+        const laneCount = bars.reduce((m, b) => Math.max(m, b.lane + 1), 0);
 
         return (
-          <div key={w} className="relative grid grid-cols-7 gap-1.5">
+          <div
+            key={w}
+            className="relative grid grid-cols-7 gap-1.5"
+            style={{ "--row-h": `${Math.max(ROW_BASE_PX, OVERLAY_TOP_PX + laneCount * (LANE_H_PX + LANE_GAP_PX) + ROW_PAD_PX)}px` } as CSSProperties}
+          >
             {weekDays.map((d) => (
               <DayCell key={d.iso} data={d} style={cellStyle} />
             ))}
@@ -90,10 +101,10 @@ export function CalendarMonth({ data }: { data: CalendarMonthData }) {
                   ))}
                 </div>
                 {/* Desktop: overlay absolut dengan lane anti-tabrakan */}
-                <div className="absolute inset-x-0 bottom-0 hidden overflow-y-auto overscroll-contain pt-[50px] md:block [scrollbar-width:thin]">
+                <div className="absolute inset-x-0 top-[40px] bottom-2 hidden md:block">
                   <div
                     className="grid grid-cols-7 content-start gap-x-1.5"
-                    style={{ gridAutoRows: "minmax(32px, auto)" }}
+                    style={{ gridAutoRows: `${LANE_H_PX}px`, rowGap: `${LANE_GAP_PX}px` }}
                   >
                     {bars.map(({ span, lane }, i) => (
                       <OrderBar key={`${span.orderId}-${i}`} span={span} gridRow={lane + 1} />

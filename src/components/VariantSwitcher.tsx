@@ -38,7 +38,7 @@ export function VariantSwitcher({ theme, hero, onSelectTheme, onSelectHero }: Va
     return (
       <button
         onClick={() => setOpen(true)}
-        className="btn-retro fixed bottom-4 right-4 z-50 flex size-11 items-center justify-center rounded-full bg-card shadow-lg"
+        className="btn-retro fixed bottom-4 right-4 z-50 hidden size-11 items-center justify-center rounded-full bg-card shadow-lg md:flex"
         aria-label="Buka panel pilihan tema"
       >
         <Palette className="size-5" aria-hidden />
@@ -47,7 +47,7 @@ export function VariantSwitcher({ theme, hero, onSelectTheme, onSelectHero }: Va
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-64 rounded-2xl border bg-card p-4 shadow-xl shadow-foreground/10">
+    <div className="fixed bottom-4 right-4 z-50 hidden w-64 rounded-2xl border bg-card p-4 shadow-xl shadow-foreground/10 md:block">
       <div className="mb-3 flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-sm font-bold">
           <Palette className="size-4" aria-hidden />

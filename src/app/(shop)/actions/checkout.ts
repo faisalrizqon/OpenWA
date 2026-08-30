@@ -9,6 +9,7 @@ import { ensureStockAvailable } from "@/lib/availability";
 import { calcSubtotal, getTierPrice } from "@/lib/pricing";
 import { generateOrderNumber } from "@/lib/orderNumber";
 import { ensureOrderReminders } from "@/lib/reminders/scheduler";
+import { notifyOrderIncoming } from "@/lib/notify-order-incoming";
 import { calcPromoDiscount, checkPromoEligibility } from "@/lib/promo";
 import { saveUpload, resolveStoragePath } from "@/lib/storage";
 import { createMidtransTransaction, midtransConfigured, type PaymentMethod } from "@/lib/payment";
@@ -216,6 +217,9 @@ export async function checkoutOrder(
 
   // Slot reminder COD disiapkan SETELAH transaksi commit (hindari nested-tx SQLite)
   await ensureOrderReminders(orderId);
+
+  // Notifikasi order masuk (admin & customer) setelah transaksi commit
+  void notifyOrderIncoming(orderId);
 
   // Midtrans: buat transaksi Snap lalu arahkan customer ke halaman pembayaran
   if (paymentMethod === "midtrans") {

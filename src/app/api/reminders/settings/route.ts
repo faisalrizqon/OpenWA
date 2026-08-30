@@ -78,6 +78,11 @@ export async function POST(request: NextRequest) {
       sendToCustomer: data.sendToCustomer ?? current.sendToCustomer,
       sendToAdmin: data.sendToAdmin ?? current.sendToAdmin,
       adminPhones: typeof data.adminPhones === "string" ? (data.adminPhones.trim() || null) : current.adminPhones,
+      orderIncoming: {
+        enabled: data.orderIncoming?.enabled ?? current.orderIncoming.enabled,
+        toAdmin: data.orderIncoming?.toAdmin ?? current.orderIncoming.toAdmin,
+        toCustomer: data.orderIncoming?.toCustomer ?? current.orderIncoming.toCustomer,
+      },
       notifyAdmin: data.notifyAdmin ?? current.notifyAdmin,
       adminPhone: typeof data.adminPhone === "string" ? (data.adminPhone.trim() || null) : current.adminPhone,
     };

@@ -55,6 +55,7 @@ export function ReminderTab({ settings }: ReminderTabProps) {
     sendToCustomer: false,
     sendToAdmin: true,
     adminPhones: null,
+    orderIncoming: { enabled: true, toAdmin: true, toCustomer: false },
     notifyAdmin: false,
     adminPhone: null,
   };
@@ -165,8 +166,10 @@ export function ReminderTab({ settings }: ReminderTabProps) {
         </Card>
       )}
 
+      {/* Card pengaturan — grid 2 kolom di layar lebar */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Global Controls */}
-      <Card>
+      <Card className="h-full">
         <CardHeader><CardTitle className="flex items-center gap-2"><Settings2 className="size-4" /> Pengaturan Global</CardTitle><CardDescription>Kontrol utama semua reminder</CardDescription></CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -194,7 +197,7 @@ export function ReminderTab({ settings }: ReminderTabProps) {
       </Card>
 
       {/* Recipient Selection */}
-      <Card>
+      <Card className="h-full">
         <CardHeader><CardTitle className="flex items-center gap-2"><Users className="size-4" /> Target Penerima Reminder</CardTitle><CardDescription>Pilih siapa yang menerima notifikasi WA</CardDescription></CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -238,8 +241,31 @@ export function ReminderTab({ settings }: ReminderTabProps) {
         </CardContent>
       </Card>
 
+      {/* Notifikasi Order Masuk */}
+      <Card className="h-full">
+        <CardHeader><CardTitle className="flex items-center gap-2"><Bell className="size-4" /> Notifikasi Order Masuk</CardTitle><CardDescription>Kirim WA otomatis setiap ada pesanan baru (checkout online atau order dibuat admin)</CardDescription></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div><Label className="font-medium">Aktifkan Notifikasi Order Masuk</Label><p className="text-xs text-muted-foreground">Kirim pesan otomatis saat pesanan baru dibuat</p></div>
+            <Switch checked={formData.orderIncoming.enabled} onCheckedChange={(c) => setFormData((p) => ({ ...p, orderIncoming: { ...p.orderIncoming, enabled: c } }))} />
+          </div>
+          {formData.orderIncoming.enabled && (
+            <>
+              <div className="flex items-center justify-between">
+                <div><Label className="font-medium">Kabari Admin</Label><p className="text-xs text-muted-foreground">Ringkasan order masuk dikirim ke daftar Nomor WA Admin di atas</p></div>
+                <Switch checked={formData.orderIncoming.toAdmin} onCheckedChange={(c) => setFormData((p) => ({ ...p, orderIncoming: { ...p.orderIncoming, toAdmin: c } }))} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div><Label className="font-medium">Konfirmasi ke Customer</Label><p className="text-xs text-muted-foreground">Kirim pesan "pesanan diterima" ke nomor WA pelanggan</p></div>
+                <Switch checked={formData.orderIncoming.toCustomer} onCheckedChange={(c) => setFormData((p) => ({ ...p, orderIncoming: { ...p.orderIncoming, toCustomer: c } }))} />
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       {/* COD Reminder Slots */}
-      <Card>
+      <Card className="h-full">
         <CardHeader><CardTitle>Pengaturan Slot COD (Sebelum Pickup/Antar)</CardTitle><CardDescription>Jadwal reminder sebelum order diambil atau dikirimkan kurir</CardDescription></CardHeader>
         <CardContent className="space-y-4">
           {(Object.entries(formData.cod.slots) as Array<[keyof typeof formData.cod.slots, any]>).map(([key, slot]) => (
@@ -263,7 +289,7 @@ export function ReminderTab({ settings }: ReminderTabProps) {
       </Card>
 
       {/* RETURN Reminder Slots */}
-      <Card>
+      <Card className="h-full">
         <CardHeader><CardTitle>Pengaturan Slot RETURN (Sebelum Pengembalian)</CardTitle><CardDescription>Jadwal reminder sebelum jatuh tempo pengembalian</CardDescription></CardHeader>
         <CardContent className="space-y-4">
           {(Object.entries(formData.return.slots) as Array<[keyof typeof formData.return.slots, any]>).map(([key, slot]) => (
@@ -287,7 +313,7 @@ export function ReminderTab({ settings }: ReminderTabProps) {
       </Card>
 
       {/* LATE Reminder Settings */}
-      <Card>
+      <Card className="h-full">
         <CardHeader><CardTitle>Peringatan Keterlambatan (LATE)</CardTitle><CardDescription>Pertama setelah order status berubah jadi 'Late', lalu update berkala</CardDescription></CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -310,6 +336,7 @@ export function ReminderTab({ settings }: ReminderTabProps) {
           )}
         </CardContent>
       </Card>
+      </div>
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3">

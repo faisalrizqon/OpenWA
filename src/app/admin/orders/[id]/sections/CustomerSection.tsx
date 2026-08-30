@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Wallet, CalendarClock, AlertTriangle, CheckCircle2, Ban } from "lucide-react";
 import { formatRupiah } from "@/lib/pricing";
+import { Button } from "@/components/ui/button";
 import { ExternalLink } from "@/components/LinkButton";
 import { StatusChangeForm, DeleteOrderDialog } from "@/components/OrderAdminActions";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
@@ -65,25 +66,19 @@ export function CustomerSection({
               <input type="hidden" name="orderId" value={order.id} />
               <input type="hidden" name="action" value="accept" />
               <input type="hidden" name="back" value={`/admin/orders/${order.id}`} />
-              <button
-                type="submit"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-              >
+              <Button type="submit" size="sm" className="gap-1.5">
                 <CheckCircle2 className="size-4" aria-hidden />
                 Terima Order
-              </button>
+              </Button>
             </form>
             <form action={confirmPendingOrder}>
               <input type="hidden" name="orderId" value={order.id} />
               <input type="hidden" name="action" value="reject" />
               <input type="hidden" name="back" value={`/admin/orders/${order.id}`} />
-              <button
-                type="submit"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
-              >
+              <Button type="submit" variant="outline" size="sm" className="gap-1.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700">
                 <Ban className="size-4" aria-hidden />
                 Tolak (Spam)
-              </button>
+              </Button>
             </form>
           </div>
         </div>
