@@ -128,7 +128,8 @@ export async function getReportMetrics(daysRaw: number): Promise<ReportMetrics> 
     .sort((a, b) => b.pct - a.pct);
 
   const orderRows = ordersInRange.map((o) => {
-    const total = o.items.reduce((s, it) => s + it.subtotal, 0);
+    const total =
+      o.items.reduce((s, it) => s + it.subtotal, 0) + (o.courierFee ?? 0) + (o.tipAmount ?? 0);
     const paid = o.payments
       .filter((p) => PAID_IN_TYPES.includes(p.paymentType))
       .reduce((s, p) => s + p.amount, 0);
@@ -140,7 +141,7 @@ export async function getReportMetrics(daysRaw: number): Promise<ReportMetrics> 
       itemSummary: o.items.map((it) => `${it.product.name} ×${it.quantity}`).join(", "),
       total,
       paid,
-      sisa: total - paid,
+      sisa: Math.max(0, total - paid),
       status: o.status,
     };
   });
