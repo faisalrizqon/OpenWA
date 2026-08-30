@@ -137,6 +137,26 @@ export function writeDeploymentModeOverride(mode: OpenWADeploymentMode): void {
   fs.writeFileSync(DEPLOYMENT_MODE_FILE, JSON.stringify({ mode }, null, 2), "utf8");
 }
 
+/** Base URL UI dashboard OpenWA MENGIKUTI mode deployment aktif. Dipakai semua tempat
+ *  yang membuka/meng-embed UI (iframe admin, shortcut, ping) — JANGAN hardcode
+ *  `OPENWA_DASHBOARD_URL`, karena di mode bundled env itu bisa menunjuk port dev yang
+ *  mati (:2886) dan browser menampilkan "refused to connect".
+ *
+ *  - split   → UI disajikan Vite dev server (`OPENWA_DASHBOARD_URL`, fallback :2886).
+ *  - bundled → UI disajikan gateway itu sendiri di port 2785; `OPENWA_DASHBOARD_URL`
+ *    hanya dipakai bila memang menjawab (mis. subdomain produksi yang di-proxy nginx ke
+ *    gateway), selain itu fallback ke origin gateway. */
+export async function resolveDashboardUrl(): Promise<string> {
+  if (openwaDeploymentMode() === "split") {
+    return (process.env.OPENWA_DASHBOARD_URL ?? OPENWA_DEV_SERVER_URL).replace(/\/+$/, "");
+  }
+  const configured = (process.env.OPENWA_DASHBOARD_URL ?? "").replace(/\/+$/, "");
+  if (configured && configured !== OPENWA_URL && (await pingDashboard(configured))) {
+    return configured;
+  }
+  return OPENWA_URL;
+}
+
 export function openwaConfigured(): boolean {
   return Boolean(process.env.OPENWA_API_KEY && process.env.OPENWA_SESSION_ID);
 }

@@ -1,13 +1,17 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { format } from "date-fns";
-import { id as localeId } from "date-fns/locale";
 import { OpenWATabs, OPENWA_TAB_IDS } from "@/components/OpenWATabs";
-import { openwaConfigured, pingGateway, pingDashboard, listSessions, getSessionQr, resolveSessionId, openwaDeploymentMode } from "@/lib/openwa-api-client";
+import {
+  openwaConfigured,
+  pingGateway,
+  pingDashboard,
+  listSessions,
+  getSessionQr,
+  resolveSessionId,
+  openwaDeploymentMode,
+  resolveDashboardUrl,
+} from "@/lib/openwa-api-client";
 import { PageNotifier, type PageNotification } from "@/components/PageNotifier";
-import { HeaderLink } from "@/components/HeaderLink";
-import { EmptyState } from "@/components/EmptyState";
 import { BackLink } from "@/components/BackLink";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DeploymentModeForm } from "@/components/DeploymentModeForm";
@@ -47,13 +51,18 @@ export default async function AdminWhatsAppPage({ searchParams }: PageProps<"/ad
     notifications.push({
       type: "success",
       message: m === "split"
-        ? "Mode deployment: Local/Split (gateway + Vite dev server) — gunakan Stop lalu Start untuk menerapkan"
-        : "Mode deployment: Docker/Bundled (1 proses, hemat resource) — gunakan Stop lalu Start untuk menerapkan",
+        ? "Mode deployment: Option B — Local Development (API + Vite dev server). Gunakan Stop lalu Start untuk menerapkan."
+        : "Mode deployment: Option A — Docker/Bundled (1 proses, hemat resource). Gunakan Stop lalu Start untuk menerapkan.",
     });
   } else if (sp.error) {
     const msg = Array.isArray(sp.error) ? sp.error[0] : sp.error;
     notifications.push({ type: "error", message: decodeURIComponent(msg) });
   }
+
+  // URL UI dashboard mengikuti mode deployment aktif — bundled → origin gateway (:2785
+  // menyajikan UI), split → Vite dev server (:2886). Dipakai shortcut + iframe di bawah
+  // supaya tab Dashboard tidak "refused to connect" saat env menunjuk port yang mati.
+  const dashboardUrl = await resolveDashboardUrl();
 
   return (
     <div className="space-y-6">
@@ -69,7 +78,7 @@ export default async function AdminWhatsAppPage({ searchParams }: PageProps<"/ad
       {tab === "dashboard" && (
         <div className="flex flex-wrap gap-3 rounded-lg border bg-card p-3">
           <a
-            href={process.env.OPENWA_DASHBOARD_URL ?? "http://localhost:2785/dashboard"}
+            href={dashboardUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
@@ -89,7 +98,7 @@ export default async function AdminWhatsAppPage({ searchParams }: PageProps<"/ad
         </div>
       )}
       <div className="mt-4 space-y-6">
-        {tab === "dashboard" && <DashboardTab />}
+        {tab === "dashboard" && <DashboardTab dashboardBaseUrl={dashboardUrl} />}
         {tab === "setup" && <SetupTab />}
         {tab === "reminder" && <ReminderTabWrapper />}
       </div>
@@ -98,28 +107,15 @@ export default async function AdminWhatsAppPage({ searchParams }: PageProps<"/ad
 }
 
 // --- Tab 1: Dashboard dengan iframe ---
-function DashboardTab() {
-  const dashboardBaseUrl = (process.env.OPENWA_DASHBOARD_URL ?? "http://localhost:2785/dashboard").replace(/\/+$/, "");
-  
-  // Try different API key formats that OpenWA Dashboard might accept
+function DashboardTab({ dashboardBaseUrl }: { dashboardBaseUrl: string }) {
+  // Auto-login via fragment hash bawaan dashboard OpenWA (`/#key=...`). URL dasar
+  // mengikuti mode deployment (dihitung di induk via resolveDashboardUrl).
   let autoLoginUrl;
   if (process.env.OPENWA_API_KEY) {
-    const apiKey = process.env.OPENWA_API_KEY;
-    
-    // Format 1: #key= prefix (original OpenWA style)
-    const format1 = `${dashboardBaseUrl}/#key=${encodeURIComponent(apiKey)}`;
-    
-    // Format 2: ?api_key= (query param)
-    const format2 = `${dashboardBaseUrl}/login?api_key=${encodeURIComponent(apiKey)}`;
-    
-    // Format 3: ?key= (simple query param)
-    const format3 = `${dashboardBaseUrl}/login?key=${encodeURIComponent(apiKey)}`;
-    
-    // Gunakan format #key= (fragment routing bawaan dashboard OpenWA)
-    autoLoginUrl = format1;
+    autoLoginUrl = `${dashboardBaseUrl}/#key=${encodeURIComponent(process.env.OPENWA_API_KEY)}`;
   }
   return (
-    <iframe 
+    <iframe
       src={autoLoginUrl}
       className="w-full h-[95vh] min-h-[800px] rounded-xl border border-border"
       title="OpenWA Dashboard"
@@ -133,6 +129,8 @@ async function SetupTab() {
   const configured = openwaConfigured();
   const gatewayRunning = await pingGateway();
   const deploymentMode = openwaDeploymentMode();
+  // Bundled: UI disajikan proses gateway itu sendiri (tidak ada proses kedua untuk diping).
+  // Split: ping Vite dev server secara terpisah.
   const dashboardRunning = deploymentMode === "split" ? await pingDashboard() : gatewayRunning;
   const sessions = gatewayRunning ? await listSessions().catch(() => []) : [];
   const apiDocsUrl = `${process.env.OPENWA_URL ?? "http://localhost:2785"}/api/docs`;
@@ -149,16 +147,10 @@ async function SetupTab() {
     /* biarkan default */
   }
 
-  // Session utama (dari env OPENWA_SESSION_ID, by UUID atau nama)
-  const primarySessionId = await resolveSessionId().catch(() => null);
-
-  // QR hanya diambil bila ada session yang menunggu scan
-  const qrSession = sessions.find((s) => s.status === "qr_ready" || s.status === "qr_pending");
-  const qrCode = qrSession ? await getSessionQr(qrSession.id).catch(() => null) : null;
-
   return (
     <div className="space-y-6">
-      {/* Mode Deployment — pengganti pola on/off buta: pilih SATU mode, jangan keduanya */}
+      {/* Mode Deployment — istilah mengikuti Quick Start docs OpenWA (Option A / Option B).
+          Pengganti pola on/off buta yang selalu menjalankan DUA proses sekaligus. */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -166,7 +158,8 @@ async function SetupTab() {
             Mode Deployment OpenWA
           </CardTitle>
           <CardDescription>
-            Pilih cara OpenWA dijalankan (Docker/bundled vs local/split) — jangan aktifkan keduanya, boros resource
+            Sesuai Quick Start docs OpenWA — pilih SATU opsi, jangan keduanya (boros resource).
+            Perubahan berlaku tanpa restart; tombol Start/Stop di bawah mengikuti mode ini.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -179,11 +172,11 @@ async function SetupTab() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>Status Gateway</CardTitle>
+              <CardTitle>Status OpenWA</CardTitle>
               <CardDescription>
                 {deploymentMode === "bundled"
-                  ? `Satu proses — API + UI dashboard di port ${gatewayPort}`
-                  : `Dua proses — API gateway di port ${gatewayPort}, Vite dev server di port ${dashboardPort}`}{" "}
+                  ? `Option A (Docker/Bundled): SATU proses — API + UI dashboard di port ${gatewayPort}`
+                  : `Option B (Local Dev): DUA proses — API di port ${gatewayPort} + Vite dev server di port ${dashboardPort}`}{" "}
                 — dikontrol langsung dari halaman ini
               </CardDescription>
             </div>
@@ -197,9 +190,11 @@ async function SetupTab() {
                 <CheckCircle2 className="size-4.5" aria-hidden />
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-medium leading-snug text-muted-foreground">Gateway</p>
+                <p className="text-xs font-medium leading-snug text-muted-foreground">
+                  {deploymentMode === "bundled" ? "OpenWA (API + Dashboard)" : "API Gateway"}
+                </p>
                 <p className={gatewayRunning ? "font-semibold text-emerald-600" : "font-semibold text-red-600"}>
-                  {gatewayRunning ? "Running" : "Offline"}
+                  {gatewayRunning ? "Ready" : "Offline"}
                 </p>
               </div>
             </div>
@@ -209,16 +204,10 @@ async function SetupTab() {
               </span>
               <div className="min-w-0">
                 <p className="text-xs font-medium leading-snug text-muted-foreground">
-                  {deploymentMode === "bundled" ? "Dashboard (bundled)" : "Dashboard (Vite dev)"}
+                  {deploymentMode === "bundled" ? "Dashboard (bundled :2785)" : "Dashboard (Vite dev :2886)"}
                 </p>
                 <p className={dashboardRunning ? "font-semibold text-blue-600" : "font-semibold text-gray-600"}>
-                  {deploymentMode === "bundled"
-                    ? gatewayRunning
-                      ? "Disajikan gateway"
-                      : "Offline"
-                    : dashboardRunning
-                      ? "Ready"
-                      : "Offline"}
+                  {dashboardRunning ? "Ready" : "Offline"}
                 </p>
               </div>
             </div>

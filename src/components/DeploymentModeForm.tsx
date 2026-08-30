@@ -80,28 +80,28 @@ export function DeploymentModeForm({ mode }: { mode: OpenWADeploymentMode }) {
       <div>
         <p className="text-sm font-medium">Mode deployment</p>
         <p className="text-xs text-muted-foreground">
-          Menentukan proses mana yang dijalankan tombol Start — pilih satu, jangan keduanya, supaya hemat resource.
+          Pilih satu opsi saja. Jangan jalankan keduanya — boros resource. Sesuai Quick Start docs OpenWA.
         </p>
       </div>
       <form action={setOpenWADashboardMode} className="flex flex-col gap-2 sm:flex-row">
         <ModeButton
           value="bundled"
-          label="Docker / Bundled"
-          description="1 proses: gateway menyajikan API + UI dashboard (port 2785). Pilihan produksi — paling hemat."
+          label="Option A: Docker (Recommended)"
+          description="1 proses (port 2785) — gateway menyajikan API + UI dashboard (`dashboard/dist`). Hemat RAM — default produksi."
           icon={Container}
           active={mode === "bundled"}
         />
         <ModeButton
           value="split"
-          label="Local / Split"
-          description="2 proses: gateway API (2785) + Vite dev server (2886). Hanya untuk mengembangkan UI dashboard (hot-reload)."
+          label="Option B: Local Development"
+          description="2 proses — API gateway (:2785) + Vite dev server (:2886) untuk hot-reload UI dashboard. Hanya saat develop!"
           icon={Terminal}
           active={mode === "split"}
         />
       </form>
       {mode === "split" && (
         <p className="text-[11px] leading-tight text-amber-600">
-          Mode split menjalankan dua proses — gunakan hanya saat mengembangkan dashboard OpenWA, lalu kembali ke Bundled.
+          ⚠️ Mode split menjalankan DUA proses — gunakan hanya saat mengembangkan dashboard OpenWA. Setelah selesai, kembali ke Option A.
         </p>
       )}
     </div>
