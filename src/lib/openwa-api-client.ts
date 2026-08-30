@@ -105,7 +105,7 @@ export function messageLogAvailable(): boolean {
 
 // --- HTTP helper ---
 
-async function openwaFetch(pathname: string, init?: RequestInit): Promise<Response> {
+async function openwaFetch(pathname: string, init?: RequestInit, timeoutMs = 10_000): Promise<Response> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(init?.headers as Record<string, string> | undefined),
@@ -117,7 +117,7 @@ async function openwaFetch(pathname: string, init?: RequestInit): Promise<Respon
     ...init,
     headers,
     cache: "no-store",
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 }
 
@@ -231,7 +231,7 @@ export async function sendMessage(sessionId: string, input: SendMessageInput): P
     const res = await openwaFetch(`/api/sessions/${encodeURIComponent(sessionId)}/messages/send-text`, {
       method: "POST",
       body: JSON.stringify(input),
-    });
+    }, 30_000);
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
       console.error(`[openwa] send gagal (${res.status}):`, errText.slice(0, 300));

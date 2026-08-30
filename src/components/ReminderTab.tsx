@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Settings2, Save, Users, User, Plus, Trash2, MessageCircle, Bell, CalendarClock, AlertTriangle } from "lucide-react";
+import { Settings2, Save, Users, User, Plus, Trash2, MessageCircle, Bell, CalendarClock, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ReminderSettings } from "@/lib/reminders/config";
 
 interface ReminderTabProps {
@@ -64,6 +65,10 @@ export function ReminderTab({ settings }: ReminderTabProps) {
   // Khusus test kirim — daftar nomor yang DIINPUT manual (bukan dari DB atau form utama).
   const [testPhones, setTestPhones] = useState<string[]>([]);
 
+  type TestSendResult = { ok: boolean; message: string; sentTo: Array<{ phone: string; ok: boolean; error?: string }> };
+  const [testResult, setTestResult] = useState<TestSendResult | null>(null);
+  const [scanResult, setScanResult] = useState<{ scanned: number; sent: number; skipped: number; failed: number } | null>(null);
+
   const updateCodSlot = (key: keyof typeof formData.cod.slots, field: "enabled" | "minutesBefore", value: boolean | number) => {
     setFormData((prev) => ({
       ...prev,
@@ -109,11 +114,12 @@ export function ReminderTab({ settings }: ReminderTabProps) {
   const handleTestScan = async () => {
     setLoading(true);
     setError(null);
+    setScanResult(null);
     try {
       const response = await fetch("/api/reminders/scan");
       if (!response.ok) throw new Error("Gagal menjalankan scan");
       const result = await response.json();
-      alert(`Scan selesai:\n- Dipindai: ${result.scanned}\n- Terkirim: ${result.sent}\n- Dilewati: ${result.skipped}\n- Gagal: ${result.failed}`);
+      setScanResult({ scanned: result.scanned, sent: result.sent, skipped: result.skipped, failed: result.failed });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menjalankan scan");
     } finally {
@@ -125,6 +131,7 @@ export function ReminderTab({ settings }: ReminderTabProps) {
     setLoading(true);
     setError(null);
     setSaved(false);
+    setTestResult(null);
     if (testPhones.length === 0) {
       setError("Masukkan minimal satu nomor WA tujuan sebelum test kirim.");
       setLoading(false);
@@ -138,10 +145,7 @@ export function ReminderTab({ settings }: ReminderTabProps) {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Gagal kirim pesan test");
-      const targetLines = (result.sentTo ?? [])
-        .map((s: { phone: string; ok: boolean }) => `- ${s.phone}: ${s.ok ? "✅ terkirim" : "❌ gagal"}`)
-        .join("\n");
-      alert(`Test kirim ${type.toUpperCase()}:\n\n${result.message}\n\nDetail target:\n${targetLines}`);
+      setTestResult({ ok: result.ok, message: result.message, sentTo: result.sentTo ?? [] });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan saat test kirim");
     } finally {
@@ -311,6 +315,11 @@ export function ReminderTab({ settings }: ReminderTabProps) {
       <div className="flex flex-wrap gap-3">
         <Button onClick={handleSubmit} disabled={loading} className="gap-2"><Save className="size-4" /> Simpan Pengaturan</Button>
         <Button onClick={handleTestScan} variant="outline" disabled={loading}>Run Test Scan</Button>
+        {scanResult && (
+          <p className="w-full rounded-lg border border-border bg-card px-4 py-2 text-sm">
+            Scan selesai — Dipindai: <b>{scanResult.scanned}</b>, Terkirim: <b>{scanResult.sent}</b>, Dilewati: <b>{scanResult.skipped}</b>, Gagal: <b>{scanResult.failed}</b>
+          </p>
+        )}
       </div>
 
       {/* Test Send Section */}
@@ -359,6 +368,24 @@ export function ReminderTab({ settings }: ReminderTabProps) {
               <AlertTriangle className="size-4" /> Test Late
             </Button>
           </div>
+          {testResult && (
+            <div className={cn("space-y-2 rounded-lg border p-4", testResult.ok ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50")}>
+              <p className={cn("text-sm font-medium", testResult.ok ? "text-emerald-700" : "text-red-700")}>{testResult.message}</p>
+              <ul className="space-y-1">
+                {testResult.sentTo.map((s) => (
+                  <li key={s.phone} className="flex items-start gap-2 text-sm">
+                    {s.ok
+                      ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden />
+                      : <XCircle className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden />}
+                    <span>
+                      <span className="font-medium">{s.phone}</span>
+                      {s.ok ? " — terkirim" : ` — gagal: ${s.error ?? "penyebab tidak diketahui"}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
             Pesan test dikirim langsung ke nomor yang kamu ketik di atas. Gunakan ini untuk verifikasi pengaturan sebelum production.
           </p>

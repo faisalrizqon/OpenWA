@@ -65,19 +65,25 @@ export default async function PortalReviewsPage({
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 md:px-8 md:py-12">
       <PageNotifier notifications={notifications} />
 
-      {/* Header + Back */}
-      <div className="flex items-center justify-between">
-        <Link href="/portal">
-          <Button variant="ghost" size="sm" className="gap-1.5">
-            <ArrowLeft className="size-4" aria-hidden />
-            Kembali ke Dashboard
-          </Button>
-        </Link>
-        <div className="text-sm text-muted-foreground">
-          Review terlampir:{" "}
-          <span className="font-semibold">{reviews.length}</span>
-        </div>
-      </div>
+      {/* Header card: judul di atas tombol kembali */}
+      <Card>
+        <CardHeader className="space-y-3 pb-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h1 className="text-2xl font-bold">Review Saya</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Ulasan yang kamu berikan untuk pesanan selesai</p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Review terkirim: <span className="font-semibold">{reviews.length}</span>
+            </p>
+          </div>
+          <Link href="/portal">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <ArrowLeft className="size-4" aria-hidden /> Kembali ke Dashboard
+            </Button>
+          </Link>
+        </CardHeader>
+      </Card>
 
       {reviews.length === 0 ? (
         <Card>

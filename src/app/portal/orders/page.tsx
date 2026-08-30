@@ -87,10 +87,10 @@ export default async function PortalOrdersPage({ searchParams }: PageProps<"/por
 
       {/* Header */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardHeader className="space-y-3 pb-4">
           <div>
             <h1 className="text-2xl font-bold">Pesanan saya</h1>
-            <p className="text-sm text-muted-foreground mt-1">Riwayat dan status pesanan sewa kamera</p>
+            <p className="mt-1 text-sm text-muted-foreground">Riwayat dan status pesanan sewa kamera</p>
           </div>
           <Link href="/portal">
             <Button variant="outline" size="sm" className="gap-1.5">
@@ -145,7 +145,7 @@ export default async function PortalOrdersPage({ searchParams }: PageProps<"/por
               }
             />
           ) : (
-            <div className="divide-y">
+            <div className="space-y-3 p-4">
               {orders.map((o) => {
                 const itemNames = o.items.map((it) => it.product.name).join(", ");
                 const paidAmount = o.payments
@@ -171,12 +171,12 @@ export default async function PortalOrdersPage({ searchParams }: PageProps<"/por
                     href={`/portal/orders/${o.orderNumber}`}
                     className="group block"
                   >
-                    <Card className="h-full hover:shadow-md transition-shadow">
+                    <Card className="transition-shadow hover:shadow-md">
                       <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                          <div>
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
                             <p className="text-sm text-muted-foreground"># {o.orderNumber}</p>
-                            <p className="font-medium mt-1">{itemNames}</p>
+                            <p className="mt-1 line-clamp-2 font-medium">{itemNames}</p>
                           </div>
                           <StatusBadge status={o.status} />
                         </div>
@@ -184,21 +184,21 @@ export default async function PortalOrdersPage({ searchParams }: PageProps<"/por
                       <CardContent>
                         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                           <dt className="text-muted-foreground">Status pembayaran</dt>
-                          <dd className="font-medium">{PAYMENT_STATUS_LABELS[o.paymentStatus] ?? o.paymentStatus}</dd>
-                          
+                          <dd className="min-w-0 truncate font-medium">{PAYMENT_STATUS_LABELS[o.paymentStatus] ?? o.paymentStatus}</dd>
+
                           <dt className="text-muted-foreground">Tanggal mulai</dt>
-                          <dd className="font-medium">{format(o.startDate, "dd MMM yyyy", { locale: localeId })}</dd>
-                          
+                          <dd className="whitespace-nowrap font-medium">{format(o.startDate, "dd MMM yyyy", { locale: localeId })}</dd>
+
                           <dt className="text-muted-foreground">Tanggal kembali</dt>
-                          <dd className="font-medium">{format(o.endDate, "dd MMM yyyy", { locale: localeId })}</dd>
-                          
+                          <dd className="whitespace-nowrap font-medium">{format(o.endDate, "dd MMM yyyy", { locale: localeId })}</dd>
+
                           <dt className="text-muted-foreground">Total</dt>
-                          <dd className="font-medium text-right">{formatRupiah(orderTotal)}</dd>
+                          <dd className="font-medium tabular-nums">{formatRupiah(orderTotal)}</dd>
                         </dl>
-                        
-                        <div className="mt-4 flex items-center justify-between">
+
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                           <span className="text-sm text-muted-foreground">{nextAction}</span>
-                          <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1" aria-hidden />
+                          <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" aria-hidden />
                         </div>
                       </CardContent>
                     </Card>

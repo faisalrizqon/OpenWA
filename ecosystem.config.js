@@ -1,16 +1,19 @@
 // ============================================================
-// MudahSewa PM2 ecosystem config (production template)
+// MudahSewa PM2 ecosystem config (production)
 // Real secrets live in .env files on the server, NOT here.
 // Names MUST use underscores matching aaPanel project records,
 // otherwise the aaPanel Node.js Project UI shows OFFLINE.
 // ============================================================
 module.exports = {
   apps: [
-    // Main MudahSewa Next.js App
+    // Main MudahSewa Next.js App — port 3000
+    // PENTING: jalankan bin `next` langsung, BUKAN `npm start`.
+    // `npm start` melahirkan child next-server yang jadi orphan saat PM2
+    // restart → port 3000 tetap terpegang → EADDRINUSE crash loop.
     {
       name: 'mudahsewa_app',
       cwd: '/www/wwwroot/dagdigdugdigicam.store',
-      script: 'npm',
+      script: './node_modules/next/dist/bin/next',
       args: 'start',
       instances: 1,
       exec_mode: 'fork',
@@ -25,6 +28,9 @@ module.exports = {
       restart_delay: 4000,
       max_restarts: 10,
       max_memory_restart: '600M',
+      // Bunuh seluruh process tree saat restart/stop
+      kill_timeout: 5000,
+      treekill: true,
     },
 
     // GoPay Gateway (payment processor) — port 3100

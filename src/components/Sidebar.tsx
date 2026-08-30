@@ -8,6 +8,7 @@ import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import {
   Menu,
   X,
+  Monitor,
   LayoutDashboard,
   ClipboardList,
   Camera,
@@ -45,7 +46,7 @@ const ADMIN_NAV_SECTIONS: NavSection[] = [
   {
     title: "Operasional",
     items: [
-      { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+      { label: "Dashboard", href: "/admin", icon: Monitor },
       { label: "Orders", href: "/admin/orders", icon: ClipboardList },
       { label: "Kalender", href: "/admin/calendar", icon: CalendarDays },
       { label: "Pembayaran", href: "/admin/payments", icon: Wallet },
@@ -90,7 +91,7 @@ const CUSTOMER_NAV_SECTIONS: CustomerNavSection[] = [
   {
     title: "Dashboard",
     items: [
-      { label: "Beranda", href: "/portal", icon: LayoutDashboard },
+      { label: "Dashboard", href: "/portal", icon: Monitor },
     ],
   },
   {

@@ -88,37 +88,35 @@ export default async function ReceivablesPage() {
 
       <Card>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-3 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Card className="rounded-xl border-amber-200 bg-amber-50/60">
-              <CardContent className="flex items-center gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900">
+              <CardContent className="flex items-center gap-3 sm:flex-col sm:items-start">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900 sm:size-auto sm:rounded-lg">
                   <Wallet className="size-5" aria-hidden />
                 </span>
-                <div>
+                <div className="sm:text-left">
                   <p className="text-xs font-medium text-amber-900">Total Piutang</p>
-                  <p className="text-xl font-bold tracking-tight">
-                    Rp {summary.total.toLocaleString("id-ID")}
-                  </p>
+                  <p className="text-xl font-bold tracking-tight">Rp {summary.total.toLocaleString("id-ID")}</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="rounded-xl border-amber-200 bg-amber-50/60">
-              <CardContent className="flex items-center gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900">
+              <CardContent className="flex items-center gap-3 sm:flex-col sm:items-start">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900 sm:size-auto sm:rounded-lg">
                   <AlertTriangle className="size-5" aria-hidden />
                 </span>
-                <div>
+                <div className="sm:text-left">
                   <p className="text-xs font-medium text-amber-900">Order Tidak Lunas</p>
                   <p className="text-xl font-bold tracking-tight">{summary.count}</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="rounded-xl border-border bg-card">
-              <CardContent className="flex items-center gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <CardContent className="flex items-center gap-3 sm:flex-col sm:items-start">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground sm:size-auto sm:rounded-lg">
                   <ExternalLink className="size-5" aria-hidden />
                 </span>
-                <div>
+                <div className="sm:text-left">
                   <p className="text-xs font-medium text-muted-foreground">Total Order</p>
                   <p className="text-xl font-bold tracking-tight">{rows.length}</p>
                 </div>
@@ -137,13 +135,13 @@ export default async function ReceivablesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-1/6">No. Order</TableHead>
-                <TableHead>Pelanggan</TableHead>
+                <TableHead className="w-24">No. Order</TableHead>
+                <TableHead className="min-w-[140px]">Pelanggan</TableHead>
                 <TableHead>Unit</TableHead>
                 <TableHead>Jatuh Tempo</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Sudah Bayar</TableHead>
-                <TableHead>Sisa</TableHead>
+                <TableHead className="text-right w-24">Total</TableHead>
+                <TableHead className="text-right w-24">Sudah Bayar</TableHead>
+                <TableHead className="text-right w-24 font-semibold">Sisa</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>

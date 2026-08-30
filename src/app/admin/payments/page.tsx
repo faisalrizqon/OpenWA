@@ -206,83 +206,49 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                     key={payment.id}
                     className="rounded-xl border bg-card p-4 transition-colors hover:border-primary/30"
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between md:gap-4">
                       {/* Left: Info */}
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href={`/admin/orders/${payment.orderId}`}
-                            className="font-semibold text-primary underline-offset-2 hover:underline"
-                          >
-                            {payment.order?.orderNumber ?? payment.orderId}
-                          </Link>
-                          <span className={payment.paymentType === "pelunasan" ? "rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-medium text-white" : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"}>
-                            {PAYMENT_TYPE_LABELS[payment.paymentType] ?? payment.paymentType}
-                          </span>
-                          {payment.method && (
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                              {PAYMENT_METHOD_LABELS[(payment.method as PaymentMethod)] ?? payment.method}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {payment.order?.customer?.name ?? "Customer"} ·{" "}
-                          {format(new Date(payment.paidAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
-                        </p>
-                        <p className="text-lg font-bold tabular-nums">{formatRupiah(payment.amount)}</p>
-                        {payment.note && (
-                          <p className="text-xs italic text-muted-foreground">"{payment.note}"</p>
-                        )}
-                        {/* Items summary */}
+                      <div className="min-w-0 flex-1 space-y-1.5 md:space-y-1">
+                        <p className="text-xs font-semibold">{payment.order?.orderNumber ?? payment.orderId}</p>
+                        <dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-muted-foreground sm:grid-cols-3">
+                          <dt>Tipe</dt><dd className="font-medium">{PAYMENT_TYPE_LABELS[payment.paymentType] ?? payment.paymentType}</dd>
+                          {payment.method && (<><dt>Metode</dt><dd className="font-medium">{PAYMENT_METHOD_LABELS[(payment.method as PaymentMethod)] ?? payment.method}</dd></>)}
+                          <dt>Jam</dt><dd>{format(new Date(payment.paidAt), "dd MMM HH:mm", { locale: localeId })}</dd>
+                          <dt className="col-span-2 sm:col-span-3">Jumlah</dt><dd className="font-bold text-primary md:col-span-1 md:text-lg">{formatRupiah(payment.amount)}</dd>
+                        </dl>
+                        {payment.note && <p className="text-xs italic text-muted-foreground line-clamp-2 md:hidden">"{payment.note}"</p>}
                         {payment.order?.items && payment.order.items.length > 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            Item: {payment.order.items.map((it) => `${it.product.name} ×${it.quantity}`).join(", ")}
-                          </p>
+                          <p className="hidden text-xs text-muted-foreground md:block">Item: {payment.order.items.slice(0, 2).map((it) => it.product.name).join(", ")}{payment.order.items.length > 2 ? "…" : ""}</p>
                         )}
                       </div>
 
                       {/* Right: Actions + Proof */}
-                      <div className="flex flex-col items-end gap-3">
-                        <div className="flex gap-2">
+                      <div className="mt-3 flex w-full flex-col items-end gap-2 md:mt-0 md:w-auto">
+                        <div className="flex flex-wrap gap-2 md:flex-nowrap">
                           <form action={approvePayment}>
                             <input type="hidden" name="paymentId" value={payment.id} />
-                            <Button type="submit" size="sm" className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700">
+                            <Button type="submit" size="sm" className="min-w-[8rem] bg-emerald-600 text-white hover:bg-emerald-700">
                               <CheckCircle2 className="size-4" aria-hidden />
-                              Konfirmasi Pembayaran
+                              Konfirmasi
                             </Button>
                           </form>
                           <RejectPaymentForm paymentId={payment.id} />
                         </div>
                         {payment.proofPath && (
                           <Dialog>
-                            <DialogTrigger className="group relative cursor-zoom-in overflow-hidden rounded-lg border transition-transform hover:scale-[1.02]">
+                            <DialogTrigger className="group relative overflow-hidden rounded-lg border transition-transform hover:scale-[1.02]">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={storageUrl(payment.proofPath)}
-                                alt="Bukti pembayaran — klik untuk lihat ukuran penuh"
-                                className="h-32 w-auto object-cover"
-                              />
+                              <img src={storageUrl(payment.proofPath)} alt="Bukti pembayaran" className="max-h-40 w-auto object-cover" />
                               <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                                <span className="flex size-8 items-center justify-center rounded-full bg-white text-black shadow">
-                                  <ZoomIn className="size-4" aria-hidden />
-                                </span>
+                                <span className="flex size-7 items-center justify-center rounded-full bg-white text-black shadow"><ZoomIn className="size-3" aria-hidden /></span>
                               </div>
                             </DialogTrigger>
                             <DialogContent className="max-w-5xl sm:max-w-5xl">
-                              <DialogHeader>
-                                <DialogTitle>Bukti Pembayaran — {payment.order?.orderNumber ?? payment.orderId}</DialogTitle>
-                              </DialogHeader>
+                              <DialogHeader><DialogTitle>Bukti Pembayaran — {payment.order?.orderNumber ?? payment.orderId}</DialogTitle></DialogHeader>
                               <div className="flex items-center justify-center bg-muted p-4">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={storageUrl(payment.proofPath)}
-                                  alt="Bukti pembayaran ukuran penuh"
-                                  className="max-h-[75vh] max-w-full object-contain"
-                                />
+                                <img src={storageUrl(payment.proofPath)} alt="Bukti pembayaran ukuran penuh" className="max-h-[75vh] max-w-full object-contain" />
                               </div>
-                              <p className="px-4 pb-4 text-center text-xs text-muted-foreground">
-                                Tekan ESC atau tombol tutup untuk menutup
-                              </p>
+                              <p className="px-4 pb-4 text-center text-xs text-muted-foreground">Tekan ESC atau tutup untuk menutup</p>
                             </DialogContent>
                           </Dialog>
                         )}
