@@ -194,10 +194,14 @@ export function OrdersBulkTable({ rows }: { rows: OrderRow[] }) {
                   {formatRupiah(sisa)}
                 </TableCell>
                 <TableCell className="text-center">
-                  {o.paymentCompleted && o.status === "booking" ? (
-                    <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
-                      Siap Diproses
-                    </Badge>
+                  {o.paymentCompleted ? (
+                    o.status === "booking" ? (
+                      <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
+                        Siap Diproses
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Terverifikasi</Badge>
+                    )
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
