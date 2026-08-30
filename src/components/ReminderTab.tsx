@@ -85,7 +85,11 @@ export function ReminderTab({ settings }: ReminderTabProps) {
     try {
       const payload: ReminderSettings = {
         ...formData,
-        adminPhones: adminPhoneList.length > 0 ? JSON.stringify(adminPhoneList) : null,
+        // Hanya simpan nomor yang benar-benar terisi (buang string kosong dari "Tambah Nomor")
+        adminPhones: (() => {
+          const filled = adminPhoneList.map((p) => p.trim()).filter((p) => p.length > 0);
+          return filled.length > 0 ? JSON.stringify(filled) : null;
+        })(),
       };
       const response = await fetch("/api/reminders/settings", {
         method: "POST",
