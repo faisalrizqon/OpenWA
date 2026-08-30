@@ -249,6 +249,14 @@ export function parseAdminPhones(raw: string | null): string[] {
   return trimmed ? [trimmed] : [];
 }
 
+/** Nomor WA Indonesia yang valid: diawali 08 / 8 / 62, 9-14 digit.
+ *  Jaga ketat: jangan pernah kirim ke nomor kosong/tidak valid. */
+export function isValidPhone(phone: string | null | undefined): phone is string {
+  if (!phone) return false;
+  const trimmed = phone.trim();
+  return /^0\d{8,13}$/.test(trimmed) || /^8\d{8,13}$/.test(trimmed) || /^62\d{8,13}$/.test(trimmed);
+}
+
 export function minutesToLabel(minutes: number): string {
   if (minutes >= 1440 && minutes % 1440 === 0) {
     return `${minutes / 1440} hari`;

@@ -19,7 +19,7 @@ import {
   resolveSessionId,
   openwaConfigured,
 } from "@/lib/openwa-api-client";
-import { getReminderSettings, parseAdminPhones, minutesToLabel, type ReminderType } from "@/lib/reminders/config";
+import { getReminderSettings, parseAdminPhones, isValidPhone, type ReminderType } from "@/lib/reminders/config";
 import { formatReturnReminderWA, formatLateWarningWA } from "@/lib/wa";
 import { computeLateInfo, loadLateFeeItems } from "@/lib/late";
 
@@ -254,17 +254,26 @@ async function runScan(now: Date): Promise<ReminderScanResult> {
     }
 
     // --- Tentukan penerima berdasarkan pengaturan ---
+    // ATURAN KETAT: jangan pernah kirim bila nomor tidak diinput/tidak valid.
     const recipients: string[] = [];
-    if (settings.sendToCustomer) {
+    if (settings.sendToCustomer && isValidPhone(rem.order.customer.phone)) {
       recipients.push(phoneToChatId(rem.order.customer.phone));
     }
     if (settings.sendToAdmin) {
-      const adminPhones = parseAdminPhones(settings.adminPhones);
+      const adminPhones = parseAdminPhones(settings.adminPhones).filter(isValidPhone);
       for (const phone of adminPhones) {
         recipients.push(phoneToChatId(phone));
       }
     }
-    if (recipients.length === 0) continue; // Tidak ada target → skip
+    if (recipients.length === 0) {
+      // Tidak ada nomor tujuan valid → skip, jangan pernah kirim.
+      await prisma.reminder.update({
+        where: { id: rem.id },
+        data: { status: "skipped", error: "tidak ada nomor tujuan valid" },
+      });
+      result.skipped++;
+      continue;
+    }
 
     let anyOk = false;
     let lastError: string | null = null;

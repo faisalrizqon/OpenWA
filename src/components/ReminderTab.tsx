@@ -61,6 +61,9 @@ export function ReminderTab({ settings }: ReminderTabProps) {
   const [formData, setFormData] = useState<ReminderSettings>(initialSettings);
   const [adminPhoneList, setAdminPhoneList] = useState<string[]>(parsePhones(initialSettings.adminPhones));
 
+  // Khusus test kirim — daftar nomor yang DIINPUT manual (bukan dari DB atau form utama).
+  const [testPhones, setTestPhones] = useState<string[]>([]);
+
   const updateCodSlot = (key: keyof typeof formData.cod.slots, field: "enabled" | "minutesBefore", value: boolean | number) => {
     setFormData((prev) => ({
       ...prev,
@@ -118,16 +121,21 @@ export function ReminderTab({ settings }: ReminderTabProps) {
     setLoading(true);
     setError(null);
     setSaved(false);
+    if (testPhones.length === 0) {
+      setError("Masukkan minimal satu nomor WA tujuan sebelum test kirim.");
+      setLoading(false);
+      return;
+    }
     try {
       const response = await fetch("/api/reminders/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, sendToCustomer: formData.sendToCustomer, sendToAdmin: formData.sendToAdmin, adminPhones: JSON.stringify(adminPhoneList) }),
+        body: JSON.stringify({ type, phones: testPhones }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Gagal kirim pesan test");
       const targetLines = (result.sentTo ?? [])
-        .map((s: { phone: string; label: string; ok: boolean }) => `- ${s.label} (${s.phone}): ${s.ok ? "✅ terkirim" : "❌ gagal"}`)
+        .map((s: { phone: string; ok: boolean }) => `- ${s.phone}: ${s.ok ? "✅ terkirim" : "❌ gagal"}`)
         .join("\n");
       alert(`Test kirim ${type.toUpperCase()}:\n\n${result.message}\n\nDetail target:\n${targetLines}`);
     } catch (err) {
@@ -307,22 +315,48 @@ export function ReminderTab({ settings }: ReminderTabProps) {
           <CardTitle className="flex items-center gap-2">
             <MessageCircle className="size-4" /> Test Kirim Langsung
           </CardTitle>
-          <CardDescription>Kirim pesan test ke semua nomor target yang dituju (customer sample + admin)</CardDescription>
+          <CardDescription>
+            Kirim pesan test HANYA ke nomor yang kamu ketik di bawah — tidak pernah mengambil
+            nomor customer/database secara otomatis.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="space-y-2 rounded-lg border p-4">
+            <Label className="font-medium">Nomor WA Tujuan Test</Label>
+            <p className="text-xs text-muted-foreground">Format: 08xxxxxxxxxx. Wajib diisi sebelum test — tanpa nomor, tidak ada pesan yang dikirim.</p>
+            <div className="space-y-2">
+              {testPhones.map((phone, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Input
+                    type="tel"
+                    placeholder="08xxxxxxxxxx"
+                    value={phone}
+                    onChange={(e) => setTestPhones((prev) => prev.map((p, i) => (i === idx ? e.target.value : p)))}
+                    className="flex-1"
+                  />
+                  <Button type="button" variant="outline" size="icon" onClick={() => setTestPhones((prev) => prev.filter((_, i) => i !== idx))}>
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => setTestPhones((prev) => [...prev, ""])} className="gap-1.5">
+              <Plus className="size-4" /> Tambah Nomor
+            </Button>
+          </div>
           <div className="flex flex-wrap gap-3">
-            <Button onClick={() => handleTestSend("cod")} variant="outline" disabled={loading} className="gap-2">
+            <Button onClick={() => handleTestSend("cod")} variant="outline" disabled={loading || testPhones.length === 0} className="gap-2">
               <Bell className="size-4" /> Test COD
             </Button>
-            <Button onClick={() => handleTestSend("return")} variant="outline" disabled={loading} className="gap-2">
+            <Button onClick={() => handleTestSend("return")} variant="outline" disabled={loading || testPhones.length === 0} className="gap-2">
               <CalendarClock className="size-4" /> Test Return
             </Button>
-            <Button onClick={() => handleTestSend("late")} variant="outline" disabled={loading} className="gap-2">
+            <Button onClick={() => handleTestSend("late")} variant="outline" disabled={loading || testPhones.length === 0} className="gap-2">
               <AlertTriangle className="size-4" /> Test Late
             </Button>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Pesan test dikirim langsung ke nomor WA yang dikonfigurasi di atas. Gunakan ini untuk verifikasi pengaturan sebelum production.
+          <p className="text-xs text-muted-foreground">
+            Pesan test dikirim langsung ke nomor yang kamu ketik di atas. Gunakan ini untuk verifikasi pengaturan sebelum production.
           </p>
         </CardContent>
       </Card>

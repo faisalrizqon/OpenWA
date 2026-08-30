@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
-import { getReminderSettings, parseAdminPhones } from "@/lib/reminders/config";
+import { getReminderSettings, parseAdminPhones, isValidPhone } from "@/lib/reminders/config";
 import {
   sendMessage,
   phoneToChatId,
@@ -37,11 +36,16 @@ function buildTestMessage(type: "cod" | "return" | "late", now: Date): string {
 }
 
 /**
- * POST /api/reminders/test — kirim pesan test langsung ke semua nomor target
- * yang dikonfigurasi (customer sample / nomor admin). Dipakai dari tombol
- * "Test Kirim" di tab Reminder untuk verifikasi pengaturan sebelum production.
+ * POST /api/reminders/test — kirim pesan test LANGSUNG ke nomor yang DIINPUT.
  *
- * Body: { type: "cod" | "return" | "late" }
+ * ATURAN KEAMANAN KETAT:
+ *   • TIDAK PERNAH mengambil nomor dari database / order / customer otomatis.
+ *   • Hanya mengirim ke nomor yang secara eksplisit dimasukkan di body request
+ *     (dari input "Nomor WA Admin" / "Nomor WA Customer" di tab Reminder).
+ *   • Nomor kosong/tidak valid dilewati — bila tidak ada satu pun nomor valid,
+ *     endpoint menolak mengirim apa pun.
+ *
+ * Body: { type, phones: string[] }
  */
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -52,18 +56,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json().catch(() => ({}))) as {
       type?: string;
-      /** Override dari form saat ini (belum disimpan) — agar test memakai nomor yang dituju sekarang. */
-      sendToCustomer?: boolean;
-      sendToAdmin?: boolean;
-      adminPhones?: string | null;
+      /** Daftar nomor tujuan — HANYA nomor yang diinput manual di form. */
+      phones?: string[];
     };
     const type = body.type === "return" || body.type === "late" ? body.type : "cod";
-
-    const settings = await getReminderSettings();
-    // Prefer nilai dari form (belum disimpan) bila dikirim; fallback ke DB.
-    const sendToCustomer = body.sendToCustomer ?? settings.sendToCustomer;
-    const sendToAdmin = body.sendToAdmin ?? settings.sendToAdmin;
-    const adminPhonesRaw = body.adminPhones !== undefined ? body.adminPhones : settings.adminPhones;
 
     if (!openwaConfigured()) {
       return NextResponse.json(
@@ -79,46 +75,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Kumpulkan nomor target sesuai pengaturan
-    const targets: Array<{ phone: string; label: string }> = [];
-    const adminPhones = parseAdminPhones(adminPhonesRaw);
+    // Saring hanya nomor yang benar-benar diinput & valid — jangan pernah kirim ke yang lain.
+    const validPhones = Array.isArray(body.phones)
+      ? body.phones.filter(isValidPhone)
+      : [];
 
-    if (sendToCustomer) {
-      // Pakai nomor pemesan terbaru sebagai sample (test tidak butuh order nyata)
-      const sampleOrder = await prisma.order.findFirst({
-        orderBy: { createdAt: "desc" },
-        include: { customer: { select: { phone: true } } },
-      });
-      if (sampleOrder?.customer.phone) {
-        targets.push({ phone: sampleOrder.customer.phone, label: "customer (sample)" });
-      }
-    }
-    if (sendToAdmin) {
-      for (const phone of adminPhones) {
-        targets.push({ phone, label: "admin" });
-      }
-    }
-
-    if (targets.length === 0) {
+    if (validPhones.length === 0) {
       return NextResponse.json(
         {
           ok: false,
           error:
-            "Tidak ada target penerima. Nyalakan 'Kirim ke Customer' atau 'Kirim ke Admin' dan isi nomor admin di tab Reminder.",
+            "Tidak ada nomor tujuan yang diinput. Masukkan minimal satu nomor WA yang valid sebelum test kirim.",
         },
         { status: 400 }
       );
     }
 
     const message = buildTestMessage(type, new Date());
+    const settings = await getReminderSettings();
+    void settings; // settings tidak dipakai untuk menentukan penerima (aturan keamanan)
 
-    // Kirim ke semua target
     let okCount = 0;
     let failCount = 0;
-    const sentTo: Array<{ phone: string; label: string; ok: boolean; error?: string }> = [];
+    const sentTo: Array<{ phone: string; ok: boolean; error?: string }> = [];
 
-    for (const target of targets) {
-      const chatId = phoneToChatId(target.phone);
+    for (const phone of validPhones) {
+      const chatId = phoneToChatId(phone);
       await logMessage({
         sessionId,
         chatId,
@@ -129,10 +111,10 @@ export async function POST(request: NextRequest) {
       const sendResult = await sendMessage(sessionId, { chatId, text: message });
       if (sendResult.ok) {
         okCount++;
-        sentTo.push({ phone: target.phone, label: target.label, ok: true });
+        sentTo.push({ phone, ok: true });
       } else {
         failCount++;
-        sentTo.push({ phone: target.phone, label: target.label, ok: false, error: sendResult.error });
+        sentTo.push({ phone, ok: false, error: sendResult.error });
       }
     }
 
