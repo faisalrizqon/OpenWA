@@ -18,6 +18,8 @@
  * logging otomatis no-op — tidak pernah menggagalkan alur utama.
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import { prisma } from "@/lib/db";
 
 // --- Tipe data ---
@@ -80,6 +82,60 @@ interface MessageLogDelegate {
 const OPENWA_URL = (process.env.OPENWA_URL ?? "http://localhost:2785").replace(/\/+$/, "");
 /** Dashboard UI OpenWA (Vite dev server) — port terpisah dari API gateway. */
 export const OPENWA_DASHBOARD_URL = (process.env.OPENWA_DASHBOARD_URL ?? "https://wa.dagdigdugdigicam.store").replace(/\/+$/, "");
+
+/** URL Vite dev server dashboard (hot-reload) — port terpisah dari gateway. */
+export const OPENWA_DEV_SERVER_URL = (process.env.OPENWA_DEV_SERVER_URL ?? "http://localhost:2886").replace(/\/+$/, "");
+
+/** File override mode deployment (ditulis server action `setOpenWADashboardMode`) —
+ *  memungkinkan ganti mode tanpa restart app Next.js. Tidak di-commit: preferensi mesin. */
+const DEPLOYMENT_MODE_FILE = path.join(process.cwd(), "openwa-deployment-mode.json");
+
+export type OpenWADeploymentMode = "bundled" | "split";
+
+function readModeOverride(): OpenWADeploymentMode | null {
+  try {
+    const raw = fs.readFileSync(DEPLOYMENT_MODE_FILE, "utf8");
+    const parsed = JSON.parse(raw) as { mode?: unknown };
+    return parsed.mode === "bundled" || parsed.mode === "split" ? parsed.mode : null;
+  } catch {
+    return null; // file tidak ada / korup → tidak ada override
+  }
+}
+
+/** Mode deployment OpenWA (lihat docs OpenWA — Docker/bundled vs local dev):
+ *
+ *  - `"bundled"`: SATU proses — gateway (default :2785) menyajikan API sekaligus UI
+ *    dashboard dari build `dashboard/dist` (layout Docker/production). Hemat resource.
+ *  - `"split"`: DUA proses — gateway API + Vite dev server (:2886); UI dibaca dari dev
+ *    server untuk hot-reload saat mengembangkan dashboard.
+ *
+ *  Urusan resource: menjalankan keduanya sekaligus di mode bundled membuang RAM untuk
+ *  Vite yang tidak dipakai. Urutan deteksi: (1) override file yang ditulis switcher UI,
+ *  (2) env `OPENWA_DASHBOARD_MODE`, (3) `OPENWA_DASHBOARD_URL` yang menunjuk port
+ *  localhost berbeda dari gateway → split. Default: bundled. */
+export function openwaDeploymentMode(): OpenWADeploymentMode {
+  const fileOverride = readModeOverride();
+  if (fileOverride) return fileOverride;
+  const forced = process.env.OPENWA_DASHBOARD_MODE;
+  if (forced === "bundled" || forced === "split") return forced;
+  const dashUrl = process.env.OPENWA_DASHBOARD_URL;
+  const gatewayUrl = process.env.OPENWA_URL;
+  if (dashUrl && gatewayUrl) {
+    try {
+      const dash = new URL(dashUrl);
+      const gateway = new URL(gatewayUrl);
+      if (dash.hostname === gateway.hostname && dash.port !== gateway.port && dash.port !== "") return "split";
+    } catch {
+      /* URL tidak valid — jatuh ke default bundled */
+    }
+  }
+  return "bundled";
+}
+
+/** Tulis override mode (dipakai server action switcher). Validasi input di caller. */
+export function writeDeploymentModeOverride(mode: OpenWADeploymentMode): void {
+  fs.writeFileSync(DEPLOYMENT_MODE_FILE, JSON.stringify({ mode }, null, 2), "utf8");
+}
 
 export function openwaConfigured(): boolean {
   return Boolean(process.env.OPENWA_API_KEY && process.env.OPENWA_SESSION_ID);

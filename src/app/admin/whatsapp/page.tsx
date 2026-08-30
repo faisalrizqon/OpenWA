@@ -4,14 +4,15 @@ import { auth } from "@/lib/auth";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { OpenWATabs, OPENWA_TAB_IDS } from "@/components/OpenWATabs";
-import { openwaConfigured, pingGateway, pingDashboard, listSessions, getSessionQr, resolveSessionId } from "@/lib/openwa-api-client";
+import { openwaConfigured, pingGateway, pingDashboard, listSessions, getSessionQr, resolveSessionId, openwaDeploymentMode } from "@/lib/openwa-api-client";
 import { PageNotifier, type PageNotification } from "@/components/PageNotifier";
 import { HeaderLink } from "@/components/HeaderLink";
 import { EmptyState } from "@/components/EmptyState";
 import { BackLink } from "@/components/BackLink";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { DeploymentModeForm } from "@/components/DeploymentModeForm";
 import { Badge } from "@/components/ui/badge";
-import { Phone, CheckCircle2, QrCode, ExternalLink, BookOpen } from "lucide-react";
+import { Phone, CheckCircle2, QrCode, ExternalLink, BookOpen, Settings } from "lucide-react";
 import { GatewayToggleForm } from "@/components/GatewayToggleForm";
 import { OpenWAManagement } from "@/components/OpenWAManagement";
 import { ReminderTab } from "@/components/ReminderTab";
@@ -41,6 +42,14 @@ export default async function AdminWhatsAppPage({ searchParams }: PageProps<"/ad
     notifications.push({ type: "success", message: "Gateway OpenWA berhasil dijalankan" });
   } else if (sp.success === "stop-gateway") {
     notifications.push({ type: "success", message: "Gateway OpenWA berhasil dihentikan" });
+  } else if (sp.success === "set-mode") {
+    const m = Array.isArray(sp.mode) ? sp.mode[0] : sp.mode;
+    notifications.push({
+      type: "success",
+      message: m === "split"
+        ? "Mode deployment: Local/Split (gateway + Vite dev server) — gunakan Stop lalu Start untuk menerapkan"
+        : "Mode deployment: Docker/Bundled (1 proses, hemat resource) — gunakan Stop lalu Start untuk menerapkan",
+    });
   } else if (sp.error) {
     const msg = Array.isArray(sp.error) ? sp.error[0] : sp.error;
     notifications.push({ type: "error", message: decodeURIComponent(msg) });
@@ -123,7 +132,8 @@ function DashboardTab() {
 async function SetupTab() {
   const configured = openwaConfigured();
   const gatewayRunning = await pingGateway();
-  const dashboardRunning = await pingDashboard();
+  const deploymentMode = openwaDeploymentMode();
+  const dashboardRunning = deploymentMode === "split" ? await pingDashboard() : gatewayRunning;
   const sessions = gatewayRunning ? await listSessions().catch(() => []) : [];
   const apiDocsUrl = `${process.env.OPENWA_URL ?? "http://localhost:2785"}/api/docs`;
   let gatewayPort = "2785";
@@ -148,6 +158,22 @@ async function SetupTab() {
 
   return (
     <div className="space-y-6">
+      {/* Mode Deployment — pengganti pola on/off buta: pilih SATU mode, jangan keduanya */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="size-5" aria-hidden />
+            Mode Deployment OpenWA
+          </CardTitle>
+          <CardDescription>
+            Pilih cara OpenWA dijalankan (Docker/bundled vs local/split) — jangan aktifkan keduanya, boros resource
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DeploymentModeForm mode={deploymentMode} />
+        </CardContent>
+      </Card>
+
       {/* Gateway Status */}
       <Card>
         <CardHeader>
@@ -155,7 +181,10 @@ async function SetupTab() {
             <div>
               <CardTitle>Status Gateway</CardTitle>
               <CardDescription>
-                Gateway API (backend) di port {gatewayPort} • Dashboard UI (Vite) di port {dashboardPort} — gateway dikontrol langsung dari halaman ini
+                {deploymentMode === "bundled"
+                  ? `Satu proses — API + UI dashboard di port ${gatewayPort}`
+                  : `Dua proses — API gateway di port ${gatewayPort}, Vite dev server di port ${dashboardPort}`}{" "}
+                — dikontrol langsung dari halaman ini
               </CardDescription>
             </div>
             <GatewayToggleForm running={gatewayRunning && dashboardRunning} partialRunning={gatewayRunning || dashboardRunning} />
@@ -179,9 +208,17 @@ async function SetupTab() {
                 <QrCode className="size-4.5" aria-hidden />
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-medium leading-snug text-muted-foreground">Dashboard</p>
+                <p className="text-xs font-medium leading-snug text-muted-foreground">
+                  {deploymentMode === "bundled" ? "Dashboard (bundled)" : "Dashboard (Vite dev)"}
+                </p>
                 <p className={dashboardRunning ? "font-semibold text-blue-600" : "font-semibold text-gray-600"}>
-                  {dashboardRunning ? "Ready" : "Offline"}
+                  {deploymentMode === "bundled"
+                    ? gatewayRunning
+                      ? "Disajikan gateway"
+                      : "Offline"
+                    : dashboardRunning
+                      ? "Ready"
+                      : "Offline"}
                 </p>
               </div>
             </div>
@@ -207,6 +244,12 @@ async function SetupTab() {
             <code className="rounded bg-muted px-2 py-1 text-xs">
               {process.env.OPENWA_SESSION_ID || "Not set"}
             </code>
+          </div>
+          <div className="flex justify-between items-center gap-2">
+            <span className="font-medium">API Docs:</span>
+            <a href={apiDocsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline text-sm">
+              {apiDocsUrl} <ExternalLink className="size-3.5" aria-hidden />
+            </a>
           </div>
           {!configured && (
             <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/20 dark:text-amber-400">
@@ -248,7 +291,7 @@ async function SetupTab() {
               {sessions.map((s) => {
                 const isReady = s.status === "connected" || s.status === "ready";
                 const isQr = s.status === "qr_ready";
-                
+
                 return (
                   <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-3">
                     <div>
@@ -267,7 +310,6 @@ async function SetupTab() {
           )}
         </CardContent>
       </Card>
-
     </div>
   );
 }

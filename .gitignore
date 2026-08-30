@@ -89,3 +89,8 @@ openwa-server/
 data/*.db
 data/*.db-*
 !data/.gitkeep
+
+# OpenWA deployment mode override (ditulis switcher di /admin/whatsapp — preferensi mesin)
+openwa-deployment-mode.json
+scripts/debug-*.mjs
+scripts/verify-openwa-login.mjs

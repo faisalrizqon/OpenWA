@@ -10,6 +10,8 @@ type PortStatus = {
   status: "online" | "offline";
   api: "online" | "offline";
   dashboard: "online" | "offline";
+  /** Mode deployment aktif (bundled = UI disajikan gateway; split = Vite dev server terpisah). */
+  mode?: "bundled" | "split";
 };
 
 export function OpenWADashboardFrame({

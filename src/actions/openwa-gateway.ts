@@ -1,12 +1,17 @@
 /**
  * Server action untuk mengontrol proses OpenWA (gateway API + dashboard UI).
- * Tombol Start/Stop di /admin/whatsapp?tab=setup menjalankan/menghentikan
- * KEDUA proses sekaligus:
- *  - Gateway API : node dist/main.js di openwa-server (port 2785)
- *  - Dashboard UI: Dashboard bundled di NestJS :2785, diakses via subdomain wa.dagdigdugdigicam.store
+ * Tombol Start/Stop di /admin/whatsapp?tab=setup menjalankan/menghentikan proses
+ * SESUAI MODE DEPLOYMENT (lihat openwa-api-client.ts: openwaDeploymentMode):
  *
- * State campuran (mis. gateway up tapi dashboard offline) tetap ditangani:
- * Start hanya menjalankan proses yang belum ada, Stop menghentikan keduanya.
+ *  - Bundled (Docker/production): SATU proses — gateway API menyajikan dashboard
+ *    UI sendiri dari build `dashboard/dist` (port 2785). Hemat resource.
+ *  - Split (local development): DUA proses — gateway API (port 2785) + Vite dev
+ *    server (port 2886) untuk hot-reload UI dashboard.
+ *
+ * Start hanya menjalankan proses yang BELUM ada sesuai mode; Stop membersihkan
+ * proses di KEDUA port apa pun mode aktifnya (supaya proses sisa dari mode
+ * sebelumnya tidak buang resource). Mode bisa diganti tanpa restart app Next.js
+ * lewat setOpenWADashboardMode (file override).
  *
  * Hasil diumumkan via query param (success/error) → PageNotifier.
  */
@@ -20,6 +25,7 @@ import { promisify } from "util";
 import fs from "fs";
 import path from "path";
 import { requireMitraOrAdmin } from "@/lib/permissions";
+import { openwaDeploymentMode, writeDeploymentModeOverride, type OpenWADeploymentMode } from "@/lib/openwa-api-client";
 
 const execAsync = promisify(exec);
 const PAGE = "/admin/whatsapp?tab=setup";
@@ -129,100 +135,72 @@ function spawnDetached(
 }
 
 /**
- * Jalankan proses OpenWA yang belum running (gateway API + dashboard UI).
- * Keduanya sudah running → error; state campuran → hanya menyalakan yang
- * belum ada (mis. gateway up tapi dashboard offline).
+ * Jalankan proses OpenWA sesuai mode deployment yang terdeteksi — tidak spawn otomatis kedua proses.
+ *
+ *  - Mode bundled (default Docker/production): gateway API menyajikan UI dashboard sendiri;
+ *    hanya jalankan gateway (`npm run start:prod` / `node dist/main.js`). Hemat resource.
+ *  - Mode split (local development): gateway API + Vite dev server (:2886) untuk hot-reload.
+ *
+ *  Validasi prasyarat sebelum spawn, tunggu setiap proses boot sebelum lanjut.
  */
 export async function startOpenWA(): Promise<void> {
   await requireMitraOrAdmin();
 
+  const mode = openwaDeploymentMode();
   const gatewayPid = await findPidOnPort(GATEWAY_PORT);
-  const dashboardPid = await findPidOnPort(DASHBOARD_PORT);
-  if (gatewayPid && dashboardPid) {
-    redirect(
-      `${PAGE}&error=${encodeURIComponent(
-        "Gateway & dashboard sudah running — stop dulu sebelum start ulang",
-      )}`,
-    );
+
+  // SPLIT mode berarti dua proses (gateway + Vite dev server); keduanya harus up
+  // sebelum tombol Start dianggap selesai.
+  const dashboardPid = mode === "split" ? await findPidOnPort(DASHBOARD_PORT) : null;
+  if (gatewayPid && mode === "split" && dashboardPid) {
+    redirect(`${PAGE}&error=${encodeURIComponent("Gateway & dashboard sudah running — stop dulu sebelum start ulang")}`);
+  }
+  if (gatewayPid && mode === "bundled") {
+    redirect(`${PAGE}&error=${encodeURIComponent("Gateway sudah running (mode bundled — dashboard ikut disajikan gateway) — stop dulu sebelum start ulang")}`);
   }
 
-  // Validasi prasyarat SEBELUM spawn apa pun agar kegagalan tidak meninggalkan
-  // state setengah jalan (gateway hidup tapi dashboard gagal spawn, dsb.).
+  // Validasi prasyarat SEBELUM spawn agar kegagalan tidak meninggalkan state setengah jalan.
   const gatewayEntry = path.join(OPENWA_DIR, "dist", "main.js");
   if (!gatewayPid && !fs.existsSync(gatewayEntry)) {
-    redirect(
-      `${PAGE}&error=${encodeURIComponent(
-        "Build gateway belum ada — jalankan `npm run build` di folder openwa-server dulu",
-      )}`,
-    );
+    redirect(`${PAGE}&error=${encodeURIComponent("Build gateway belum ada — jalankan `npm run build` di folder openwa-server dulu")}`);
   }
-  const viteEntry = path.join(
-    DASHBOARD_DIR,
-    "node_modules",
-    "vite",
-    "bin",
-    "vite.js",
-  );
-  if (!dashboardPid && !fs.existsSync(viteEntry)) {
-    redirect(
-      `${PAGE}&error=${encodeURIComponent(
-        "Dependensi dashboard belum terpasang — jalankan `npm install` di folder openwa-server/dashboard dulu",
-      )}`,
-    );
+  const viteEntry = path.join(DASHBOARD_DIR, "node_modules", "vite", "bin", "vite.js");
+  if (mode === "split" && !dashboardPid && !fs.existsSync(viteEntry)) {
+    redirect(`${PAGE}&error=${encodeURIComponent("Dependensi dashboard belum terpasang — jalankan `npm install` di folder openwa-server/dashboard dulu")}`);
   }
 
+  // Jalankan proses yang belum ada sesuai mode
   if (!gatewayPid) {
     try {
-      spawnDetached(gatewayEntry, OPENWA_DIR, GATEWAY_LOG_FILE, {
-        PORT: String(GATEWAY_PORT),
-      });
+      spawnDetached(gatewayEntry, OPENWA_DIR, GATEWAY_LOG_FILE, { PORT: String(GATEWAY_PORT) });
     } catch (err) {
-      redirect(
-        `${PAGE}&error=${encodeURIComponent(
-          `Gagal start gateway: ${err instanceof Error ? err.message : String(err)}`,
-        )}`,
-      );
+      redirect(`${PAGE}&error=${encodeURIComponent(`Gagal start gateway: ${err instanceof Error ? err.message : String(err)}`)}`);
     }
-
-    // Tunggu gateway benar-benar boot sebelum lanjut. Tanpa ini, halaman
-    // menampilkan "Offline" meski spawn berhasil, dan crash (EADDRINUSE dll.)
-    // tersembunyi di balik pesan sukses.
+    // Tunggu gateway boot sebelum lanjut
     if (!(await waitForBoot(`http://localhost:${GATEWAY_PORT}/api/health`))) {
-      redirect(
-        `${PAGE}&error=${encodeURIComponent(
-          "Gateway di-spawn tapi tidak merespons dalam 15 detik — cek openwa.log untuk detail (mungkin EADDRINUSE atau crash saat boot)",
-        )}`,
-      );
+      redirect(`${PAGE}&error=${encodeURIComponent("Gateway tidak merespons dalam 15 detik — cek openwa.log")}`);
     }
   }
 
-  if (!dashboardPid) {
+  if (mode === "split" && !dashboardPid) {
     try {
       spawnDetached(viteEntry, DASHBOARD_DIR, DASHBOARD_LOG_FILE);
     } catch (err) {
-      redirect(
-        `${PAGE}&error=${encodeURIComponent(
-          `Gagal start dashboard: ${err instanceof Error ? err.message : String(err)}`,
-        )}`,
-      );
+      redirect(`${PAGE}&error=${encodeURIComponent(`Gagal start dashboard Vite: ${err instanceof Error ? err.message : String(err)}`)}`);
     }
-
-    // Ping root `/` — JANGAN `/api/health`: rute itu diproksi Vite ke gateway
-    // 2785, jadi dashboard yang hidup bisa terbaca offline bila gateway mati.
+    // Ping root `/` — JANGAN /api/health karena diproksi ke gateway
     if (!(await waitForBoot(`http://localhost:${DASHBOARD_PORT}/`))) {
-      redirect(
-        `${PAGE}&error=${encodeURIComponent(
-          "Dashboard di-spawn tapi tidak merespons dalam 15 detik — cek openwa-dashboard.log untuk detail",
-        )}`,
-      );
+      redirect(`${PAGE}&error=${encodeURIComponent("Dashboard Vite tidak merespons dalam 15 detik — cek openwa-dashboard.log")}`);
     }
   }
 
   revalidatePath("/admin/whatsapp");
-  redirect(`${PAGE}&success=start-openwa`);
+  redirect(`${PAGE}&success=start-openwa&mode=${mode}`);
 }
 
-/** Hentikan semua proses OpenWA (kill process tree gateway + dashboard). */
+/** Hentikan semua proses OpenWA. Selalu periksa KEDUA port (gateway + Vite dev) apa pun
+ *  mode aktifnya: proses sisa dari mode sebelumnya (mis. Vite yang hidup dari sesi split
+ *  padahal mode kini bundled) tetap harus dibersihkan supaya tidak buang resource. */
 export async function stopOpenWA(): Promise<void> {
   await requireMitraOrAdmin();
 
@@ -262,4 +240,22 @@ export async function stopOpenWA(): Promise<void> {
 
   revalidatePath("/admin/whatsapp");
   redirect(`${PAGE}&success=stop-openwa`);
+}
+
+/**
+ * Ganti mode deployment OpenWA (switcher di halaman setup) — TIDAK butuh restart app
+ * Next.js: pilihan ditulis ke file override (`openwa-deployment-mode.json`) yang dibaca
+ * `openwaDeploymentMode()` di setiap request. Proses yang berjalan TIDAK diubah otomatis —
+ *  jika mode baru butuh proses berbeda, gunakan Stop lalu Start. Ini disengaja: mematikan
+ *  proses diam-diam bisa memutus sesi WhatsApp aktif tanpa konfirmasi.
+ */
+export async function setOpenWADashboardMode(formData: FormData): Promise<void> {
+  await requireMitraOrAdmin();
+  const raw = String(formData.get("mode") ?? "");
+  if (raw !== "bundled" && raw !== "split") {
+    redirect(`${PAGE}&error=${encodeURIComponent("Mode tidak valid — pilih 'bundled' atau 'split'")}`);
+  }
+  writeDeploymentModeOverride(raw);
+  revalidatePath("/admin/whatsapp");
+  redirect(`${PAGE}&success=set-mode&mode=${raw}`);
 }

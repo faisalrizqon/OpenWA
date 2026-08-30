@@ -90,33 +90,33 @@ export default async function ReceivablesPage() {
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Card className="rounded-xl border-amber-200 bg-amber-50/60">
-              <CardContent className="flex items-center gap-3 sm:flex-col sm:items-start">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900 sm:size-auto sm:rounded-lg">
+              <CardContent className="flex items-center gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900">
                   <Wallet className="size-5" aria-hidden />
                 </span>
-                <div className="sm:text-left">
+                <div>
                   <p className="text-xs font-medium text-amber-900">Total Piutang</p>
                   <p className="text-xl font-bold tracking-tight">Rp {summary.total.toLocaleString("id-ID")}</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="rounded-xl border-amber-200 bg-amber-50/60">
-              <CardContent className="flex items-center gap-3 sm:flex-col sm:items-start">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900 sm:size-auto sm:rounded-lg">
+              <CardContent className="flex items-center gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900">
                   <AlertTriangle className="size-5" aria-hidden />
                 </span>
-                <div className="sm:text-left">
+                <div>
                   <p className="text-xs font-medium text-amber-900">Order Tidak Lunas</p>
                   <p className="text-xl font-bold tracking-tight">{summary.count}</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="rounded-xl border-border bg-card">
-              <CardContent className="flex items-center gap-3 sm:flex-col sm:items-start">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground sm:size-auto sm:rounded-lg">
+              <CardContent className="flex items-center gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                   <ExternalLink className="size-5" aria-hidden />
                 </span>
-                <div className="sm:text-left">
+                <div>
                   <p className="text-xs font-medium text-muted-foreground">Total Order</p>
                   <p className="text-xl font-bold tracking-tight">{rows.length}</p>
                 </div>

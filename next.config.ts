@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
     // 10 foto galeri × 20MB = maks 200MB body + overhead multipart -> 240MB.
     proxyClientMaxBodySize: "240mb",
   },
+  // NFT (output file tracing) mengikuti referensi `process.cwd()` di server action
+  // openwa-gateway.ts sampai ke openwa-server/data — folder berisi file auth sesi
+  // WhatsApp yang TERKUNCI oleh proses gateway hidup (Chromium Cookies-journal),
+  // sehingga `next build` gagal dengan "file being used by another process".
+  // Exclusion ini membuat tracing tidak membaca isi folder tersebut.
+  outputFileTracingExcludes: {
+    "*": ["openwa-server/**"],
+  },
 };
-
-export default nextConfig;
