@@ -9,14 +9,7 @@ import { customerSchema } from "@/lib/validation";
 import { saveUpload, deleteStoredFile, resolveStoragePath } from "@/lib/storage";
 import { requireAdmin, requireMitraOrAdmin } from "@/lib/permissions";
 import bcrypt from "bcryptjs";
-import { compressImage } from "@/lib/image";
-
-const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
-const MIME_EXT: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
+import { processUploadFile } from "@/lib/image";
 
 export async function createCustomer(formData: FormData) {
   const _user = await requireMitraOrAdmin();
@@ -157,15 +150,11 @@ export async function uploadDocument(formData: FormData) {
     redirect(`${back}?error=file`);
   }
   const f = file as File;
-  const ext = MIME_EXT[f.type];
-  if (!ext || f.size > MAX_UPLOAD_BYTES) {
-    redirect(`${back}?error=file`);
-  }
-
-  // File > 3 MB dikompres otomatis; ≤ 3 MB disimpan apa adanya.
-  const image = await compressImage(Buffer.from(await f.arrayBuffer()), f.type);
-  const fileName = `${customerId}-${Date.now()}.${image.ext}`;
-  const stored = await saveUpload("ktp", fileName, image.buffer);
+  // Terima semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
+  const processed = await processUploadFile(f);
+  if (!processed) redirect(`${back}?error=file`);
+  const fileName = `${customerId}-${Date.now()}.${processed.ext}`;
+  const stored = await saveUpload("ktp", fileName, processed.buffer);
 
   await prisma.document.create({
     data: {

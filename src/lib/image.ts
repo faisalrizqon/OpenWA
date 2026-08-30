@@ -24,6 +24,9 @@ export interface CompressedImage {
   originalSize: number;
   finalSize: number;
 }
+/** Maksimal ukuran upload per file: 15 MB (file akan dikompres otomatis ke ≤3 MB). */
+export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024; // 15 MB
+
 
 /** Tangga kualitas encoding — dicoba berurutan sampai hasil ≤ 3 MB. */
 const QUALITY_LADDER = [82, 74, 66, 58];
@@ -212,4 +215,41 @@ export async function optimizeStoredImage(
   }
 
   return compressLossy(buffer, mime === "image/webp" ? "webp" : "jpeg", originalSize);
+}
+
+/**
+ * Proses satu file upload apa pun (bukti bayar, identitas, dll.):
+ *
+ * - Ukuran > MAX_UPLOAD_BYTES (15 MB)      -> return null (caller menolak).
+ * - Gambar jpeg/png/webp                   -> compressImage: file > 3 MB
+ *   dipadatkan ke ≤ 3 MB, file ≤ 3 MB dibiarkan apa adanya.
+ * - File lain (pdf, heic, doc, dsb.)       -> lolos apa adanya, ekstensi
+ *   asli dipertahankan (engine kompresi hanya untuk gambar).
+ *
+ * Tidak ada penolakan berdasarkan tipe file — semua jenis diterima
+ * selama ukurannya ≤ 15 MB.
+ */
+export async function processUploadFile(
+  file: File,
+  opts?: { keepPng?: boolean }
+): Promise<CompressedImage | null> {
+  if (file.size > MAX_UPLOAD_BYTES) return null;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  if (MIME_TO_EXT[file.type]) {
+    return compressImage(buffer, file.type, opts);
+  }
+
+  // Bukan gambar yang dikenali engine: simpan apa adanya dengan ekstensi asli.
+  const dot = file.name.lastIndexOf(".");
+  const rawExt = dot >= 0 ? file.name.slice(dot + 1) : "";
+  const ext = /^[a-z0-9]{1,8}$/i.test(rawExt) ? rawExt.toLowerCase() : "bin";
+  return {
+    buffer,
+    ext,
+    mime: file.type || "application/octet-stream",
+    compressed: false,
+    originalSize: buffer.length,
+    finalSize: buffer.length,
+  };
 }

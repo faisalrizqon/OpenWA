@@ -14,7 +14,7 @@ import { calcPromoDiscount, checkPromoEligibility } from "@/lib/promo";
 import { saveUpload, resolveStoragePath } from "@/lib/storage";
 import { createMidtransTransaction, midtransConfigured, type PaymentMethod } from "@/lib/payment";
 import { requireMitraOrAdmin } from "@/lib/permissions";
-import { compressImage } from "@/lib/image";
+import { processUploadFile } from "@/lib/image";
 
 interface CheckoutItemInput {
   productId: number;
@@ -322,11 +322,6 @@ export async function changePaymentMethod(formData: FormData) {
   redirect(`${back}?method=changed`);
 }
 
-const PROOF_MIME_EXT: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
 
 /** Customer upload bukti transfer/QRIS statis. */
 export async function submitPaymentProof(formData: FormData) {
@@ -340,8 +335,10 @@ export async function submitPaymentProof(formData: FormData) {
 
   const file = formData.get("proof");
   if (!(file instanceof File) || file.size === 0) redirect(`${back}?error=nofile`);
-  // Accept any file type - auto-compress by our engine
-  if (file.size > 5 * 1024 * 1024) redirect(`${back}?error=file-size-exceeded`);
+
+  // Terima semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
+  const processed = await processUploadFile(file);
+  if (!processed) redirect(`${back}?error=file-size-exceeded`);
 
   const order = await prisma.order.findUnique({
     where: { orderNumber },
@@ -353,10 +350,8 @@ export async function submitPaymentProof(formData: FormData) {
   const items = await prisma.orderItem.findMany({ where: { orderId: order.id } });
   const total = items.reduce((s, it) => s + it.subtotal, 0);
 
-  // File > 3 MB dikompresi otomatis; ≤ 3 MB disimpan apa adanya.
-  const image = await compressImage(Buffer.from(await file.arrayBuffer()), file.type);
-  const fileName = `${order.orderNumber}-${Date.now()}.${image.ext}`;
-  const stored = await saveUpload("proof", fileName, image.buffer);
+  const fileName = `${order.orderNumber}-${Date.now()}.${processed.ext}`;
+  const stored = await saveUpload("proof", fileName, processed.buffer);
 
   await prisma.$transaction([
     prisma.payment.create({
@@ -403,11 +398,6 @@ export async function confirmOnlinePayment(formData: FormData) {
   redirect(back);
 }
 
-const GUARANTEE_MIME_EXT: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
 
 /** Customer/admin upload dokumen jaminan untuk order tertentu.
  *  Form mengirim 2 file sekaligus:
@@ -440,12 +430,11 @@ export async function submitGuarantee(formData: FormData) {
   ];
 
   for (const entry of entries) {
-    const ext = GUARANTEE_MIME_EXT[entry.f.type];
-    if (!ext || entry.f.size > 5 * 1024 * 1024) redirect(`${back}?error=file`);
-    // File > 3 MB dikompres otomatis; ≤ 3 MB disimpan apa adanya.
-    const image = await compressImage(Buffer.from(await entry.f.arrayBuffer()), entry.f.type);
-    const fileName = `${order.orderNumber}-${entry.type}-${Date.now()}.${image.ext}`;
-    await writeFile(path.join(dir, fileName), image.buffer);
+    // Terima semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
+    const processed = await processUploadFile(entry.f);
+    if (!processed) redirect(`${back}?error=file-size-exceeded`);
+    const fileName = `${order.orderNumber}-${entry.type}-${Date.now()}.${processed.ext}`;
+    await writeFile(path.join(dir, fileName), processed.buffer);
     await prisma.document.create({
       data: {
         customerId: order.customerId,
@@ -598,13 +587,11 @@ export async function completeOrder(formData: FormData) {
   // Process file upload jika ada (qris/transfer)
   let paymentProofPath: string | null = null;
   if (!alreadyComplete && method !== "cash" && proofFileRaw instanceof File && proofFileRaw.size > 0) {
-    const MAX_PROOF_SIZE = 5 * 1024 * 1024;
-    if (proofFileRaw.size > MAX_PROOF_SIZE) redirect(`${back}?error=file-size-exceeded`);
-    
-    // Accept any file type - auto-compress by our engine
-    const image = await compressImage(Buffer.from(await proofFileRaw.arrayBuffer()), proofFileRaw.type);
-    const fileName = `${order.orderNumber}-${Date.now()}.${image.ext}`;
-    const stored = await saveUpload("proof", fileName, image.buffer);
+    // Terima semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
+    const processed = await processUploadFile(proofFileRaw);
+    if (!processed) redirect(`${back}?error=file-size-exceeded`);
+    const fileName = `${order.orderNumber}-${Date.now()}.${processed.ext}`;
+    const stored = await saveUpload("proof", fileName, processed.buffer);
     paymentProofPath = stored.filePath;
   }
 

@@ -13,6 +13,7 @@ import { notifyOrderIncoming } from "@/lib/notify-order-incoming";
 import { saveUpload, deleteStoredFile } from "@/lib/storage";
 import { requireAdmin, requireMitraOrAdmin } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
+import { processUploadFile } from "@/lib/image";
 interface ItemInput {
   productId: number;
   quantity: number;
@@ -424,15 +425,11 @@ export async function addPayment(formData: FormData) {
 
   let proofPath: string | null = null;
   if (proofFileRaw && proofFileRaw.size > 0) {
-    const MAX_PROOF_BYTES = 5 * 1024 * 1024; // 5MB
-    const validTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (proofFileRaw.size > MAX_PROOF_BYTES || !validTypes.includes(proofFileRaw.type)) {
-      redirect(`${back}?error=file`);
-    }
-    const ext = proofFileRaw.type === "image/jpeg" ? "jpg" : proofFileRaw.type === "image/png" ? "png" : "webp";
-    const filename = `${orderId}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-    const bytes = Buffer.from(await proofFileRaw.arrayBuffer());
-    proofPath = (await saveUpload("proof", filename, bytes)).filePath;
+    // Terima semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
+    const processed = await processUploadFile(proofFileRaw);
+    if (!processed) redirect(`${back}?error=file`);
+    const filename = `${orderId}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${processed.ext}`;
+    proofPath = (await saveUpload("proof", filename, processed.buffer)).filePath;
   }
 
   const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true } });
@@ -488,15 +485,11 @@ export async function editPayment(formData: FormData) {
   // Handle file upload for proof - delete old if replacing
   let newProofPath: string | null = existingPayment?.proofPath ?? null;
   if (proofFileRaw && proofFileRaw.size > 0) {
-    const MAX_PROOF_BYTES = 5 * 1024 * 1024;
-    const validTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (proofFileRaw.size > MAX_PROOF_BYTES || !validTypes.includes(proofFileRaw.type)) {
-      redirect(`${back}?error=file`);
-    }
-    const ext = proofFileRaw.type === "image/jpeg" ? "jpg" : proofFileRaw.type === "image/png" ? "png" : "webp";
-    const filename = `${existingPayment?.orderId ?? paymentId}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-    const bytes = Buffer.from(await proofFileRaw.arrayBuffer());
-    const result = await saveUpload("proof", filename, bytes);
+    // Terima semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
+    const processed = await processUploadFile(proofFileRaw);
+    if (!processed) redirect(`${back}?error=file`);
+    const filename = `${existingPayment?.orderId ?? paymentId}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${processed.ext}`;
+    const result = await saveUpload("proof", filename, processed.buffer);
 
     // Hapus bukti lama bila ada (idempotent — aman jika file sudah tidak ada)
     if (existingPayment?.proofPath) {
@@ -607,11 +600,10 @@ export async function submitReturn(formData: FormData) {
   for (const key of formData.getAll("photos")) {
     const f = key;
     if (!(f instanceof File) || f.size === 0) continue;
-    const ext = RETURN_MIME_EXT[f.type];
-    if (!ext || f.size > 5 * 1024 * 1024) {
-      redirect(`${back}?error=file`);
-    }
-    photos.push({ bytes: Buffer.from(await f.arrayBuffer()), ext });
+    // Terima semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
+    const processed = await processUploadFile(f);
+    if (!processed) redirect(`${back}?error=file`);
+    photos.push({ bytes: processed.buffer, ext: processed.ext });
   }
 
   const written: { filePath: string; fileSize: number; fileHash: string }[] = [];
@@ -702,13 +694,13 @@ export async function addReturnPhotos(formData: FormData) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) redirect("/admin/orders");
 
-  // Validasi foto: mime gambar & ≤ 5MB per file
+  // Validasi foto: semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
   const photos: { bytes: Buffer; ext: string }[] = [];
   for (const entry of formData.getAll("photos")) {
     if (!(entry instanceof File) || entry.size === 0) continue;
-    const ext = RETURN_MIME_EXT[entry.type];
-    if (!ext || entry.size > 5 * 1024 * 1024) redirect(`${back}?error=file`);
-    photos.push({ bytes: Buffer.from(await entry.arrayBuffer()), ext });
+    const processed = await processUploadFile(entry);
+    if (!processed) redirect(`${back}?error=file`);
+    photos.push({ bytes: processed.buffer, ext: processed.ext });
   }
   if (photos.length === 0) redirect(`${back}?error=return`);
 

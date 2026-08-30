@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin, requireMitraOrAdmin } from "@/lib/permissions";
-import { compressImage } from "@/lib/image";
+import { compressImage, processUploadFile } from "@/lib/image";
 import { logAudit } from "@/lib/audit";
 import { sendMessage, phoneToChatId, logMessage } from "@/lib/openwa-api-client";
 
@@ -140,8 +140,8 @@ export async function rejectPayment(formData: FormData) {
   redirect(`${PANEL}?rejected=1`);
 }
 
-/** Batas ukuran gambar QRIS yang diupload (5 MB). */
-const QRIS_MAX_BYTES = 5 * 1024 * 1024;
+/** Batas ukuran gambar QRIS yang diupload (15 MB). */
+const QRIS_MAX_BYTES = 15 * 1024 * 1024;
 
 /** Konfigurasi metode pembayaran: toggle metode aktif + data QRIS & rekening.
  *  Checkbox yang tidak dicentang tidak ikut FormData -> dianggap false.
@@ -172,7 +172,8 @@ export async function updatePaymentSettings(formData: FormData) {
     }
     // QRIS harus tetap PNG tajam: kompresi lossless saja; kalau masih
     // > 3 MB disimpan apa adanya (keepPng). File ≤ 3 MB tidak disentuh.
-    const image = await compressImage(Buffer.from(await file.arrayBuffer()), file.type, { keepPng: true });
+    const image = await processUploadFile(file, { keepPng: true });
+    if (!image) redirect(`${TAB_CONFIG}&error=qris-size`);
     const dir = path.join(process.cwd(), "public", "uploads", "qris");
     await mkdir(dir, { recursive: true });
     const fileName = `qris-${Date.now()}.${image.ext}`;

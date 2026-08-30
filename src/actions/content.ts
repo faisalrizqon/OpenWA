@@ -7,14 +7,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import type { PrismaPromise } from "@prisma/client";
 import { requireAdmin } from "@/lib/permissions";
-import { compressImage } from "@/lib/image";
-
-const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
-const MIME_EXT: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
+import { processUploadFile } from "@/lib/image";
 
 const CONTENT_PATH = "/admin/content";
 
@@ -62,26 +55,23 @@ export async function updateStoreSettings(formData: FormData) {
 /* ================= Gambar Hero (dengan upload) ================= */
 
 async function saveImage(file: File): Promise<string> {
-  const ext = MIME_EXT[file.type];
-  if (!ext || file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("file");
-  }
-  // File > 3 MB dikompres otomatis; ≤ 3 MB disimpan apa adanya.
-  const image = await compressImage(Buffer.from(await file.arrayBuffer()), file.type);
+  // Terima semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
+  const processed = await processUploadFile(file);
+  if (!processed) throw new Error("file");
   const dir = path.join(process.cwd(), "public", "uploads", "hero");
   await mkdir(dir, { recursive: true });
-  const fileName = `hero-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${image.ext}`;
-  await writeFile(path.join(dir, fileName), image.buffer);
+  const fileName = `hero-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${processed.ext}`;
+  await writeFile(path.join(dir, fileName), processed.buffer);
   return `/uploads/hero/${fileName}`;
 }
 async function saveLogo(file: File): Promise<string> {
-  const ext = MIME_EXT[file.type];
-  if (!ext || file.size > MAX_UPLOAD_BYTES) throw new Error("file");
-  const image = await compressImage(Buffer.from(await file.arrayBuffer()), file.type);
+  // Terima semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
+  const processed = await processUploadFile(file);
+  if (!processed) throw new Error("file");
   const dir = path.join(process.cwd(), "public", "uploads", "logo");
   await mkdir(dir, { recursive: true });
-  const fileName = `logo-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${image.ext}`;
-  await writeFile(path.join(dir, fileName), image.buffer);
+  const fileName = `logo-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${processed.ext}`;
+  await writeFile(path.join(dir, fileName), processed.buffer);
   return `/uploads/logo/${fileName}`;
 }
 
