@@ -3,7 +3,7 @@
  * Tombol Start/Stop di /admin/whatsapp?tab=setup menjalankan/menghentikan
  * KEDUA proses sekaligus:
  *  - Gateway API : node dist/main.js di openwa-server (port 2785)
- *  - Dashboard UI: Vite dev server di openwa-server/dashboard (port 2886)
+ *  - Dashboard UI: Dashboard bundled di NestJS :2785, diakses via subdomain wa.dagdigdugdigicam.store
  *
  * State campuran (mis. gateway up tapi dashboard offline) tetap ditangani:
  * Start hanya menjalankan proses yang belum ada, Stop menghentikan keduanya.
@@ -34,7 +34,8 @@ const GATEWAY_LOG_FILE = path.join(process.cwd(), "openwa.log");
 const DASHBOARD_LOG_FILE = path.join(process.cwd(), "openwa-dashboard.log");
 /** Port API gateway OpenWA. */
 const GATEWAY_PORT = 2785;
-/** Port dashboard UI OpenWA (dipatok di vite.config.ts). */
+/** Port dashboard UI OpenWA — hanya dipakai spawn dev (Vite). Di production
+ *  dashboard bundled di NestJS :2785 dan diakses via wa.dagdigdugdigicam.store. */
 const DASHBOARD_PORT = 2886;
 
 function sleep(ms: number): Promise<void> {

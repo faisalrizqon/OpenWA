@@ -8,7 +8,7 @@ import { PaymentRowActions } from "@/components/OrderAdminActions";
 import { UploadField } from "@/components/UploadField";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { PAYMENT_TYPES, METHODS, dateFmtDay } from "./constants";
-import { Eye } from "lucide-react";
+import { Eye, Wallet } from "lucide-react";
 import { LateFeeSuggestion } from "./LateFeeSuggestion";
 
 export interface PaymentSectionProps {
@@ -158,7 +158,8 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
         </div>
 
         <div className="sm:col-span-2">
-          <Button type="submit" variant="secondary">
+          <Button type="submit" className="gap-1.5">
+            <Wallet className="size-4" aria-hidden />
             Catat Pembayaran
           </Button>
         </div>

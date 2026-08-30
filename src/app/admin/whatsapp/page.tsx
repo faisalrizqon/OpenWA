@@ -60,7 +60,7 @@ export default async function AdminWhatsAppPage({ searchParams }: PageProps<"/ad
       {tab === "dashboard" && (
         <div className="flex flex-wrap gap-3 rounded-lg border bg-card p-3">
           <a
-            href={process.env.OPENWA_DASHBOARD_URL ?? "http://localhost:2886"}
+            href={process.env.OPENWA_DASHBOARD_URL ?? "http://localhost:2785/dashboard"}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
@@ -90,7 +90,7 @@ export default async function AdminWhatsAppPage({ searchParams }: PageProps<"/ad
 
 // --- Tab 1: Dashboard dengan iframe ---
 function DashboardTab() {
-  const dashboardBaseUrl = (process.env.OPENWA_DASHBOARD_URL ?? "http://localhost:2886").replace(/\/+$/, "");
+  const dashboardBaseUrl = (process.env.OPENWA_DASHBOARD_URL ?? "http://localhost:2785/dashboard").replace(/\/+$/, "");
   
   // Try different API key formats that OpenWA Dashboard might accept
   let autoLoginUrl;
@@ -106,10 +106,9 @@ function DashboardTab() {
     // Format 3: ?key= (simple query param)
     const format3 = `${dashboardBaseUrl}/login?key=${encodeURIComponent(apiKey)}`;
     
-    // Use format1 by default (change based on what works for your setup)
+    // Gunakan format #key= (fragment routing bawaan dashboard OpenWA)
     autoLoginUrl = format1;
   }
-  
   return (
     <iframe 
       src={autoLoginUrl}
@@ -135,7 +134,7 @@ async function SetupTab() {
   }
   let dashboardPort = "2886";
   try {
-    dashboardPort = new URL(process.env.OPENWA_DASHBOARD_URL ?? "http://localhost:2886").port || "2886";
+    dashboardPort = new URL(process.env.OPENWA_DASHBOARD_URL ?? "http://localhost:2785/dashboard").port || "2886";
   } catch {
     /* biarkan default */
   }

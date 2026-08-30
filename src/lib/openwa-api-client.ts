@@ -79,7 +79,7 @@ interface MessageLogDelegate {
 
 const OPENWA_URL = (process.env.OPENWA_URL ?? "http://localhost:2785").replace(/\/+$/, "");
 /** Dashboard UI OpenWA (Vite dev server) — port terpisah dari API gateway. */
-export const OPENWA_DASHBOARD_URL = (process.env.OPENWA_DASHBOARD_URL ?? "http://localhost:2886").replace(/\/+$/, "");
+export const OPENWA_DASHBOARD_URL = (process.env.OPENWA_DASHBOARD_URL ?? "https://wa.dagdigdugdigicam.store").replace(/\/+$/, "");
 
 export function openwaConfigured(): boolean {
   return Boolean(process.env.OPENWA_API_KEY && process.env.OPENWA_SESSION_ID);
@@ -148,13 +148,13 @@ export async function pingGateway(url?: string): Promise<boolean> {
   }
 }
 
-/** Cek apakah dashboard UI berjalan (port 2886 atau custom).
+/** Cek apakah dashboard UI berjalan (subdomain wa.dagdigdugdigicam.store atau custom).
  *  Ping root `/` — Vite selalu menjawab 200 dengan index.html untuk SPA.
  *  JANGAN pakai `/api/health`: rute itu diproksi Vite ke gateway 2785, jadi
  *  dashboard yang hidup tapi gateway mati akan terbaca "Offline" padahal UI-nya up. */
 export async function pingDashboard(url?: string): Promise<boolean> {
   try {
-    const baseURL = url ?? process.env.OPENWA_DASHBOARD_URL ?? "http://localhost:2886";
+    const baseURL = url ?? process.env.OPENWA_DASHBOARD_URL ?? "https://wa.dagdigdugdigicam.store";
     const res = await fetch(baseURL, { cache: "no-store", redirect: "follow" });
     return res.ok;
   } catch {

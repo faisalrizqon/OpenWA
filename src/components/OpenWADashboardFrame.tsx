@@ -13,7 +13,7 @@ type PortStatus = {
 };
 
 export function OpenWADashboardFrame({
-  dashboardBaseUrl = "http://localhost:2886",
+  dashboardBaseUrl = "http://localhost:2785/dashboard",
   autoLoginUrl,
 }: {
   dashboardBaseUrl?: string;
@@ -65,7 +65,7 @@ export function OpenWADashboardFrame({
                 <CardTitle className="text-base">OpenWA Gateway</CardTitle>
               </div>
               <PortBadge label="API :2785" online={apiOnline} loading={checking} />
-              <PortBadge label="Dashboard :2886" online={dashboardOnline} loading={checking} />
+              <PortBadge label="Dashboard (wa.dagdigdugdigicam.store)" online={dashboardOnline} loading={checking} />
             </div>
           )}
           <div className="flex items-center gap-1">
