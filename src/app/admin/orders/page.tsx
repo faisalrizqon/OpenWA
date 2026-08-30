@@ -138,7 +138,8 @@ export default async function OrdersPage({
     startDate: o.startDate.toISOString(),
     customerName: o.customer.name,
     itemSummary: o.items.map((it) => `${it.product.name} ×${it.quantity}`).join(", "),
-    total: o.items.reduce((s, it) => s + it.subtotal, 0),
+    total:
+      o.items.reduce((s, it) => s + it.subtotal, 0) + o.courierFee + o.tipAmount,
     paid: o.payments
       .filter(
         (p) => ["dp", "pelunasan", "denda"].includes(p.paymentType) && p.status !== "pending"
