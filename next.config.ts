@@ -21,3 +21,5 @@ const nextConfig: NextConfig = {
     "*": ["openwa-server/**"],
   },
 };
+
+export default nextConfig;
