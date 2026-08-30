@@ -32,11 +32,19 @@ export default async function OrderDetailPage({
   if (error === "file") notifications.push({ type: "error", message: "File tidak valid — maksimal 15MB (file di atas 3MB dikompres otomatis)." });
   if (error === "return") notifications.push({ type: "error", message: "Data return tidak valid." });
   if (error === "reschedule") notifications.push({ type: "error", message: "Gagal mengubah tanggal — pastikan tanggal valid dan stok unit tersedia di rentang baru." });
-  if (error && !["payment", "file", "return", "reschedule"].includes(error)) {
+  if (error === "fees") notifications.push({ type: "error", message: "Ongkir atau tip tidak valid." });
+  if (error === "items") notifications.push({ type: "error", message: "Harga item tidak valid — harus angka >= 0." });
+  if (error && !["payment", "file", "return", "reschedule", "fees", "items"].includes(error)) {
     notifications.push({ type: "error", message: decodeURIComponent(error) });
   }
   if (success === "rescheduled") notifications.push({ type: "success", message: "Tanggal sewa berhasil diubah." });
-
+  const edited = Array.isArray(errorParam.edited) ? errorParam.edited[0] : errorParam.edited;
+  const fees = Array.isArray(errorParam.fees) ? errorParam.fees[0] : errorParam.fees;
+  const items = Array.isArray(errorParam.items) ? errorParam.items[0] : errorParam.items;
+  if (edited === "1") notifications.push({ type: "success", message: "Data pesanan diperbarui (jaminan, pengantaran, catatan)." });
+  if (fees === "updated") notifications.push({ type: "success", message: "Ongkos antar & tip diperbarui." });
+  if (items === "updated") notifications.push({ type: "success", message: "Harga item diperbarui." });
+  else if (items === "unchanged") notifications.push({ type: "info", message: "Tidak ada perubahan pada harga item." });
   const session = await auth();
   const isAdmin = session?.user?.role === "admin";
 

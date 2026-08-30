@@ -9,6 +9,7 @@ import { waLink } from "@/lib/wa";
 import { GUARANTEE_TYPES, dateFmt } from "./constants";
 import { confirmPendingOrder } from "@/actions/orders";
 import { OrderActionsSection } from "./OrderActionsSection";
+import { CustomerDetailsForm } from "./CustomerDetailsForm";
 export interface CustomerSectionProps {
   order: {
     id: string;
@@ -196,6 +197,18 @@ export function CustomerSection({
           )}
         </dl>
       )}
+
+      {/* Edit data order: jaminan, pengantaran, catatan */}
+      <div className="mt-4">
+        <CustomerDetailsForm
+          orderId={order.id}
+          initialGuaranteeType={order.guaranteeType ?? null}
+          initialGuaranteeNumber={order.guaranteeNumber ?? null}
+          initialDeliveryMode={order.deliveryMode ?? null}
+          initialDeliveryAddress={order.deliveryAddress ?? null}
+          initialNoteOrder={order.noteOrder ?? null}
+        />
+      </div>
       <div className="mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
         <StatusChangeForm orderId={order.id} status={order.status} />
         {isAdmin && <DeleteOrderDialog orderId={order.id} orderNumber={order.orderNumber} />}
