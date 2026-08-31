@@ -44,6 +44,29 @@ const GATEWAY_PORT = 2785;
  *  dashboard bundled di NestJS :2785 dan diakses via wa.dagdigdugdigicam.store. */
 const DASHBOARD_PORT = 2886;
 
+/** Durasi maksimal tunggu boot gateway. Boot bersih ±5–15 detik; angka besar ini
+ *  menoleransi mesin lambat/disk sibuk tanpa menunggu tak hingga. (Insiden 31/8:
+ *  boot 3+ menit terjadi karena BANYAK gateway di-spawn serentak dan rebutan
+ *  port/registry/SQLite — root cause itu ditutup lock serialisasi di bawah,
+ *  bukan dengan menunggu lebih lama.) */
+const GATEWAY_BOOT_TIMEOUT_MS = 60_000;
+
+/** Durasi maksimal tunggu boot Vite dev server (dashboard mode split). Lebih singkat karena
+ *  Vite biasanya siap dalam 3–8 detik. */
+const DASHBOARD_BOOT_TIMEOUT_MS = 15_000;
+
+/** Penanda di openwa.log bahwa anak proses menyerah SEBELUM listen — dari
+ *  openwa-server/src/config/bootstrap-fatal.ts (mis. listen EADDRINUSE). */
+const GATEWAY_FATAL_MARKER = "Fatal error during bootstrap";
+
+/** Bendera serialisasi Start/Stop. Disimpan di globalThis supaya selamat dari
+ *  hot-reload dev (re-evaluasi module me-reset `let` biasa, padahal aksi dari
+ *  module lama bisa masih berjalan). Tanpa ini, dua Start serentak (double-click
+ *  / dua tab admin) men-spawn 2+ gateway sekaligus → rebutan port 2785
+ *  (EADDRINUSE), registry plugin (EPERM), dan SQLite → boot menit-an → timeout. */
+const controlState = globalThis as typeof globalThis & { __openwaControlBusy?: boolean };
+
+
 function sleep(ms: number): Promise<void> {
   const { promise, resolve } = Promise.withResolvers<void>();
   setTimeout(resolve, ms);
@@ -79,20 +102,55 @@ async function findPidOnPort(port: number): Promise<number | null> {
 /**
  * Tunggu proses benar-benar listen dan menjawab HTTP di URL target. Spawn
  * adalah fire-and-forget — NestJS/Vite butuh beberapa detik untuk boot —
- * jadi poll URL sampai merespons atau timeout. Return true bila hidup.
+ * jadi poll URL sampai merespons atau timeout. Return:
+ *  - "up"      → URL menjawab OK
+ *  - "crashed" → logFile memuat fatalMarker sejak logOffset (anak proses mati)
+ *  - "timeout" → tidak ada jawaban sampai maxWaitMs habis
+ * Setiap fetch dibatasi 2 detik agar satu koneksi nyangkut tidak memakan
+ * seluruh jendela polling.
  */
-async function waitForBoot(url: string, maxWaitMs = 15000): Promise<boolean> {
+async function waitForBoot(
+  url: string,
+  opts: { maxWaitMs?: number; logFile?: string; logOffset?: number; fatalMarker?: string } = {},
+): Promise<"up" | "crashed" | "timeout"> {
+  const { maxWaitMs = 15_000, logFile, logOffset = 0, fatalMarker } = opts;
   const deadline = Date.now() + maxWaitMs;
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(url, { cache: "no-store" });
-      if (res.ok) return true;
+      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(2_000) });
+      if (res.ok) return "up";
     } catch {
       /* belum up — coba lagi */
     }
+    // Gagal cepat bila anak proses sudah menyerah (mis. EADDRINUSE) alih-alih
+    // menunggu timeout penuh — baris fatal pasti muncul setelah logOffset.
+    if (logFile && fatalMarker && readLogSince(logFile, logOffset).includes(fatalMarker)) {
+      return "crashed";
+    }
     await sleep(500);
   }
-  return false;
+  return "timeout";
+}
+
+/** Baca isi log sejak offset byte (deteksi fatal error selama menunggu boot).
+ *  Maks 64 KB terakhir — penanda fatal selalu dekat ekor. Gagal baca (file
+ *  terputar/dihapus proses lain) → string kosong, polling lanjut. */
+function readLogSince(file: string, fromByte: number): string {
+  try {
+    const { size } = fs.statSync(file);
+    if (size <= fromByte) return "";
+    const fd = fs.openSync(file, "r");
+    try {
+      const length = Math.min(size - fromByte, 64 * 1024);
+      const buf = Buffer.alloc(length);
+      fs.readSync(fd, buf, 0, length, size - length);
+      return buf.toString("utf8");
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return "";
+  }
 }
 
 /**
@@ -146,56 +204,82 @@ function spawnDetached(
 export async function startOpenWA(): Promise<void> {
   await requireMitraOrAdmin();
 
-  const mode = openwaDeploymentMode();
-  const gatewayPid = await findPidOnPort(GATEWAY_PORT);
+  // Serialisasi kontrol — gagal cepat lebih baik daripada antre: pemanggil kedua
+  // cukup menunggu sebentar lalu mencoba lagi (state akan terbaca ulang fresh).
+  if (controlState.__openwaControlBusy) {
+    redirect(`${PAGE}&error=${encodeURIComponent("Start/Stop OpenWA lain sedang berjalan — tunggu sebentar lalu coba lagi")}`);
+  }
+  controlState.__openwaControlBusy = true;
+  try {
+    const mode = openwaDeploymentMode();
+    const gatewayPid = await findPidOnPort(GATEWAY_PORT);
 
-  // SPLIT mode berarti dua proses (gateway + Vite dev server); keduanya harus up
-  // sebelum tombol Start dianggap selesai.
-  const dashboardPid = mode === "split" ? await findPidOnPort(DASHBOARD_PORT) : null;
-  if (gatewayPid && mode === "split" && dashboardPid) {
-    redirect(`${PAGE}&error=${encodeURIComponent("Gateway & dashboard sudah running — stop dulu sebelum start ulang")}`);
-  }
-  if (gatewayPid && mode === "bundled") {
-    redirect(`${PAGE}&error=${encodeURIComponent("Gateway sudah running (mode bundled — dashboard ikut disajikan gateway) — stop dulu sebelum start ulang")}`);
-  }
-
-  // Validasi prasyarat SEBELUM spawn agar kegagalan tidak meninggalkan state setengah jalan.
-  const gatewayEntry = path.join(OPENWA_DIR, "dist", "main.js");
-  if (!gatewayPid && !fs.existsSync(gatewayEntry)) {
-    redirect(`${PAGE}&error=${encodeURIComponent("Build gateway belum ada — jalankan `npm run build` di folder openwa-server dulu")}`);
-  }
-  const viteEntry = path.join(DASHBOARD_DIR, "node_modules", "vite", "bin", "vite.js");
-  if (mode === "split" && !dashboardPid && !fs.existsSync(viteEntry)) {
-    redirect(`${PAGE}&error=${encodeURIComponent("Dependensi dashboard belum terpasang — jalankan `npm install` di folder openwa-server/dashboard dulu")}`);
-  }
-
-  // Jalankan proses yang belum ada sesuai mode
-  if (!gatewayPid) {
-    try {
-      spawnDetached(gatewayEntry, OPENWA_DIR, GATEWAY_LOG_FILE, { PORT: String(GATEWAY_PORT) });
-    } catch (err) {
-      redirect(`${PAGE}&error=${encodeURIComponent(`Gagal start gateway: ${err instanceof Error ? err.message : String(err)}`)}`);
+    // SPLIT mode berarti dua proses (gateway + Vite dev server); keduanya harus up
+    // sebelum tombol Start dianggap selesai.
+    const dashboardPid = mode === "split" ? await findPidOnPort(DASHBOARD_PORT) : null;
+    if (gatewayPid && mode === "split" && dashboardPid) {
+      redirect(`${PAGE}&error=${encodeURIComponent("Gateway & dashboard sudah running — stop dulu sebelum start ulang")}`);
     }
-    // Tunggu gateway boot sebelum lanjut
-    if (!(await waitForBoot(`http://localhost:${GATEWAY_PORT}/api/health`))) {
-      redirect(`${PAGE}&error=${encodeURIComponent("Gateway tidak merespons dalam 15 detik — cek openwa.log")}`);
+    if (gatewayPid && mode === "bundled") {
+      redirect(`${PAGE}&error=${encodeURIComponent("Gateway sudah running (mode bundled — dashboard ikut disajikan gateway) — stop dulu sebelum start ulang")}`);
     }
-  }
 
-  if (mode === "split" && !dashboardPid) {
-    try {
-      spawnDetached(viteEntry, DASHBOARD_DIR, DASHBOARD_LOG_FILE);
-    } catch (err) {
-      redirect(`${PAGE}&error=${encodeURIComponent(`Gagal start dashboard Vite: ${err instanceof Error ? err.message : String(err)}`)}`);
+    // Validasi prasyarat SEBELUM spawn agar kegagalan tidak meninggalkan state setengah jalan.
+    const gatewayEntry = path.join(OPENWA_DIR, "dist", "main.js");
+    if (!gatewayPid && !fs.existsSync(gatewayEntry)) {
+      redirect(`${PAGE}&error=${encodeURIComponent("Build gateway belum ada — jalankan `npm run build` di folder openwa-server dulu")}`);
     }
-    // Ping root `/` — JANGAN /api/health karena diproksi ke gateway
-    if (!(await waitForBoot(`http://localhost:${DASHBOARD_PORT}/`))) {
-      redirect(`${PAGE}&error=${encodeURIComponent("Dashboard Vite tidak merespons dalam 15 detik — cek openwa-dashboard.log")}`);
+    const viteEntry = path.join(DASHBOARD_DIR, "node_modules", "vite", "bin", "vite.js");
+    if (mode === "split" && !dashboardPid && !fs.existsSync(viteEntry)) {
+      redirect(`${PAGE}&error=${encodeURIComponent("Dependensi dashboard belum terpasang — jalankan `npm install` di folder openwa-server/dashboard dulu")}`);
     }
-  }
 
-  revalidatePath("/admin/whatsapp");
-  redirect(`${PAGE}&success=start-openwa&mode=${mode}`);
+    // Jalankan proses yang belum ada sesuai mode
+    if (!gatewayPid) {
+      // Offset log dicatat SEBELUM spawn — hanya baris baru (yang ditulis anak
+      // proses ini) yang diperiksa untuk deteksi fatal error selama menunggu boot.
+      const logOffset = fs.existsSync(GATEWAY_LOG_FILE) ? fs.statSync(GATEWAY_LOG_FILE).size : 0;
+      try {
+        // PORT eksplisit di extraEnv (ditaruh SETELAH ...process.env oleh
+        // spawnDetached) — Next.js mewariskan PORT=3000 dan tanpa override ini
+        // gateway mencoba listen di 3000 dan kena EADDRINUSE.
+        spawnDetached(gatewayEntry, OPENWA_DIR, GATEWAY_LOG_FILE, { PORT: String(GATEWAY_PORT) });
+      } catch (err) {
+        redirect(`${PAGE}&error=${encodeURIComponent(`Gagal start gateway: ${err instanceof Error ? err.message : String(err)}`)}`);
+      }
+      // Tunggu gateway boot: probe liveness (statis, tanpa akses DB) + deteksi
+      // cepat bila anak proses mati sendiri alih-alih menunggu timeout penuh.
+      const boot = await waitForBoot(`http://localhost:${GATEWAY_PORT}/api/health/live`, {
+        maxWaitMs: GATEWAY_BOOT_TIMEOUT_MS,
+        logFile: GATEWAY_LOG_FILE,
+        logOffset,
+        fatalMarker: GATEWAY_FATAL_MARKER,
+      });
+      if (boot === "crashed") {
+        redirect(`${PAGE}&error=${encodeURIComponent("Gateway gagal boot (kemungkinan port 2785 dipakai proses lain) — cek openwa.log")}`);
+      }
+      if (boot === "timeout") {
+        redirect(`${PAGE}&error=${encodeURIComponent(`Gateway tidak merespons dalam ${GATEWAY_BOOT_TIMEOUT_MS / 1000} detik — cek openwa.log`)}`);
+      }
+    }
+
+    if (mode === "split" && !dashboardPid) {
+      try {
+        spawnDetached(viteEntry, DASHBOARD_DIR, DASHBOARD_LOG_FILE);
+      } catch (err) {
+        redirect(`${PAGE}&error=${encodeURIComponent(`Gagal start dashboard Vite: ${err instanceof Error ? err.message : String(err)}`)}`);
+      }
+      // Ping root `/` — JANGAN /api/health karena diproksi ke gateway
+      if ((await waitForBoot(`http://localhost:${DASHBOARD_PORT}/`)) !== "up") {
+        redirect(`${PAGE}&error=${encodeURIComponent("Dashboard Vite tidak merespons dalam 15 detik — cek openwa-dashboard.log")}`);
+      }
+    }
+
+    revalidatePath("/admin/whatsapp");
+    redirect(`${PAGE}&success=start-openwa&mode=${mode}`);
+  } finally {
+    controlState.__openwaControlBusy = false;
+  }
 }
 
 /** Hentikan semua proses OpenWA. Selalu periksa KEDUA port (gateway + Vite dev) apa pun
@@ -204,42 +288,50 @@ export async function startOpenWA(): Promise<void> {
 export async function stopOpenWA(): Promise<void> {
   await requireMitraOrAdmin();
 
-  const targets = [
-    { name: "gateway", port: GATEWAY_PORT, pid: await findPidOnPort(GATEWAY_PORT) },
-    { name: "dashboard", port: DASHBOARD_PORT, pid: await findPidOnPort(DASHBOARD_PORT) },
-  ];
-  if (!targets.some((t) => t.pid)) {
-    redirect(
-      `${PAGE}&error=${encodeURIComponent(
-        "Tidak ada service OpenWA yang running (port 2785 & 2886 kosong)",
-      )}`,
-    );
+  if (controlState.__openwaControlBusy) {
+    redirect(`${PAGE}&error=${encodeURIComponent("Start/Stop OpenWA lain sedang berjalan — tunggu sebentar lalu coba lagi")}`);
   }
-
-  const failures: string[] = [];
-  for (const target of targets) {
-    if (!target.pid) continue;
-    try {
-      // /T = bunuh seluruh process tree (node + child chromium/esbuild), /F = force
-      await execAsync(`taskkill /F /T /PID ${target.pid}`);
-      await waitPortFree(target.port);
-    } catch (err) {
-      failures.push(
-        `${target.name} (PID ${target.pid}): ${err instanceof Error ? err.message : String(err)}`,
+  controlState.__openwaControlBusy = true;
+  try {
+    const targets = [
+      { name: "gateway", port: GATEWAY_PORT, pid: await findPidOnPort(GATEWAY_PORT) },
+      { name: "dashboard", port: DASHBOARD_PORT, pid: await findPidOnPort(DASHBOARD_PORT) },
+    ];
+    if (!targets.some((t) => t.pid)) {
+      redirect(
+        `${PAGE}&error=${encodeURIComponent(
+          "Tidak ada service OpenWA yang running (port 2785 & 2886 kosong)",
+        )}`,
       );
     }
-  }
 
-  if (failures.length > 0) {
-    redirect(
-      `${PAGE}&error=${encodeURIComponent(
-        `Gagal stop OpenWA — ${failures.join("; ")}`,
-      )}`,
-    );
-  }
+    const failures: string[] = [];
+    for (const target of targets) {
+      if (!target.pid) continue;
+      try {
+        // /T = bunuh seluruh process tree (node + child chromium/esbuild), /F = force
+        await execAsync(`taskkill /F /T /PID ${target.pid}`);
+        await waitPortFree(target.port);
+      } catch (err) {
+        failures.push(
+          `${target.name} (PID ${target.pid}): ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
 
-  revalidatePath("/admin/whatsapp");
-  redirect(`${PAGE}&success=stop-openwa`);
+    if (failures.length > 0) {
+      redirect(
+        `${PAGE}&error=${encodeURIComponent(
+          `Gagal stop OpenWA — ${failures.join("; ")}`,
+        )}`,
+      );
+    }
+
+    revalidatePath("/admin/whatsapp");
+    redirect(`${PAGE}&success=stop-openwa`);
+  } finally {
+    controlState.__openwaControlBusy = false;
+  }
 }
 
 /**

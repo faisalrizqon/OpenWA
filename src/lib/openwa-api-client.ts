@@ -6,13 +6,12 @@
  * proses Next.js — gateway adalah proses terpisah (Docker/Node).
  *
  * Endpoint yang dipakai (lihat README OpenWA):
- *   GET  /api/sessions                                  daftar session
- *   GET  /api/health                                    health check gateway
- *   POST /api/sessions/{id}/start                       jalankan session (QR)
- *   POST /api/sessions/{id}/stop                        hentikan session
- *   GET  /api/sessions/{id}/qr                          ambil QR code
- *   POST /api/sessions/{id}/messages/send-text          kirim pesan teks
- *
+ *   GET  /api/sessions                           daftar session
+ *   GET  /api/health/live                        liveness probe — statis, tanpa akses DB/key
+ *   POST /api/sessions/{id}/start                jalankan session (QR)
+ *   POST /api/sessions/{id}/stop                 hentikan session
+ *   GET  /api/sessions/{id}/qr                   ambil QR code
+ *   POST /api/sessions/{id}/messages/send-text   kirim pesan teks
  * Setiap pesan keluar dicatat ke tabel MessageLog (Prisma) sebagai audit
  * trail. Bila Prisma client belum di-regenerate (model MessageLog baru),
  * logging otomatis no-op — tidak pernah menggagalkan alur utama.
@@ -213,11 +212,12 @@ export async function listSessions(): Promise<OpenWASession[]> {
   return [];
 }
 
-/** Cek apakah gateway OpenWA hidup (GET /api/health). */
+/** Cek apakah gateway OpenWA hidup (GET /api/health/live — probe liveness statis
+ *  tanpa akses DB/key validation; lihat health.controller.ts openwa-server). */
 export async function pingGateway(url?: string): Promise<boolean> {
   try {
     const baseURL = url ?? process.env.OPENWA_URL ?? "http://localhost:2785";
-    const res = await fetch(`${baseURL}/api/health`, { cache: "no-store" });
+    const res = await fetch(`${baseURL}/api/health/live`, { cache: "no-store" });
     return res.ok;
   } catch {
     return false;
