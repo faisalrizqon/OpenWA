@@ -22,8 +22,7 @@ export interface ReturnSectionProps {
  * Return & Penyelesaian di halaman detail order admin:
  * - Order aktif/terlambat: form lengkap (kondisi unit + foto + selesaikan).
  * - Order selesai: tambah/revisi foto kondisi (tanpa ubah status).
- * Foto tampil dengan zoom TANPA tombol hapus per-foto — semua penghapusan
- * data order disatukan di dialog "Hapus Data Order" pada bar bawah halaman.
+ * Foto tampil dengan zoom + tombol ✕ per foto untuk revisi bila salah upload.
  */
 export function ReturnSection({ order, active, assignedUnits }: ReturnSectionProps) {
   const completed = order.status === "completed";
@@ -37,13 +36,12 @@ export function ReturnSection({ order, active, assignedUnits }: ReturnSectionPro
             ? "Foto kondisi barang + set kondisi unit, lalu selesaikan."
             : completed
               ? "Order selesai — tambah/revisi foto kondisi barang tanpa mengubah status order."
-              : "Tersedia saat order aktif / terlambat"}{" "}
-          Penghapusan data lewat tombol &ldquo;Hapus Data Order&rdquo; di bawah halaman.
+              : "Tersedia saat order aktif / terlambat"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 overflow-x-auto px-3 py-3 sm:px-6 sm:py-4">
         {active && <ReturnForm orderId={order.id} units={assignedUnits} />}
-        <ReturnPhotoGrid photos={order.returnPhotos} />
+        <ReturnPhotoGrid orderId={order.id} photos={order.returnPhotos} />
         {completed && (
           <div className="rounded-xl border bg-muted/30 p-4">
             <ReturnPhotoAddForm orderId={order.id} />

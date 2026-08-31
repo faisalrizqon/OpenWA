@@ -35,9 +35,8 @@ export interface GuaranteeDoc {
 }
 
 /**
- * Daftar dokumen jaminan terupload (klik untuk zoom). Penghapusan data TIDAK
- * lagi per-foto di sini — semua hapusan order disatukan lewat dialog
- * "Hapus Data Order" di bagian bawah halaman detail order.
+ * Daftar dokumen jaminan terupload (klik untuk zoom) + tombol ✕ per dokumen
+ * untuk revisi bila salah upload — jaminan bersifat opsional (pelengkap data).
  */
 export function GuaranteeDocs({
   orderId,
@@ -51,8 +50,7 @@ export function GuaranteeDocs({
   /** Halaman kembali setelah hapus (mis. /admin/orders/<id>). */
   back?: string;
   columns?: string;
-  /** Di halaman customer: hapus per-foto tetap ada. Di detail order admin,
-   *  semua hapusan disatukan lewat dialog "Hapus Data Order" di bawah halaman. */
+  /** Set false untuk menyembunyikan tombol hapus per-foto. */
   allowDelete?: boolean;
 }) {
   if (documents.length === 0) {

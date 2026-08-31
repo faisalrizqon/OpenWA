@@ -17,8 +17,7 @@ import { PaymentSection } from "./sections/PaymentSection";
 import { ReturnSection } from "./sections/ReturnSection";
 import { dateFmt } from "./sections/constants";
 import { orderDetailInclude } from "./sections/types";
-import { OrderActionsBar } from "./sections/OrderActionsBar";
-import { DeleteOrderDialog } from "@/components/OrderAdminActions";
+import { StatusChangeForm, DeleteOrderDialog } from "@/components/OrderAdminActions";
 
 export default async function OrderDetailPage({
   params,
@@ -148,8 +147,9 @@ export default async function OrderDetailPage({
             {dateFmt(order.startDate)} → {dateFmt(order.endDate)}
           </span>
         </div>
-        {/* Tombol aksi utama di pojok kanan atas */}
+        {/* Semua aksi order di pojok kanan atas: simpan status, cetak, hapus */}
         <div className="flex flex-wrap items-center gap-2">
+          <StatusChangeForm orderId={order.id} status={order.status} />
           <Link
             href={`/invoice/${order.id}`}
             target="_blank"
@@ -194,8 +194,6 @@ export default async function OrderDetailPage({
         <ReturnSection order={order} active={active} assignedUnits={assignedUnits} />
       </div>
 
-      {/* Aksi order terpadu: satu Simpan (ubah status) + hapus data — paling bawah */}
-      <OrderActionsBar orderId={order.id} status={order.status} isAdmin={isAdmin} />
     </div>
   );
 }

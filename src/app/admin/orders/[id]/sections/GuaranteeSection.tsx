@@ -15,9 +15,8 @@ export interface GuaranteeSectionProps {
   };
 }
 
-/** Card Jaminan di halaman detail order admin — dokumen tampil dengan zoom,
- *  TANPA tombol hapus per-foto: semua penghapusan data order disatukan di
- *  dialog "Hapus Data Order" pada bar paling bawah halaman. */
+/** Card Jaminan di halaman detail order admin — dokumen tampil dengan zoom
+ *  dan tombol ✕ per dokumen untuk revisi bila salah upload. */
 export function GuaranteeSection({ order }: GuaranteeSectionProps) {
   return (
     <Card className="min-w-0">
@@ -25,7 +24,7 @@ export function GuaranteeSection({ order }: GuaranteeSectionProps) {
         <CardTitle>Jaminan</CardTitle>
         <CardDescription>
           KTP / selfie identitas / kartu pelajar sebagai pelengkap data order ini.
-          Penghapusan data lewat tombol &ldquo;Hapus Data Order&rdquo; di bawah halaman.
+          Klik ✕ untuk menghapus bila salah upload.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 px-3 py-3 sm:px-6 sm:py-4 overflow-x-auto">
@@ -33,7 +32,7 @@ export function GuaranteeSection({ order }: GuaranteeSectionProps) {
           orderId={order.id}
           documents={order.documents}
           back={`/admin/orders/${order.id}`}
-          allowDelete={false}
+          allowDelete
         />
         <div className="rounded-xl border bg-muted/30 p-4">
           <p className="mb-3 text-sm font-semibold">Upload jaminan</p>
