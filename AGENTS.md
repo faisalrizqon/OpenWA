@@ -46,8 +46,7 @@ Rules:
 7. **Responsive pattern**: `w-full min-w-[180px] sm:w-auto` agar full-width di mobile, tapi
    shrink-to-content di desktop toolbar agar compact dan rapi.
 
-Referensi implementasi: `src/components/CalendarProductFilter.tsx`,
-`src/components/OrderAdminActions.tsx` (picker status order).
+Referensi implementasi: `src/components/CalendarProductFilter.tsx`.
 
 <!-- END:mudahsewa-ui-conventions -->
 

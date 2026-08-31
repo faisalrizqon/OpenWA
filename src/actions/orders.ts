@@ -284,29 +284,6 @@ async function applyStatusChange(tx: Tx, orderId: string, newStatus: string, use
   });
 }
 
-export async function updateOrderStatus(formData: FormData) {
-  const user = await requireMitraOrAdmin();
-  const orderId = String(formData.get("orderId") ?? "");
-  const newStatus = String(formData.get("newStatus") ?? "");
-  const back = `/admin/orders/${orderId}`;
-
-  if (!orderId) redirect("/admin/orders");
-  if (!VALID_STATUSES.includes(newStatus)) redirect(`${back}?error=status`);
-
-  try {
-    await prisma.$transaction(async (tx) => {
-      await applyStatusChange(tx, orderId, newStatus, user.id);
-    });
-  } catch (e) {
-    if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
-    const msg = e instanceof Error ? e.message : "Gagal update status";
-    redirect(`${back}?error=${encodeURIComponent(msg)}`);
-  }
-
-  revalidateOrderPaths(orderId);
-  redirect(back);
-}
-
 /** Ubah status massal (bulk action dari daftar orders). Efek samping sama per order. */
 export async function bulkUpdateOrderStatus(formData: FormData) {
   const user = await requireMitraOrAdmin();

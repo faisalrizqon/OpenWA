@@ -8,7 +8,6 @@ import { computeLateInfo } from "@/lib/late";
 import { StatusBadge } from "@/components/StatusBadge";
 import { BackLink } from "@/components/BackLink";
 import { PageNotifier, type PageNotification } from "@/components/PageNotifier";
-import { FlowInstructions } from "./sections/FlowInstructions";
 import { CustomerSection } from "./sections/CustomerSection";
 import { FinancialSummary } from "./sections/FinancialSummary";
 import { GuaranteeSection } from "./sections/GuaranteeSection";
@@ -17,7 +16,7 @@ import { PaymentSection } from "./sections/PaymentSection";
 import { ReturnSection } from "./sections/ReturnSection";
 import { dateFmt } from "./sections/constants";
 import { orderDetailInclude } from "./sections/types";
-import { StatusChangeForm, DeleteOrderDialog } from "@/components/OrderAdminActions";
+import { DeleteOrderDialog } from "@/components/OrderAdminActions";
 
 export default async function OrderDetailPage({
   params,
@@ -147,9 +146,8 @@ export default async function OrderDetailPage({
             {dateFmt(order.startDate)} → {dateFmt(order.endDate)}
           </span>
         </div>
-        {/* Semua aksi order di pojok kanan atas: simpan status, cetak, hapus */}
+        {/* Aksi order di pojok kanan atas: cetak & hapus */}
         <div className="flex flex-wrap items-center gap-2">
-          <StatusChangeForm orderId={order.id} status={order.status} />
           <Link
             href={`/invoice/${order.id}`}
             target="_blank"
@@ -170,6 +168,8 @@ export default async function OrderDetailPage({
           Melewati tanggal kembali ({dateFmt(order.endDate)}) — pertimbangkan tandai terlambat
         </p>
       )}
+      {/* Prioritas info: Pelanggan & Ringkasan bersebelahan, Item full-width,
+          lalu Catat Pembayaran — Jaminan & Return tetap paling bawah */}
       <div className="grid gap-4 lg:grid-cols-2">
         <CustomerSection
           order={order}
@@ -183,11 +183,9 @@ export default async function OrderDetailPage({
         <FinancialSummary order={order} itemsSubtotal={itemsSubtotal} paid={paid} sisa={sisa} />
       </div>
 
-      {/* Pembayaran dinaikkan di bawah ringkasan, jaminan turun ke bawah */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <PaymentSection order={order} isAdmin={isAdmin} lateFee={lateFee} />
-        <ItemsSection orderId={order.id} items={order.items} />
-      </div>
+      <ItemsSection orderId={order.id} items={order.items} />
+
+      <PaymentSection order={order} isAdmin={isAdmin} lateFee={lateFee} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <GuaranteeSection order={order} />

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Pencil, Trash2, CalendarClock, PlayCircle, AlertTriangle, CheckCircle2, Ban, Save } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogClose,
@@ -13,29 +12,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
 import { SelectField } from "@/components/SelectField";
 import {
-  updateOrderStatus,
   deleteOrder,
   editPayment,
   deletePayment,
 } from "@/actions/orders";
-
-/** Meta status order: label, icon, dan warna — dipakai picker status. */
-export const STATUS_META = [
-  { value: "pending", label: "Perlu Konfirmasi", icon: AlertTriangle, chip: "bg-amber-100 text-amber-700", text: "text-amber-700" },
-  { value: "booking", label: "Booking", icon: CalendarClock, chip: "bg-yellow-100 text-yellow-700", text: "text-yellow-700" },
-  { value: "active", label: "Aktif", icon: PlayCircle, chip: "bg-blue-100 text-blue-700", text: "text-blue-700" },
-  { value: "late", label: "Terlambat", icon: AlertTriangle, chip: "bg-red-100 text-red-700", text: "text-red-700" },
-  { value: "completed", label: "Selesai", icon: CheckCircle2, chip: "bg-green-100 text-green-700", text: "text-green-700" },
-  { value: "cancelled", label: "Dibatalkan", icon: Ban, chip: "bg-gray-200 text-gray-700", text: "text-gray-700" },
-];
 
 export const METHOD_OPTIONS = [
   { label: "—", value: "" },
@@ -43,44 +25,6 @@ export const METHOD_OPTIONS = [
   { label: "QRIS", value: "qris" },
   { label: "Transfer Bank", value: "transfer" },
 ];
-
-export function StatusChangeForm({ orderId, status }: { orderId: string; status: string }) {
-  const [value, setValue] = useState(status);
-  const meta = STATUS_META.find((m) => m.value === value) ?? STATUS_META[0];
-  return (
-    <form action={updateOrderStatus} className="flex flex-wrap items-center gap-2">
-      <input type="hidden" name="orderId" value={orderId} />
-      <input type="hidden" name="newStatus" value={value} />
-      <Select value={value} onValueChange={(v) => setValue(v as string)}>
-        <SelectTrigger className="h-8 w-full min-w-40 sm:w-auto">
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`flex size-5 shrink-0 items-center justify-center rounded-full ${meta.chip}`}
-              aria-hidden
-            >
-              <meta.icon className="size-3" />
-            </span>
-            <span className={`text-sm font-medium ${meta.text}`}>{meta.label}</span>
-          </div>
-        </SelectTrigger>
-        <SelectContent className="min-w-44 rounded-xl p-1" align="start">
-          {STATUS_META.map((m) => (
-            <SelectItem key={m.value} value={m.value}>
-              <span className={`flex size-5 items-center justify-center rounded-full ${m.chip}`}>
-                <m.icon className="size-3.5" aria-hidden />
-              </span>
-              <span className={`font-medium ${m.text}`}>{m.label}</span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button type="submit" size="sm" className="gap-1.5">
-        <Save className="size-3.5" aria-hidden />
-        Simpan
-      </Button>
-    </form>
-  );
-}
 
 /** Tombol hapus order dengan dialog konfirmasi. */
 export function DeleteOrderDialog({
