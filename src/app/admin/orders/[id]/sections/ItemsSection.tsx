@@ -36,6 +36,7 @@ export function ItemsSection({ orderId, items }: ItemsSectionProps) {
             orderId={orderId}
             items={items.map((it) => ({
               id: it.id,
+              productName: it.product.name,
               quantity: it.quantity,
               unitPrice: it.unitPrice,
               discountType: it.discountType,
