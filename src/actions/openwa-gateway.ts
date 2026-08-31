@@ -157,11 +157,11 @@ function readLogSince(file: string, fromByte: number): string {
  * Tunggu port benar-benar bebas setelah taskkill. Tanpa ini, Start cepat
  * setelah Stop bisa kena EADDRINUSE karena OS belum melepas socket.
  */
-async function waitPortFree(port: number, maxWaitMs = 5000): Promise<void> {
+async function waitPortFree(port: number, maxWaitMs = 10_000): Promise<void> {
   const deadline = Date.now() + maxWaitMs;
   while (Date.now() < deadline) {
     if (!(await findPidOnPort(port))) return;
-    await sleep(300);
+    await sleep(500);
   }
 }
 
@@ -204,18 +204,25 @@ function spawnDetached(
 export async function startOpenWA(): Promise<void> {
   await requireMitraOrAdmin();
 
-  // Serialisasi kontrol — gagal cepat lebih baik daripada antre: pemanggil kedua
-  // cukup menunggu sebentar lalu mencoba lagi (state akan terbaca ulang fresh).
   if (controlState.__openwaControlBusy) {
     redirect(`${PAGE}&error=${encodeURIComponent("Start/Stop OpenWA lain sedang berjalan. Tunggu sebentar lalu coba lagi.")}`);
   }
   controlState.__openwaControlBusy = true;
   try {
     const mode = openwaDeploymentMode();
-    const gatewayPid = await findPidOnPort(GATEWAY_PORT);
+    let gatewayPid = await findPidOnPort(GATEWAY_PORT);
 
-    // SPLIT mode berarti dua proses (gateway + Vite dev server); keduanya harus up
-    // sebelum tombol Start dianggap selesai.
+    // Bersihkan zombie/proses tersisa sebelum start — bisa muncul setelah Stop gagal membunuh tree sepenuhnya
+    if (gatewayPid) {
+      try {
+        await execAsync(`taskkill /F /T /PID ${gatewayPid}`, { timeout: 10_000 });
+        await waitPortFree(GATEWAY_PORT, 8_000);
+        gatewayPid = null; // port sudah bersih
+      } catch {
+        /* abaikan — lanjut health check yang menentukan */
+      }
+    }
+
     const dashboardPid = mode === "split" ? await findPidOnPort(DASHBOARD_PORT) : null;
     if (gatewayPid && mode === "split" && dashboardPid) {
       redirect(`${PAGE}&error=${encodeURIComponent("Gateway & dashboard sudah running. Stop dulu sebelum start ulang.")}`);
@@ -224,7 +231,6 @@ export async function startOpenWA(): Promise<void> {
       redirect(`${PAGE}&error=${encodeURIComponent("Gateway sudah running (mode bundled, dashboard ikut disajikan gateway). Stop dulu sebelum start ulang.")}`);
     }
 
-    // Validasi prasyarat SEBELUM spawn agar kegagalan tidak meninggalkan state setengah jalan.
     const gatewayEntry = path.join(OPENWA_DIR, "dist", "main.js");
     if (!gatewayPid && !fs.existsSync(gatewayEntry)) {
       redirect(`${PAGE}&error=${encodeURIComponent("Build gateway belum ada. Jalankan `npm run build` di folder openwa-server dulu.")}`);
@@ -234,21 +240,13 @@ export async function startOpenWA(): Promise<void> {
       redirect(`${PAGE}&error=${encodeURIComponent("Dependensi dashboard belum terpasang. Jalankan `npm install` di folder openwa-server/dashboard dulu.")}`);
     }
 
-    // Jalankan proses yang belum ada sesuai mode
     if (!gatewayPid) {
-      // Offset log dicatat SEBELUM spawn — hanya baris baru (yang ditulis anak
-      // proses ini) yang diperiksa untuk deteksi fatal error selama menunggu boot.
       const logOffset = fs.existsSync(GATEWAY_LOG_FILE) ? fs.statSync(GATEWAY_LOG_FILE).size : 0;
       try {
-        // PORT eksplisit di extraEnv (ditaruh SETELAH ...process.env oleh
-        // spawnDetached) — Next.js mewariskan PORT=3000 dan tanpa override ini
-        // gateway mencoba listen di 3000 dan kena EADDRINUSE.
         spawnDetached(gatewayEntry, OPENWA_DIR, GATEWAY_LOG_FILE, { PORT: String(GATEWAY_PORT) });
       } catch (err) {
         redirect(`${PAGE}&error=${encodeURIComponent(`Gagal start gateway: ${err instanceof Error ? err.message : String(err)}`)}`);
       }
-      // Tunggu gateway boot: probe liveness (statis, tanpa akses DB) + deteksi
-      // cepat bila anak proses mati sendiri alih-alih menunggu timeout penuh.
       const boot = await waitForBoot(`http://localhost:${GATEWAY_PORT}/api/health/live`, {
         maxWaitMs: GATEWAY_BOOT_TIMEOUT_MS,
         logFile: GATEWAY_LOG_FILE,
