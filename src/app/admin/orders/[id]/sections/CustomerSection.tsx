@@ -3,11 +3,10 @@ import { Wallet, CalendarClock, AlertTriangle, CheckCircle2, Ban } from "lucide-
 import { formatRupiah } from "@/lib/pricing";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "@/components/LinkButton";
-import { StatusChangeForm, DeleteOrderDialog } from "@/components/OrderAdminActions";
+import { confirmPendingOrder } from "@/actions/orders";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { waLink } from "@/lib/wa";
 import { GUARANTEE_TYPES, dateFmt } from "./constants";
-import { confirmPendingOrder } from "@/actions/orders";
 import { OrderActionsSection } from "./OrderActionsSection";
 import { CustomerDetailsForm } from "./CustomerDetailsForm";
 export interface CustomerSectionProps {
@@ -208,10 +207,6 @@ export function CustomerSection({
         </dl>
       )}
 
-      <div className="mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
-        <StatusChangeForm orderId={order.id} status={order.status} />
-        {isAdmin && <DeleteOrderDialog orderId={order.id} orderNumber={order.orderNumber} />}
-      </div>
     </div>
   );
 }
