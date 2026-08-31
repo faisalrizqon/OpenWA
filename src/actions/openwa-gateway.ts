@@ -212,14 +212,28 @@ export async function startOpenWA(): Promise<void> {
     const mode = openwaDeploymentMode();
     let gatewayPid = await findPidOnPort(GATEWAY_PORT);
 
-    // Bersihkan zombie/proses tersisa sebelum start — bisa muncul setelah Stop gagal membunuh tree sepenuhnya
+    // Bersihkan zombie/proses tersisa sebelum start — hanya jika proses sudah mati (tidak merespons health)
     if (gatewayPid) {
       try {
-        await execAsync(`taskkill /F /T /PID ${gatewayPid}`, { timeout: 10_000 });
-        await waitPortFree(GATEWAY_PORT, 8_000);
-        gatewayPid = null; // port sudah bersih
+        // Cek apakah masih alive via health endpoint — jika tidak, berarti zombie
+        const res = await fetch(`http://localhost:${GATEWAY_PORT}/api/health/live`, { cache: "no-store", signal: AbortSignal.timeout(3_000) });
+        if (!res.ok) {
+          // Proses zombie — kill dan tunggu port bersih
+          await execAsync(`taskkill /F /T /PID ${gatewayPid}`, { timeout: 10_000 });
+          await waitPortFree(GATEWAY_PORT, 8_000);
+          gatewayPid = null;
+        } else {
+          /* masih alive — jangan kill */
+        }
       } catch {
-        /* abaikan — lanjut health check yang menentukan */
+        /* health check failed — kemungkinan zombie, lanjut kill */
+        try {
+          await execAsync(`taskkill /F /T /PID ${gatewayPid}`, { timeout: 10_000 });
+          await waitPortFree(GATEWAY_PORT, 8_000);
+          gatewayPid = null;
+        } catch {
+          /* abaikan — nanti di-handle oleh health check setelah spawn */
+        }
       }
     }
 
