@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowRight, Printer } from "lucide-react";
+import { AlertTriangle, Printer } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { formatBookingWA, formatReturnReminderWA, formatLateWarningWA } from "@/lib/wa";
@@ -135,14 +135,16 @@ export default async function OrderDetailPage({
             className="group inline-flex h-9 w-fit items-center gap-1.5 rounded-full border border-border/70 bg-card/80 px-3.5 text-sm font-medium text-muted-foreground shadow-sm backdrop-blur-md transition-all hover:-translate-x-0.5 hover:bg-card hover:text-foreground hover:shadow-md"
           >
             Lihat Kalender
-            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
+            <span aria-hidden className="text-sm">→</span>
           </Link>
-          <div className="ml-auto flex min-w-0 flex-wrap items-center gap-3">
-            <h1 className="text-xl font-bold tracking-tight md:text-2xl">{order.orderNumber}</h1>
-            <StatusBadge status={order.status} />
+          <div className="ml-auto flex min-w-0 flex-col items-end gap-1">
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
+              <h1 className="text-xl font-bold tracking-tight md:text-2xl">{order.orderNumber}</h1>
+              <StatusBadge status={order.status} />
+            </div>
             <span className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex">
               <span>{dateFmt(order.startDate)}</span>
-              <span aria-hidden>→</span>
+              <span aria-hidden className="shrink-0">→</span>
               <span>{dateFmt(order.endDate)}</span>
             </span>
           </div>
