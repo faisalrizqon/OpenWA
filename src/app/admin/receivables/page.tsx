@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { waLink } from "@/lib/wa";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { PageHeader } from "@/components/PageHeader";
+import { HeaderLink } from "@/components/HeaderLink";
 import { EmptyState } from "@/components/EmptyState";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatRupiah } from "@/lib/pricing";
@@ -59,33 +60,15 @@ export default async function ReceivablesPage() {
     { total: 0, count: 0 }
   );
 
-  if (rows.length === 0) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Piutang / Belum Lunas"
-          description="Daftar order yang masih aktif tetapi belum lunas pembayaran."
-          action={<Link href="/admin/orders/new" className={cn("h-8 inline-flex items-center rounded-lg bg-emerald-600 px-3 text-sm font-medium text-white shadow transition-colors hover:bg-emerald-700")}>
-            <ClipboardList className="mr-2 size-4" aria-hidden />
-            Buat Order
-          </Link>}
-        />
-        <EmptyState
-          icon={<Wallet className="size-5" aria-hidden />}
-          title="Tidak ada piutang"
-          description="Semua order sudah lunas atau belum ada order aktif."
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Piutang / Belum Lunas"
         description="Pantau tagihan yang belum dibayar pelanggan."
+        action={<HeaderLink href="/admin/orders/new" label="Buat Order" />}
       />
 
+      {/* Ringkasan — selalu tampil meskipun tidak ada piutang */}
       <Card>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -132,75 +115,83 @@ export default async function ReceivablesPage() {
           <CardDescription>Urut dari order pertama hingga terbaru</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-24">No. Order</TableHead>
-                <TableHead className="min-w-[140px]">Pelanggan</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead>Jatuh Tempo</TableHead>
-                <TableHead className="text-right w-24">Total</TableHead>
-                <TableHead className="text-right w-24">Sudah Bayar</TableHead>
-                <TableHead className="text-right w-24 font-semibold">Sisa</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((r) => (
-                <TableRow key={r.order.id}>
-                  <TableCell className="font-semibold">
-                    <Link
-                      href={`/admin/orders/${r.order.id}`}
-                      className="text-blue-600 underline-offset-2 hover:underline"
-                      title={`Buka detail order ${r.order.orderNumber}`}
-                    >
-                      {r.order.orderNumber}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{r.order.customer.name}</TableCell>
-                  <TableCell>
-                    <div className="space-y-0.5">
-                      {r.order.items.map((it) => (
-                        <p key={it.id} className="text-xs leading-4">
-                          <span className="font-medium">{it.product.name}</span>
-                          {it.unit && (
-                            <span className="text-muted-foreground">
-                              {" "}· Unit #{it.unit.serialNumber ?? it.unit.id}
-                            </span>
-                          )}
-                        </p>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap tabular-nums">
-                    {format(r.order.endDate, "dd MMMM yyyy HH.mm", { locale: localeId })}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{formatRupiah(r.total)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatRupiah(r.paid)}</TableCell>
-                  <TableCell className={cn("text-right font-semibold tabular-nums", r.sisa > 0 ? "text-red-600" : "text-emerald-600")}>
-                    {formatRupiah(r.sisa)}
-                  </TableCell>
-                  <TableCell>
-                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ${r.statusInfo.className}`}>
-                      {r.statusInfo.label}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href={waLink(r.phone, `Halo ${r.order.customer.name}, mohon selesaikan pelunasan order *${r.order.orderNumber}* sebesar ${formatRupiah(r.sisa)}. Terima kasih! 🙏`)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex h-7 items-center gap-1.5 rounded-md bg-emerald-600 px-2 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
-                    >
-                      <WhatsAppIcon className="size-3" />
-                      WA
-                    </Link>
-                  </TableCell>
+          {rows.length === 0 ? (
+            <EmptyState
+              icon={<ClipboardList className="size-5" aria-hidden />}
+              title="Tidak ada piutang"
+              description="Semua order sudah lunas atau belum ada order aktif."
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-24">No. Order</TableHead>
+                  <TableHead className="min-w-[140px]">Pelanggan</TableHead>
+                  <TableHead>Unit</TableHead>
+                  <TableHead>Jatuh Tempo</TableHead>
+                  <TableHead className="text-right w-24">Total</TableHead>
+                  <TableHead className="text-right w-24">Sudah Bayar</TableHead>
+                  <TableHead className="text-right w-24 font-semibold">Sisa</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Aksi</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.order.id}>
+                    <TableCell className="font-semibold">
+                      <Link
+                        href={`/admin/orders/${r.order.id}`}
+                        className="text-blue-600 underline-offset-2 hover:underline"
+                        title={`Buka detail order ${r.order.orderNumber}`}
+                      >
+                        {r.order.orderNumber}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{r.order.customer.name}</TableCell>
+                    <TableCell>
+                      <div className="space-y-0.5">
+                        {r.order.items.map((it) => (
+                          <p key={it.id} className="text-xs leading-4">
+                            <span className="font-medium">{it.product.name}</span>
+                            {it.unit && (
+                              <span className="text-muted-foreground">
+                                {" "}· Unit #{it.unit.serialNumber ?? it.unit.id}
+                              </span>
+                            )}
+                          </p>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap tabular-nums">
+                      {format(r.order.endDate, "dd MMMM yyyy HH.mm", { locale: localeId })}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{formatRupiah(r.total)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatRupiah(r.paid)}</TableCell>
+                    <TableCell className={cn("text-right font-semibold tabular-nums", r.sisa > 0 ? "text-red-600" : "text-emerald-600")}>
+                      {formatRupiah(r.sisa)}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ${r.statusInfo.className}`}>
+                        {r.statusInfo.label}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={waLink(r.phone, `Halo ${r.order.customer.name}, mohon selesaikan pelunasan order *${r.order.orderNumber}* sebesar ${formatRupiah(r.sisa)}. Terima kasih! 🙏`)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-7 items-center gap-1.5 rounded-md bg-emerald-600 px-2 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
+                      >
+                        <WhatsAppIcon className="size-3" />
+                        WA
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
