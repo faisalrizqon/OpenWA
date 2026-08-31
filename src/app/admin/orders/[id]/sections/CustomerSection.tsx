@@ -168,11 +168,11 @@ export function CustomerSection({
 
       {/* Detail tambahan */}
       {(order.guaranteeType || order.deliveryMode === "courier" || order.rescheduledFrom || order.returnedAt) && (
-        <dl className="mt-4 grid gap-x-4 gap-y-1.5 text-sm sm:grid-cols-2">
+        <dl className="mt-4 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
           {order.guaranteeType && (
-            <div className="flex justify-between gap-2">
+            <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
               <dt className="text-muted-foreground">Jaminan</dt>
-              <dd className="font-medium">
+              <dd className="min-w-0 font-medium">
                 {GUARANTEE_TYPES[order.guaranteeType] ?? order.guaranteeType}
                 {order.guaranteeNumber ? ` · ${order.guaranteeNumber}` : ""}
               </dd>
@@ -180,28 +180,28 @@ export function CustomerSection({
           )}
           {order.deliveryMode === "courier" && (
             <>
-              <div className="flex justify-between gap-2">
+              <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
                 <dt className="text-muted-foreground">Pengantaran</dt>
-                <dd className="font-medium">
+                <dd className="min-w-0 font-medium">
                   Diantar kurir{order.deliveryAddress ? ` · ${order.deliveryAddress}` : ""}
                 </dd>
               </div>
-              <div className="flex justify-between gap-2">
+              <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
                 <dt className="text-muted-foreground">Ongkos antar</dt>
-                <dd className="font-medium tabular-nums">{formatRupiah(order.courierFee)}</dd>
+                <dd className="min-w-0 font-medium tabular-nums">{formatRupiah(order.courierFee)}</dd>
               </div>
             </>
           )}
           {order.rescheduledFrom && (
-            <div className="flex justify-between gap-2">
+            <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
               <dt className="text-muted-foreground">Reschedule dari</dt>
-              <dd className="font-medium">{dateFmt(order.rescheduledFrom)}</dd>
+              <dd className="min-w-0 font-medium">{dateFmt(order.rescheduledFrom)}</dd>
             </div>
           )}
           {order.returnedAt && (
-            <div className="flex justify-between gap-2">
+            <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
               <dt className="text-muted-foreground">Dikembalikan</dt>
-              <dd className="font-medium">{dateFmt(order.returnedAt)}</dd>
+              <dd className="min-w-0 font-medium">{dateFmt(order.returnedAt)}</dd>
             </div>
           )}
         </dl>
