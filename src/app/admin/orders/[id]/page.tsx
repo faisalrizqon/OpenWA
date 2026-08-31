@@ -15,6 +15,7 @@ import { GuaranteeSection } from "./sections/GuaranteeSection";
 import { ItemsSection } from "./sections/ItemsSection";
 import { PaymentSection } from "./sections/PaymentSection";
 import { ReturnSection } from "./sections/ReturnSection";
+import { OrderActionsBar } from "./sections/OrderActionsBar";
 import { dateFmt } from "./sections/constants";
 import { orderDetailInclude } from "./sections/types";
 
@@ -182,6 +183,14 @@ export default async function OrderDetailPage({
         <GuaranteeSection order={order} />
         <ReturnSection order={order} active={active} assignedUnits={assignedUnits} />
       </div>
+
+      {/* Aksi order terpadu: ubah status + hapus — paling bawah halaman */}
+      <OrderActionsBar
+        orderId={order.id}
+        orderNumber={order.orderNumber}
+        status={order.status}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 }
