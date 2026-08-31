@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, Printer } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { formatBookingWA, formatReturnReminderWA, formatLateWarningWA } from "@/lib/wa";
@@ -16,7 +16,7 @@ import { PaymentSection } from "./sections/PaymentSection";
 import { ReturnSection } from "./sections/ReturnSection";
 import { dateFmt } from "./sections/constants";
 import { orderDetailInclude } from "./sections/types";
-import { DeleteOrderDialog } from "@/components/OrderAdminActions";
+import { StatusChangeForm, DeleteOrderDialog } from "@/components/OrderAdminActions";
 export default async function OrderDetailPage({
   params,
   searchParams,
@@ -127,27 +127,37 @@ export default async function OrderDetailPage({
       <PageNotifier notifications={notifications} />
 
       {/* Navigasi halaman — di luar card */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-card p-4 shadow-sm">
+      <div className="rounded-lg bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           <BackLink href="/admin/orders" label="Daftar Orders" />
           <Link
             href="/admin/calendar"
-            className="group inline-flex w-fit items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="group inline-flex h-9 w-fit items-center gap-1.5 rounded-full border border-border/70 bg-card/80 px-3.5 text-sm font-medium text-muted-foreground shadow-sm backdrop-blur-md transition-all hover:-translate-x-0.5 hover:bg-card hover:text-foreground hover:shadow-md"
           >
-            Lihat Kalender{" "}
-            <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" aria-hidden />
+            Lihat Kalender
+            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
           </Link>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-bold tracking-tight md:text-2xl">{order.orderNumber}</h1>
-          <StatusBadge status={order.status} />
-          <span className="text-sm text-muted-foreground hidden sm:inline-block">
-            {dateFmt(order.startDate)} → {dateFmt(order.endDate)}
-          </span>
-        </div>
-        {/* Aksi order di kanan: hapus */}
-        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+          <div className="ml-auto flex min-w-0 flex-wrap items-center gap-3">
+            <h1 className="text-xl font-bold tracking-tight md:text-2xl">{order.orderNumber}</h1>
+            <StatusBadge status={order.status} />
+            <span className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex">
+              <span>{dateFmt(order.startDate)}</span>
+              <span aria-hidden>→</span>
+              <span>{dateFmt(order.endDate)}</span>
+            </span>
+          </div>
           {isAdmin && <DeleteOrderDialog orderId={order.id} orderNumber={order.orderNumber} />}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t pt-3">
+          <div>
+            <StatusChangeForm orderId={order.id} status={order.status} />
+          </div>
+          <div>
+            <Link href={`/invoice/${order.id}`} target="_blank" className="inline-flex items-center gap-1.5 rounded-lg border border-primary/25 bg-transparent px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/5">
+              <Printer className="size-3.5" aria-hidden />
+              Cetak Invoice
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -181,6 +191,13 @@ export default async function OrderDetailPage({
         <ReturnSection order={order} active={active} assignedUnits={assignedUnits} />
       </div>
 
+      <div className="flex justify-end">
+        <div className="w-fit rounded-xl border bg-card p-2 shadow-sm">
+          <button type="submit" form="order-status-form" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
+            Simpan
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
