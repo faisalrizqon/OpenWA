@@ -207,7 +207,7 @@ export async function startOpenWA(): Promise<void> {
   // Serialisasi kontrol — gagal cepat lebih baik daripada antre: pemanggil kedua
   // cukup menunggu sebentar lalu mencoba lagi (state akan terbaca ulang fresh).
   if (controlState.__openwaControlBusy) {
-    redirect(`${PAGE}&error=${encodeURIComponent("Start/Stop OpenWA lain sedang berjalan — tunggu sebentar lalu coba lagi")}`);
+    redirect(`${PAGE}&error=${encodeURIComponent("Start/Stop OpenWA lain sedang berjalan. Tunggu sebentar lalu coba lagi.")}`);
   }
   controlState.__openwaControlBusy = true;
   try {
@@ -218,20 +218,20 @@ export async function startOpenWA(): Promise<void> {
     // sebelum tombol Start dianggap selesai.
     const dashboardPid = mode === "split" ? await findPidOnPort(DASHBOARD_PORT) : null;
     if (gatewayPid && mode === "split" && dashboardPid) {
-      redirect(`${PAGE}&error=${encodeURIComponent("Gateway & dashboard sudah running — stop dulu sebelum start ulang")}`);
+      redirect(`${PAGE}&error=${encodeURIComponent("Gateway & dashboard sudah running. Stop dulu sebelum start ulang.")}`);
     }
     if (gatewayPid && mode === "bundled") {
-      redirect(`${PAGE}&error=${encodeURIComponent("Gateway sudah running (mode bundled — dashboard ikut disajikan gateway) — stop dulu sebelum start ulang")}`);
+      redirect(`${PAGE}&error=${encodeURIComponent("Gateway sudah running (mode bundled, dashboard ikut disajikan gateway). Stop dulu sebelum start ulang.")}`);
     }
 
     // Validasi prasyarat SEBELUM spawn agar kegagalan tidak meninggalkan state setengah jalan.
     const gatewayEntry = path.join(OPENWA_DIR, "dist", "main.js");
     if (!gatewayPid && !fs.existsSync(gatewayEntry)) {
-      redirect(`${PAGE}&error=${encodeURIComponent("Build gateway belum ada — jalankan `npm run build` di folder openwa-server dulu")}`);
+      redirect(`${PAGE}&error=${encodeURIComponent("Build gateway belum ada. Jalankan `npm run build` di folder openwa-server dulu.")}`);
     }
     const viteEntry = path.join(DASHBOARD_DIR, "node_modules", "vite", "bin", "vite.js");
     if (mode === "split" && !dashboardPid && !fs.existsSync(viteEntry)) {
-      redirect(`${PAGE}&error=${encodeURIComponent("Dependensi dashboard belum terpasang — jalankan `npm install` di folder openwa-server/dashboard dulu")}`);
+      redirect(`${PAGE}&error=${encodeURIComponent("Dependensi dashboard belum terpasang. Jalankan `npm install` di folder openwa-server/dashboard dulu.")}`);
     }
 
     // Jalankan proses yang belum ada sesuai mode
@@ -256,10 +256,10 @@ export async function startOpenWA(): Promise<void> {
         fatalMarker: GATEWAY_FATAL_MARKER,
       });
       if (boot === "crashed") {
-        redirect(`${PAGE}&error=${encodeURIComponent("Gateway gagal boot (kemungkinan port 2785 dipakai proses lain) — cek openwa.log")}`);
+        redirect(`${PAGE}&error=${encodeURIComponent("Gateway gagal boot (kemungkinan port 2785 dipakai proses lain). Cek openwa.log.")}`);
       }
       if (boot === "timeout") {
-        redirect(`${PAGE}&error=${encodeURIComponent(`Gateway tidak merespons dalam ${GATEWAY_BOOT_TIMEOUT_MS / 1000} detik — cek openwa.log`)}`);
+        redirect(`${PAGE}&error=${encodeURIComponent(`Gateway tidak merespons dalam ${GATEWAY_BOOT_TIMEOUT_MS / 1000} detik. Cek openwa.log.`)}`);
       }
     }
 
@@ -269,9 +269,9 @@ export async function startOpenWA(): Promise<void> {
       } catch (err) {
         redirect(`${PAGE}&error=${encodeURIComponent(`Gagal start dashboard Vite: ${err instanceof Error ? err.message : String(err)}`)}`);
       }
-      // Ping root `/` — JANGAN /api/health karena diproksi ke gateway
-      if ((await waitForBoot(`http://localhost:${DASHBOARD_PORT}/`)) !== "up") {
-        redirect(`${PAGE}&error=${encodeURIComponent("Dashboard Vite tidak merespons dalam 15 detik — cek openwa-dashboard.log")}`);
+      // Ping root `/`. JANGAN gunakan /api/health karena diproksi ke gateway
+      if ((await waitForBoot(`http://localhost:${DASHBOARD_PORT}/`, { maxWaitMs: DASHBOARD_BOOT_TIMEOUT_MS })) !== "up") {
+        redirect(`${PAGE}&error=${encodeURIComponent(`Dashboard Vite tidak merespons dalam ${DASHBOARD_BOOT_TIMEOUT_MS / 1000} detik. Cek openwa-dashboard.log.`)}`);
       }
     }
 
@@ -289,7 +289,7 @@ export async function stopOpenWA(): Promise<void> {
   await requireMitraOrAdmin();
 
   if (controlState.__openwaControlBusy) {
-    redirect(`${PAGE}&error=${encodeURIComponent("Start/Stop OpenWA lain sedang berjalan — tunggu sebentar lalu coba lagi")}`);
+    redirect(`${PAGE}&error=${encodeURIComponent("Start/Stop OpenWA lain sedang berjalan. Tunggu sebentar lalu coba lagi.")}`);
   }
   controlState.__openwaControlBusy = true;
   try {
@@ -322,7 +322,7 @@ export async function stopOpenWA(): Promise<void> {
     if (failures.length > 0) {
       redirect(
         `${PAGE}&error=${encodeURIComponent(
-          `Gagal stop OpenWA — ${failures.join("; ")}`,
+          `Gagal stop OpenWA: ${failures.join("; ")}`,
         )}`,
       );
     }
@@ -345,7 +345,7 @@ export async function setOpenWADashboardMode(formData: FormData): Promise<void> 
   await requireMitraOrAdmin();
   const raw = String(formData.get("mode") ?? "");
   if (raw !== "bundled" && raw !== "split") {
-    redirect(`${PAGE}&error=${encodeURIComponent("Mode tidak valid — pilih 'bundled' atau 'split'")}`);
+    redirect(`${PAGE}&error=${encodeURIComponent("Mode tidak valid. Pilih 'bundled' atau 'split'.")}`);
   }
   writeDeploymentModeOverride(raw);
   revalidatePath("/admin/whatsapp");

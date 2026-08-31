@@ -62,15 +62,15 @@ function ModeButton({
 }
 
 /**
- * Switcher mode deployment OpenWA — menggantikan pola "on/off" buta yang selalu
+ * Switcher mode deployment OpenWA, menggantikan pola "on/off" buta yang selalu
  * menjalankan DUA proses (gateway + Vite dev server).
  *
- *  - **Docker / Bundled** (default produksi): SATU proses — gateway menyajikan API
+ *  - **Docker / Bundled** (default produksi): SATU proses, gateway menyajikan API
  *    sekaligus UI dashboard dari build `dashboard/dist`. Hemat resource.
  *  - **Local / Split** (pengembangan): gateway API + Vite dev server (:2886) untuk
  *    hot-reload saat mengutak-atik dashboard OpenWA.
  *
- * Mode disimpan via server action `setOpenWADashboardMode` (file override — berlaku
+ * Mode disimpan via server action `setOpenWADashboardMode` (file override, berlaku
  * tanpa restart app Next.js). Proses yang berjalan tidak dimatikan otomatis; tombol
  * Start/Stop di kartu status memakai mode ini saat spawn berikutnya.
  */
@@ -80,28 +80,28 @@ export function DeploymentModeForm({ mode }: { mode: OpenWADeploymentMode }) {
       <div>
         <p className="text-sm font-medium">Mode deployment</p>
         <p className="text-xs text-muted-foreground">
-          Pilih satu opsi saja. Jangan jalankan keduanya — boros resource. Sesuai Quick Start docs OpenWA.
+          Pilih satu opsi saja. Jangan jalankan keduanya. Boros resource. Sesuai Quick Start docs OpenWA.
         </p>
       </div>
       <form action={setOpenWADashboardMode} className="flex flex-col gap-2 sm:flex-row">
         <ModeButton
           value="bundled"
           label="Option A: Docker (Recommended)"
-          description="1 proses (port 2785) — gateway menyajikan API + UI dashboard (`dashboard/dist`). Hemat RAM — default produksi."
+          description="1 proses (port 2785), gateway menyajikan API + UI dashboard (dashboard/dist). Hemat RAM. Default produksi."
           icon={Container}
           active={mode === "bundled"}
         />
         <ModeButton
           value="split"
           label="Option B: Local Development"
-          description="2 proses — API gateway (:2785) + Vite dev server (:2886) untuk hot-reload UI dashboard. Hanya saat develop!"
+          description="2 proses, API gateway (:2785) + Vite dev server (:2886) untuk hot-reload UI dashboard. Hanya saat develop!"
           icon={Terminal}
           active={mode === "split"}
         />
       </form>
       {mode === "split" && (
         <p className="text-[11px] leading-tight text-amber-600">
-          ⚠️ Mode split menjalankan DUA proses — gunakan hanya saat mengembangkan dashboard OpenWA. Setelah selesai, kembali ke Option A.
+          Perhatian: Mode split menjalankan DUA proses. Gunakan hanya saat mengembangkan dashboard OpenWA. Setelah selesai, kembali ke Option A.
         </p>
       )}
     </div>

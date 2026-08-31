@@ -73,7 +73,7 @@ export function GatewayToggleForm({
           menjalankan proses yang masih offline. */}
       {!running && partialRunning && (
         <p className="text-[11px] leading-tight text-amber-600">
-          Satu service masih offline — klik untuk menjalankan sisanya
+          Satu service masih offline. Klik untuk menjalankan sisanya.
         </p>
       )}
     </div>

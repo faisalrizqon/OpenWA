@@ -51,8 +51,8 @@ export default async function AdminWhatsAppPage({ searchParams }: PageProps<"/ad
     notifications.push({
       type: "success",
       message: m === "split"
-        ? "Mode deployment: Option B — Local Development (API + Vite dev server). Gunakan Stop lalu Start untuk menerapkan."
-        : "Mode deployment: Option A — Docker/Bundled (1 proses, hemat resource). Gunakan Stop lalu Start untuk menerapkan.",
+        ? "Mode deployment: Option B, Local Development (API + Vite dev server). Gunakan Stop lalu Start untuk menerapkan."
+        : "Mode deployment: Option A, Docker/Bundled (1 proses, hemat resource). Gunakan Stop lalu Start untuk menerapkan.",
     });
   } else if (sp.error) {
     const msg = Array.isArray(sp.error) ? sp.error[0] : sp.error;
@@ -158,7 +158,7 @@ async function SetupTab() {
             Mode Deployment OpenWA
           </CardTitle>
           <CardDescription>
-            Sesuai Quick Start docs OpenWA — pilih SATU opsi, jangan keduanya (boros resource).
+            Sesuai Quick Start docs OpenWA, pilih SATU opsi, jangan keduanya (boros resource).
             Perubahan berlaku tanpa restart; tombol Start/Stop di bawah mengikuti mode ini.
           </CardDescription>
         </CardHeader>
@@ -175,9 +175,8 @@ async function SetupTab() {
               <CardTitle>Status OpenWA</CardTitle>
               <CardDescription>
                 {deploymentMode === "bundled"
-                  ? `Option A (Docker/Bundled): SATU proses — API + UI dashboard di port ${gatewayPort}`
-                  : `Option B (Local Dev): DUA proses — API di port ${gatewayPort} + Vite dev server di port ${dashboardPort}`}{" "}
-                — dikontrol langsung dari halaman ini
+                  ? `Option A (Docker/Bundled): SATU proses, API + UI dashboard di port ${gatewayPort}. Dikontrol langsung dari halaman ini.`
+                  : `Option B (Local Dev): DUA proses, API di port ${gatewayPort} + Vite dev server di port ${dashboardPort}. Dikontrol langsung dari halaman ini.`}
               </CardDescription>
             </div>
             <GatewayToggleForm running={gatewayRunning && dashboardRunning} partialRunning={gatewayRunning || dashboardRunning} />
