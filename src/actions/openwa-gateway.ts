@@ -321,9 +321,20 @@ export async function stopOpenWA(): Promise<void> {
     for (const target of targets) {
       if (!target.pid) continue;
       try {
-        // /T = bunuh seluruh process tree (node + child chromium/esbuild), /F = force
-        await execAsync(`taskkill /F /T /PID ${target.pid}`);
-        await waitPortFree(target.port);
+        // Kill process tree dengan timeout yang cukup
+        await execAsync(`taskkill /F /T /PID ${target.pid}`, { timeout: 15_000 });
+        // Tunggu port benar-benar bebas, jangan asal percaya kill berhasil
+        const beforeWait = Date.now();
+        while (Date.now() < beforeWait + 15_000) {
+          const stillThere = await findPidOnPort(target.port);
+          if (!stillThere) break;
+          await sleep(500);
+        }
+        // Verifikasi lagi — jika masih ada, anggap gagal
+        const remainingPid = await findPidOnPort(target.port);
+        if (remainingPid) {
+          failures.push(`${target.name} (PID ${target.pid}): belum ter-kill setelah 15 detik`);
+        }
       } catch (err) {
         failures.push(
           `${target.name} (PID ${target.pid}): ${err instanceof Error ? err.message : String(err)}`,
