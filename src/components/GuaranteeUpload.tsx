@@ -44,12 +44,16 @@ export function GuaranteeDocs({
   documents,
   back,
   columns = "grid-cols-2 sm:grid-cols-4",
+  allowDelete = true,
 }: {
   orderId: string;
   documents: GuaranteeDoc[];
   /** Halaman kembali setelah hapus (mis. /admin/orders/<id>). */
   back?: string;
   columns?: string;
+  /** Di halaman customer: hapus per-foto tetap ada. Di detail order admin,
+   *  semua hapusan disatukan lewat dialog "Hapus Data Order" di bawah halaman. */
+  allowDelete?: boolean;
 }) {
   if (documents.length === 0) {
     return (
@@ -101,6 +105,45 @@ export function GuaranteeDocs({
           <p className="mt-1 truncate text-xs text-muted-foreground">
             {DOC_LABELS[d.docType] ?? d.docType}
           </p>
+          {allowDelete && (
+            /* Tombol hapus (X) — konfirmasi dialog sebelum delete */
+            <Dialog>
+              <DialogTrigger
+                render={
+                  <button
+                    type="button"
+                    aria-label={`Hapus ${DOC_LABELS[d.docType] ?? "dokumen"}`}
+                    className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-card/95 text-muted-foreground shadow-sm ring-1 ring-border/70 transition-colors hover:bg-red-50 hover:text-red-600"
+                  >
+                    <X className="size-3.5" aria-hidden />
+                  </button>
+                }
+              />
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Hapus dokumen ini?</DialogTitle>
+                  <DialogDescription>
+                    {DOC_LABELS[d.docType] ?? "Dokumen"} jaminan akan dihapus
+                    permanen. Gunakan ini untuk revisi bila salah upload — kamu
+                    bisa upload ulang setelahnya.
+                  </DialogDescription>
+                </DialogHeader>
+                <form action={deleteGuarantee}>
+                  <input type="hidden" name="documentId" value={d.id} />
+                  <input type="hidden" name="orderId" value={orderId} />
+                  {back && <input type="hidden" name="back" value={back} />}
+                  <DialogFooter>
+                    <DialogClose
+                      render={<Button type="button" variant="outline">Batal</Button>}
+                    />
+                    <Button type="submit" variant="destructive">
+                      Ya, Hapus
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       ))}
     </div>

@@ -24,10 +24,8 @@ export interface ReturnPhotoItem {
  * di bagian bawah halaman detail order.
  */
 export function ReturnPhotoGrid({
-  orderId,
   photos,
 }: {
-  orderId: string;
   photos: ReturnPhotoItem[];
 }) {
   if (photos.length === 0) return null;
