@@ -49,7 +49,17 @@ export function CustomerSection({
 }: CustomerSectionProps) {
   return (
     <div className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-6">
-      <h2 className="mb-5 text-lg font-semibold tracking-tight text-foreground">Pelanggan & Aksi</h2>
+      <div className="mb-5 flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">Pelanggan & Aksi</h2>
+        <CustomerDetailsForm
+          orderId={order.id}
+          initialGuaranteeType={order.guaranteeType ?? null}
+          initialGuaranteeNumber={order.guaranteeNumber ?? null}
+          initialDeliveryMode={order.deliveryMode ?? null}
+          initialDeliveryAddress={order.deliveryAddress ?? null}
+          initialNoteOrder={order.noteOrder ?? null}
+        />
+      </div>
 
       {/* Anti-spam: order online masih pending — terima/tolak sebelum diproses */}
       {order.status === "pending" && (
@@ -198,17 +208,6 @@ export function CustomerSection({
         </dl>
       )}
 
-      {/* Edit data order: jaminan, pengantaran, catatan */}
-      <div className="mt-4">
-        <CustomerDetailsForm
-          orderId={order.id}
-          initialGuaranteeType={order.guaranteeType ?? null}
-          initialGuaranteeNumber={order.guaranteeNumber ?? null}
-          initialDeliveryMode={order.deliveryMode ?? null}
-          initialDeliveryAddress={order.deliveryAddress ?? null}
-          initialNoteOrder={order.noteOrder ?? null}
-        />
-      </div>
       <div className="mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
         <StatusChangeForm orderId={order.id} status={order.status} />
         {isAdmin && <DeleteOrderDialog orderId={order.id} orderNumber={order.orderNumber} />}
