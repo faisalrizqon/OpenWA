@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowRight, Printer } from "lucide-react";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { formatBookingWA, formatReturnReminderWA, formatLateWarningWA } from "@/lib/wa";
@@ -17,7 +17,6 @@ import { ReturnSection } from "./sections/ReturnSection";
 import { dateFmt } from "./sections/constants";
 import { orderDetailInclude } from "./sections/types";
 import { DeleteOrderDialog } from "@/components/OrderAdminActions";
-
 export default async function OrderDetailPage({
   params,
   searchParams,
@@ -146,19 +145,9 @@ export default async function OrderDetailPage({
             {dateFmt(order.startDate)} → {dateFmt(order.endDate)}
           </span>
         </div>
-        {/* Aksi order di pojok kanan atas: cetak & hapus */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href={`/invoice/${order.id}`}
-            target="_blank"
-            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <Printer className="size-3.5" aria-hidden />
-            Cetak Invoice
-          </Link>
-          {isAdmin && (
-            <DeleteOrderDialog orderId={order.id} orderNumber={order.orderNumber} />
-          )}
+        {/* Aksi order di kanan: hapus */}
+        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+          {isAdmin && <DeleteOrderDialog orderId={order.id} orderNumber={order.orderNumber} />}
         </div>
       </div>
 

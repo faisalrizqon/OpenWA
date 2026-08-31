@@ -13,11 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { SelectField } from "@/components/SelectField";
-import {
-  deleteOrder,
-  editPayment,
-  deletePayment,
-} from "@/actions/orders";
+import { deleteOrder, editPayment, deletePayment, updateOrderStatus } from "@/actions/orders";
 
 export const METHOD_OPTIONS = [
   { label: "—", value: "" },
@@ -26,6 +22,27 @@ export const METHOD_OPTIONS = [
   { label: "Transfer Bank", value: "transfer" },
 ];
 
+const STATUS_OPTIONS = [
+  { label: "Menunggu Konfirmasi", value: "pending" },
+  { label: "Booking", value: "booking" },
+  { label: "Aktif", value: "active" },
+  { label: "Terlambat", value: "late" },
+  { label: "Selesai", value: "completed" },
+  { label: "Dibatalkan", value: "cancelled" },
+];
+
+export function StatusChangeForm({ orderId, status }: { orderId: string; status: string }) {
+  return (
+    <form action={updateOrderStatus} className="flex min-w-0 flex-wrap items-center gap-2">
+      <input type="hidden" name="orderId" value={orderId} />
+      <SelectField name="newStatus" defaultValue={status} options={STATUS_OPTIONS} />
+      <Button type="submit" size="sm" className="gap-1.5">
+        <Pencil className="size-3.5" aria-hidden />
+        Ubah Status
+      </Button>
+    </form>
+  );
+}
 /** Tombol hapus order dengan dialog konfirmasi. */
 export function DeleteOrderDialog({
   orderId,

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { DriveIcon } from "@/components/DriveIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,8 +23,6 @@ export function PhotoDriveForm({
   const [error, setError] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [savedMessage, setSavedMessage] = React.useState("");
-
-  const dirty = link.trim() !== (initialLink ?? "").trim();
 
   const save = async (value: string) => {
     if (saving) return;
@@ -51,18 +49,13 @@ export function PhotoDriveForm({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await save(link.trim());
-  };
-
   const handleDelete = async () => {
     setLink("");
     await save("");
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2">
+    <div className="space-y-2">
       <div className="flex gap-2">
         <Input
           type="url"
@@ -74,10 +67,6 @@ export function PhotoDriveForm({
             setError("");
           }}
         />
-        <Button type="submit" size="sm" disabled={saving || !dirty || !link.trim()}>
-          {saving && <Loader2 className="size-4 animate-spin" aria-hidden />}
-          {saving ? "Menyimpan…" : "Simpan"}
-        </Button>
       </div>
 
       {initialLink && (
@@ -115,6 +104,6 @@ export function PhotoDriveForm({
           {savedMessage}
         </p>
       )}
-    </form>
+    </div>
   );
 }
