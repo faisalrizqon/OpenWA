@@ -1074,3 +1074,142 @@ export async function updateItemPrices(formData: FormData) {
   revalidateOrderPaths(orderId);
   redirect(`${back}?items=${changed > 0 ? "updated" : "unchanged"}`);
 }
+
+/** Kelola item order dari card Item (ikon edit): tambah item baru, hapus item,
+ *  dan ubah qty/durasi. Harga dihitung ulang dari tier produk (harga terkunci
+ *  per durasi). Stok dicek untuk penambahan qty/item baru. Hanya untuk order
+ *  yang belum selesai/dibatalkan. */
+export async function manageOrderItems(formData: FormData) {
+  const user = await requireMitraOrAdmin();
+  const orderId = String(formData.get("orderId") ?? "");
+  const back = `/admin/orders/${orderId}`;
+  if (!orderId) redirect("/admin/orders");
+
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) redirect("/admin/orders");
+  if (["completed", "cancelled"].includes(order.status)) {
+    redirect(`${back}?error=items-locked`);
+  }
+
+  // --- Parse payload ---
+  let adds: Array<{ productId: number; quantity: number; durationHours: number }> = [];
+  let updates: Array<{ itemId: number; quantity: number; durationHours: number }> = [];
+  const removeIds = formData.getAll("removeItemId").map((v) => Number(v));
+  try {
+    adds = JSON.parse(String(formData.get("adds") ?? "[]"));
+    updates = JSON.parse(String(formData.get("updates") ?? "[]"));
+  } catch {
+    redirect(`${back}?error=items`);
+  }
+
+  const addsValid = adds.every(
+    (a) => Number.isInteger(a.productId) && a.productId > 0 && Number.isInteger(a.quantity) && a.quantity > 0 && Number.isInteger(a.durationHours) && a.durationHours > 0
+  );
+  const updatesValid = updates.every(
+    (u) => Number.isInteger(u.itemId) && u.itemId > 0 && Number.isInteger(u.quantity) && u.quantity > 0 && Number.isInteger(u.durationHours) && u.durationHours > 0
+  );
+  if (!addsValid || !updatesValid) redirect(`${back}?error=items`);
+
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.orderItem.findMany({ where: { orderId }, include: { product: true } });
+
+    // --- Hapus item ---
+    for (const rid of removeIds) {
+      const item = existing.find((it) => it.id === rid);
+      if (!item) continue;
+      // Lepas unit yang ter-assign pada item ini
+      if (item.unitId != null) {
+        const unit = await tx.unit.findUnique({ where: { id: item.unitId }, select: { condition: true } });
+        await tx.unit.update({ where: { id: item.unitId }, data: { status: "available" } });
+        await tx.unitEvent.create({ data: { unitId: item.unitId, orderId, event: "returned", conditionAfter: unit?.condition ?? null } });
+      }
+      await tx.orderItem.delete({ where: { id: item.id } });
+      await logAudit(tx, {
+        entityType: "order",
+        entityId: orderId,
+        action: "update",
+        summary: `Item dihapus: ${item.product.name} ×${item.quantity}`,
+        userId: user.id,
+        detail: { itemId: item.id },
+      });
+    }
+
+    // --- Ubah qty/durasi (harga ikut tier baru) ---
+    for (const u of updates) {
+      const item = existing.find((it) => it.id === u.itemId);
+      if (!item) continue;
+      if (item.quantity === u.quantity && item.durationHours === u.durationHours) continue;
+
+      // Stok untuk qty tambahan (jika bertambah)
+      if (u.quantity > item.quantity) {
+        await ensureStockAvailable({
+          client: tx,
+          productId: item.productId,
+          rangeStart: order.startDate,
+          rangeEnd: order.endDate,
+          needed: u.quantity - item.quantity,
+          excludeOrderId: orderId,
+        });
+      }
+
+      const unitPrice = getTierPrice(item.product, u.durationHours);
+      const subtotal = calcSubtotal({
+        unitPrice,
+        quantity: u.quantity,
+        discountType:
+          item.discountType === "amount" || item.discountType === "percent"
+            ? item.discountType
+            : null,
+        discountValue: item.discountValue,
+      });
+      await tx.orderItem.update({
+        where: { id: item.id },
+        data: { quantity: u.quantity, durationHours: u.durationHours, unitPrice, subtotal },
+      });
+      await logAudit(tx, {
+        entityType: "order",
+        entityId: orderId,
+        action: "update",
+        summary: `Item diubah: ${item.product.name} ×${item.quantity}/${item.durationHours}j → ×${u.quantity}/${u.durationHours}j`,
+        userId: user.id,
+        detail: { itemId: item.id },
+      });
+    }
+
+    // --- Tambah item baru ---
+    for (const a of adds) {
+      const product = await tx.product.findUnique({ where: { id: a.productId } });
+      if (!product) continue;
+      await ensureStockAvailable({
+        client: tx,
+        productId: a.productId,
+        rangeStart: order.startDate,
+        rangeEnd: order.endDate,
+        needed: a.quantity,
+        excludeOrderId: orderId,
+      });
+      const unitPrice = getTierPrice(product, a.durationHours);
+      const subtotal = calcSubtotal({ unitPrice, quantity: a.quantity });
+      await tx.orderItem.create({
+        data: {
+          orderId,
+          productId: a.productId,
+          quantity: a.quantity,
+          durationHours: a.durationHours,
+          unitPrice,
+          subtotal,
+        },
+      });
+      await logAudit(tx, {
+        entityType: "order",
+        entityId: orderId,
+        action: "update",
+        summary: `Item ditambah: ${product.name} ×${a.quantity} (${a.durationHours}j)`,
+        userId: user.id,
+      });
+    }
+  });
+
+  revalidateOrderPaths(orderId);
+  redirect(`${back}?items=updated`);
+}
