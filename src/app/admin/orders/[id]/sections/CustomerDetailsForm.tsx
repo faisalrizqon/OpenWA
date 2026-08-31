@@ -7,6 +7,7 @@ import { GUARANTEE_TYPES } from "./constants";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { SelectField } from "@/components/SelectField";
 import {
   Dialog,
   DialogContent,
@@ -16,37 +17,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-/** Select component untuk guarantee type — match GUARANTEE_TYPES label. */
-function GuaranteeSelect({
-  id,
-  value = "",
-  onValueChange,
-}: {
-  id: string;
-  value?: string | null;
-  onValueChange: (v: string) => void;
-}) {
-  return (
-    <select
-      id={id}
-      name="guaranteeType"
-      value={value ?? ""}
-      onChange={(e) => onValueChange(e.target.value)}
-      className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
-    >
-      <option value="">— tanpa jaminan —</option>
-      {Object.entries(GUARANTEE_TYPES).map(([v, l]) => (
-        <option key={v} value={v}>
-          {l}
-        </option>
-      ))}
-    </select>
-  );
-}
+const GUARANTEE_OPTIONS = [
+  { value: "none", label: "— tanpa jaminan —" },
+  ...Object.entries(GUARANTEE_TYPES).map(([value, label]) => ({ value, label })),
+];
 
-/** Ikon edit (pensil) di pojok kanan atas card Pelanggan & Aksi → buka dialog
- *  overlay berisi form data order: jenis & no. jaminan, metode pengambilan +
- *  alamat antar, dan catatan. */
+const DELIVERY_OPTIONS = [
+  { value: "pickup", label: "Ambil sendiri (pickup)" },
+  { value: "courier", label: "Diantar kurir (COD)" },
+];
+
+/** Ikon edit di card Pelanggan & Aksi untuk mengubah data order. */
 export function CustomerDetailsForm({
   orderId,
   initialGuaranteeType,
@@ -97,22 +78,16 @@ export function CustomerDetailsForm({
         <form action={updateOrderFees} onSubmit={() => setOpen(false)} className="space-y-4">
           <input type="hidden" name="orderId" value={orderId} />
 
-          {/* Jaminan */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="customer-guarantee-type">Jenis Jaminan</Label>
-              <select
+              <SelectField
                 id="customer-guarantee-type"
                 name="guaranteeType"
-                defaultValue={initialGuaranteeType ?? ""}
-                onChange={() => {}}
-                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
-              >
-                <option value="">— tanpa jaminan —</option>
-                {Object.entries(GUARANTEE_TYPES).map(([v, l]) => (
-                  <option key={v} value={v}>{l}</option>
-                ))}
-              </select>
+                defaultValue={initialGuaranteeType ?? "none"}
+                options={GUARANTEE_OPTIONS}
+                triggerClassName="min-w-0 bg-background"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="customer-guarantee-number">No. Jaminan</Label>
@@ -126,19 +101,16 @@ export function CustomerDetailsForm({
             </div>
           </div>
 
-          {/* Pengantaran */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="customer-delivery-mode">Metode Pengambilan</Label>
-              <select
+              <SelectField
                 id="customer-delivery-mode"
                 name="deliveryMode"
                 defaultValue={initialDeliveryMode ?? "pickup"}
-                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
-              >
-                <option value="pickup">Ambil sendiri (pickup)</option>
-                <option value="courier">Diantar kurir (COD)</option>
-              </select>
+                options={DELIVERY_OPTIONS}
+                triggerClassName="min-w-0 bg-background"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="customer-delivery-address">Alamat Antar</Label>
@@ -152,7 +124,6 @@ export function CustomerDetailsForm({
             </div>
           </div>
 
-          {/* Catatan order */}
           <div className="space-y-1.5">
             <Label htmlFor="customer-note">Catatan Order</Label>
             <textarea
