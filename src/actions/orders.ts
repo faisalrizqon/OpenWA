@@ -683,6 +683,50 @@ export async function deleteReturnPhoto(formData: FormData) {
   redirect(`${back}?return=deleted`);
 }
 
+/** Hapus SEMUA data upload order sekaligus (satu aksi): seluruh dokumen
+ *  jaminan (KTP/selfie/kartu pelajar) + seluruh foto kondisi return.
+ *  Dipakai dialog terpadu "Hapus Data Order" — menggantikan tombol ✕
+ *  per-item yang tadinya tersebar di card Jaminan & Return. */
+export async function deleteOrderData(formData: FormData) {
+  const user = await requireAdmin();
+  const orderId = String(formData.get("orderId") ?? "");
+  const backParam = String(formData.get("back") ?? "");
+  const back = backParam.startsWith("/") ? backParam : `/admin/orders/${orderId}`;
+  if (!orderId) redirect("/admin/orders");
+
+  const docs = await prisma.document.findMany({ where: { orderId } });
+  const photos = await prisma.returnPhoto.findMany({ where: { orderId } });
+  if (docs.length === 0 && photos.length === 0) redirect(`${back}?data=empty`);
+
+  // Hapus file fisik: dukung /storage/... dan path legacy /uploads/...
+  for (const filePath of [...docs.map((d) => d.filePath), ...photos.map((p) => p.filePath)]) {
+    if (filePath.startsWith("/storage/")) {
+      await deleteStoredFile(filePath);
+    } else if (filePath.startsWith("/uploads/")) {
+      const relative = filePath.slice("/uploads/".length);
+      if (!relative.includes("..")) {
+        await unlink(path.join(process.cwd(), "public", "uploads", relative)).catch(() => {});
+      }
+    }
+  }
+
+  await prisma.$transaction([
+    prisma.document.deleteMany({ where: { orderId } }),
+    prisma.returnPhoto.deleteMany({ where: { orderId } }),
+  ]);
+
+  await logAudit(prisma, {
+    entityType: "order",
+    entityId: orderId,
+    action: "update",
+    summary: `Data order dihapus sekaligus (${docs.length} jaminan, ${photos.length} foto return)`,
+    userId: user.id,
+  });
+
+  revalidateOrderPaths(orderId);
+  redirect(`${back}?data=deleted`);
+}
+
 /** Tambah foto kondisi return untuk order yang SUDAH selesai — revisi tanpa
  * mengubah status & unit (unit sudah di-release saat order diselesaikan). */
 export async function addReturnPhotos(formData: FormData) {

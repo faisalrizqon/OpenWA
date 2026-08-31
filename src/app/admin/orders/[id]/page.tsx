@@ -17,6 +17,8 @@ import { PaymentSection } from "./sections/PaymentSection";
 import { ReturnSection } from "./sections/ReturnSection";
 import { dateFmt } from "./sections/constants";
 import { orderDetailInclude } from "./sections/types";
+import { OrderActionsBar } from "./sections/OrderActionsBar";
+import { DeleteOrderDialog } from "@/components/OrderAdminActions";
 
 export default async function OrderDetailPage({
   params,
@@ -45,6 +47,9 @@ export default async function OrderDetailPage({
   if (fees === "updated") notifications.push({ type: "success", message: "Ongkos antar & tip diperbarui." });
   if (items === "updated") notifications.push({ type: "success", message: "Harga item diperbarui." });
   else if (items === "unchanged") notifications.push({ type: "info", message: "Tidak ada perubahan pada harga item." });
+  const dataParam = Array.isArray(errorParam.data) ? errorParam.data[0] : errorParam.data;
+  if (dataParam === "deleted") notifications.push({ type: "success", message: "Semua data order (jaminan & foto return) berhasil dihapus." });
+  else if (dataParam === "empty") notifications.push({ type: "info", message: "Tidak ada data order yang bisa dihapus." });
   const session = await auth();
   const isAdmin = session?.user?.role === "admin";
 
@@ -143,14 +148,20 @@ export default async function OrderDetailPage({
             {dateFmt(order.startDate)} → {dateFmt(order.endDate)}
           </span>
         </div>
-        <Link
-          href={`/invoice/${order.id}`}
-          target="_blank"
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          <Printer className="size-3.5" aria-hidden />
-          Cetak Invoice
-        </Link>
+        {/* Tombol aksi utama di pojok kanan atas */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/invoice/${order.id}`}
+            target="_blank"
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <Printer className="size-3.5" aria-hidden />
+            Cetak Invoice
+          </Link>
+          {isAdmin && (
+            <DeleteOrderDialog orderId={order.id} orderNumber={order.orderNumber} />
+          )}
+        </div>
       </div>
 
       {overdue && (
@@ -183,6 +194,8 @@ export default async function OrderDetailPage({
         <ReturnSection order={order} active={active} assignedUnits={assignedUnits} />
       </div>
 
+      {/* Aksi order terpadu: satu Simpan (ubah status) + hapus data — paling bawah */}
+      <OrderActionsBar orderId={order.id} status={order.status} isAdmin={isAdmin} />
     </div>
   );
 }
