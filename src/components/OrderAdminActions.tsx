@@ -23,23 +23,25 @@ export const METHOD_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
-  { label: "Menunggu Konfirmasi", value: "pending" },
-  { label: "Booking", value: "booking" },
-  { label: "Aktif", value: "active" },
-  { label: "Terlambat", value: "late" },
-  { label: "Selesai", value: "completed" },
-  { label: "Dibatalkan", value: "cancelled" },
+  { label: <span className="flex items-center gap-2"><span className="size-2 rounded-full bg-amber-400" />Menunggu Konfirmasi</span>, value: "pending" },
+  { label: <span className="flex items-center gap-2"><span className="size-2 rounded-full bg-blue-500" />Booking</span>, value: "booking" },
+  { label: <span className="flex items-center gap-2"><span className="size-2 rounded-full bg-emerald-500" />Aktif</span>, value: "active" },
+  { label: <span className="flex items-center gap-2"><span className="size-2 rounded-full bg-rose-500" />Terlambat</span>, value: "late" },
+  { label: <span className="flex items-center gap-2"><span className="size-2 rounded-full bg-green-500" />Selesai</span>, value: "completed" },
+  { label: <span className="flex items-center gap-2"><span className="size-2 rounded-full bg-slate-400" />Dibatalkan</span>, value: "cancelled" },
 ];
 
 export function StatusChangeForm({ orderId, status }: { orderId: string; status: string }) {
   return (
-    <form action={updateOrderStatus} className="flex min-w-0 flex-wrap items-center gap-2">
+    <form id="order-status-form" action={updateOrderStatus} className="min-w-0">
       <input type="hidden" name="orderId" value={orderId} />
-      <SelectField name="newStatus" defaultValue={status} options={STATUS_OPTIONS} />
-      <Button type="submit" size="sm" className="gap-1.5">
-        <Pencil className="size-3.5" aria-hidden />
-        Ubah Status
-      </Button>
+      <SelectField
+        name="newStatus"
+        defaultValue={status}
+        options={STATUS_OPTIONS}
+        triggerClassName="h-8 w-auto min-w-[180px] rounded-full border-slate-200 bg-background px-3 text-sm shadow-none"
+        className="min-w-[240px] max-h-none overflow-y-visible rounded-xl border-slate-200 bg-popover p-1 shadow-lg"
+      />
     </form>
   );
 }

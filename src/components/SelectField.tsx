@@ -58,7 +58,7 @@ export function SelectField({
       >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent className={cn("rounded-xl p-1", className)}>
+      <SelectContent align="start" className={cn("min-w-[180px] rounded-xl p-1", className)}>
         {options.map((o) => (
           <SelectItem key={o.value} value={o.value} disabled={o.disabled}>
             {o.label}
