@@ -129,11 +129,13 @@ export default async function ProductsPage({
                       </TableCell>
                       <TableCell className="text-center">
                         {isAdmin && (
-                          <ProductRowActions
-                            productId={p.id}
-                            productName={p.name}
-                            active={p.active}
-                          />
+                          <div className="flex justify-center">
+                            <ProductRowActions
+                              productId={p.id}
+                              productName={p.name}
+                              active={p.active}
+                            />
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
