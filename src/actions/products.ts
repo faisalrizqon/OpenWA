@@ -14,10 +14,14 @@ export async function createProduct(formData: FormData) {
   const user = await requireAdmin();
   const parsed = productSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
-    redirect("/admin/products/new?error=invalid");
+    const issues = parsed.error.flatten().fieldErrors;
+    // Map zod errors ke pesan user-friendly per field
+    const messages = Object.entries(issues)
+      .map(([field, msgs]) => `${field}: ${msgs ? msgs.join(", ") : "-"}`)
+      .join(" · ");
+    redirect(`/admin/products/new?error=${encodeURIComponent(`Data tidak valid (${messages})`)}`);
   }
   const data = parsed.data;
-  const newCategoryName = String(formData.get("newCategoryName") ?? "").trim();
 
   let categoryId = data.categoryId;
 

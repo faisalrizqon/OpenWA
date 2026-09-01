@@ -39,6 +39,11 @@ export default async function NewProductPage({
           Data tidak valid — periksa kembali isian form.
         </p>
       )}
+      {error?.startsWith("Data tidak valid") && (
+        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {decodeURIComponent(error)}
+        </p>
+      )}
 
       <Card>
         <CardHeader>
@@ -57,13 +62,19 @@ export default async function NewProductPage({
             </div>
             <div className="space-y-2">
               <Label htmlFor="categoryId">Kategori</Label>
-              <SelectField
-                id="categoryId"
-                name="categoryId"
-                defaultValue={categories[0] ? String(categories[0].id) : undefined}
-                placeholder="Pilih kategori"
-                options={categories.map((c) => ({ label: c.name, value: String(c.id) }))}
-              />
+              {categories.length > 0 ? (
+                <SelectField
+                  id="categoryId"
+                  name="categoryId"
+                  defaultValue={String(categories[0].id)}
+                  placeholder="Pilih kategori"
+                  options={categories.map((c) => ({ label: c.name, value: String(c.id) }))}
+                />
+              ) : (
+                <p className="text-xs text-red-600">
+                  Belum ada kategori tersedia. Silakan buat kategori terlebih dahulu atau hubungi admin.
+                </p>
+              )}
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="newCategoryName">Kategori Baru (opsional)</Label>
@@ -102,7 +113,7 @@ export default async function NewProductPage({
             </div>
             <div className="space-y-2">
               <Label htmlFor="initialUnits">Jumlah Unit Awal</Label>
-              <Input id="initialUnits" name="initialUnits" type="number" min="1" defaultValue={1} />
+              <Input id="initialUnits" name="initialUnits" type="number" min="1" defaultValue="1" />
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="description">Deskripsi (opsional)</Label>
