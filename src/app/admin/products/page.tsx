@@ -77,7 +77,7 @@ export default async function ProductsPage({
                   <TableHead>Harga (6/12/24/48 jam)</TableHead>
                   <TableHead className="text-center">Stok</TableHead>
                   <TableHead>Status Stok</TableHead>
-                  {isAdmin && <TableHead className="text-right">Aksi</TableHead>}
+                  {isAdmin && <TableHead className="text-center">Aksi</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -127,7 +127,7 @@ export default async function ProductsPage({
                           <span className="text-xs text-muted-foreground">Stok aman</span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         {isAdmin && (
                           <ProductRowActions
                             productId={p.id}
