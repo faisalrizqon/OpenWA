@@ -49,7 +49,7 @@ export default async function ProductsPage({
     <div className="space-y-6">
       <PageHeader
         title="Produk"
-        description="Stok live per unit fisik — klik nama atau ikon pensil untuk edit"
+        description="Stok live per unit fisik. Buka menu titik tiga pada kolom aksi untuk mengedit, menyembunyikan, atau menghapus produk."
         action={isAdmin ? <HeaderLink href="/admin/products/new" label="Tambah Produk" /> : undefined}
       />
       <PageNotifier notifications={notifications} />
