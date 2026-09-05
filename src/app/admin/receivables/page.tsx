@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { AlertTriangle, ClipboardList, ExternalLink, Wallet } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { waLink } from "@/lib/wa";
+import { waLink, formatCollectionReminderWA } from "@/lib/wa";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { PageHeader } from "@/components/PageHeader";
 import { HeaderLink } from "@/components/HeaderLink";
@@ -44,12 +44,27 @@ export default async function ReceivablesPage() {
         : overdue
           ? { label: "Terlambat", className: "bg-red-100 text-red-800" }
           : { label: "Belum Lunas", className: "bg-amber-100 text-amber-800" };
+    // Calculate days overdue for aging bucket
+    const now = new Date();
+    const daysOverdue = o.endDate < now 
+      ? Math.ceil((now.getTime() - o.endDate.getTime()) / 86_400_000) 
+      : 0;
+    const bucket = daysOverdue === 0 
+      ? "fresh" 
+      : daysOverdue <= 7 
+        ? "early" 
+        : daysOverdue <= 30 
+          ? "middle" 
+          : "old";
+    
     return {
       order: o,
       total,
       paid,
       sisa,
       overdue,
+      daysOverdue,
+      bucket,
       phone: o.customer.phone,
       statusInfo,
     };
@@ -59,6 +74,22 @@ export default async function ReceivablesPage() {
     (acc, r) => ({ total: acc.total + r.sisa, count: r.sisa > 0 ? acc.count + 1 : acc.count }),
     { total: 0, count: 0 }
   );
+
+  // Aging buckets: kelompokkan piutang berdasarkan umur keterlambatan
+  const buckets = rows.reduce(
+    (acc, r) => {
+      acc[r.bucket].count += 1;
+      acc[r.bucket].total += r.sisa;
+      return acc;
+    },
+    {
+      fresh: { count: 0, total: 0, label: "Belum jatuh tempo", className: "text-emerald-700 bg-emerald-100" },
+      early: { count: 0, total: 0, label: "1–7 hari", className: "text-amber-700 bg-amber-100" },
+      middle: { count: 0, total: 0, label: "8–30 hari", className: "text-orange-700 bg-orange-100" },
+      old: { count: 0, total: 0, label: "> 30 hari", className: "text-red-700 bg-red-100" },
+    } as Record<string, { count: number; total: number; label: string; className: string }>
+  );
+  const BUCKET_ORDER = ["fresh", "early", "middle", "old"] as const;
 
   return (
     <div className="space-y-6">
@@ -105,6 +136,41 @@ export default async function ReceivablesPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Aging Buckets Summary — piutang dikelompokkan umur keterlambatan */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="size-4 text-amber-500" aria-hidden />
+            Umur Piutang
+          </CardTitle>
+          <CardDescription>Tagihan dikelompokkan berdasarkan berapa hari melewati jatuh tempo</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {BUCKET_ORDER.map((bucket) => (
+              <div
+                key={bucket}
+                className={cn(
+                  "rounded-xl border p-3",
+                  buckets[bucket].count > 0
+                    ? "border-primary/20 bg-card shadow-sm"
+                    : "border-dashed bg-muted/30"
+                )}
+              >
+                <span className={cn("inline-block rounded-full px-2 py-0.5 text-xs font-medium", buckets[bucket].className)}>
+                  {buckets[bucket].label}
+                </span>
+                <p className="mt-2 flex items-baseline gap-1.5">
+                  <span className="text-lg font-bold tabular-nums">{buckets[bucket].count}</span>
+                  <span className="text-xs text-muted-foreground">order</span>
+                </p>
+                <p className="text-xs font-medium tabular-nums text-muted-foreground">{formatRupiah(buckets[bucket].total)}</p>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -178,8 +244,12 @@ export default async function ReceivablesPage() {
                     </TableCell>
                     <TableCell>
                       <Link
-                        href={waLink(r.phone, `Halo ${r.order.customer.name}, mohon selesaikan pelunasan order *${r.order.orderNumber}* sebesar ${formatRupiah(r.sisa)}. Terima kasih! 🙏`)}
-                        target="_blank"
+                        href={waLink(r.phone, formatCollectionReminderWA({
+                          customerName: r.order.customer.name,
+                          orderNumber: r.order.orderNumber,
+                          daysOverdue: r.daysOverdue,
+                          outstandingAmount: r.sisa,
+                        }))}
                         rel="noopener noreferrer"
                         className="inline-flex h-7 items-center gap-1.5 rounded-md bg-emerald-600 px-2 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
                       >

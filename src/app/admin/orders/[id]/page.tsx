@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, Printer } from "lucide-react";
+import { AlertTriangle, ArrowRight, Printer } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { formatBookingWA, formatReturnReminderWA, formatLateWarningWA } from "@/lib/wa";
@@ -17,6 +17,8 @@ import { ReturnSection } from "./sections/ReturnSection";
 import { dateFmt } from "./sections/constants";
 import { orderDetailInclude } from "./sections/types";
 import { StatusChangeForm, DeleteOrderDialog } from "@/components/OrderAdminActions";
+import { OrderDetailDraftShell } from "@/components/order-draft/OrderDetailDraftShell";
+import { OrderDraftSaveBar } from "@/components/order-draft/OrderDraftSaveBar";
 export default async function OrderDetailPage({
   params,
   searchParams,
@@ -123,7 +125,7 @@ export default async function OrderDetailPage({
     }));
 
   return (
-    <div className="space-y-6">
+    <OrderDetailDraftShell orderId={order.id}>
       <PageNotifier notifications={notifications} />
 
       {/* Navigasi halaman — di luar card */}
@@ -135,20 +137,25 @@ export default async function OrderDetailPage({
             className="group inline-flex h-9 w-fit items-center gap-1.5 rounded-full border border-border/70 bg-card/80 px-3.5 text-sm font-medium text-muted-foreground shadow-sm backdrop-blur-md transition-all hover:-translate-x-0.5 hover:bg-card hover:text-foreground hover:shadow-md"
           >
             Lihat Kalender
-            <span aria-hidden className="text-sm">→</span>
+            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
           </Link>
-          <div className="ml-auto flex min-w-0 flex-col items-end gap-1">
-            <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
+            <div className="flex min-w-0 flex-wrap items-center justify-center gap-3">
               <h1 className="text-xl font-bold tracking-tight md:text-2xl">{order.orderNumber}</h1>
               <StatusBadge status={order.status} />
             </div>
-            <span className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex">
+            <span className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
               <span>{dateFmt(order.startDate)}</span>
-              <span aria-hidden className="shrink-0">→</span>
+              <ArrowRight className="size-3 shrink-0 text-muted-foreground" aria-hidden />
               <span>{dateFmt(order.endDate)}</span>
             </span>
           </div>
-          {isAdmin && <DeleteOrderDialog orderId={order.id} orderNumber={order.orderNumber} />}
+          {isAdmin && (
+            <>
+              <DeleteOrderDialog orderId={order.id} orderNumber={order.orderNumber} />
+              <OrderDraftSaveBar orderId={order.id} />
+            </>
+          )}
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t pt-3">
           <div>
@@ -193,13 +200,6 @@ export default async function OrderDetailPage({
         <ReturnSection order={order} active={active} assignedUnits={assignedUnits} />
       </div>
 
-      <div className="flex justify-end">
-        <div className="w-fit rounded-xl border bg-card p-2 shadow-sm">
-          <button type="submit" form="order-status-form" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
-            Simpan
-          </button>
-        </div>
-      </div>
-    </div>
+    </OrderDetailDraftShell>
   );
 }

@@ -2,7 +2,7 @@ import { DeletePromoForm } from "./DeletePromoForm";
 import { PromoDateField } from "./PromoDateField";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { BadgePercent, Plus } from "lucide-react";
+import { ArrowRight, BadgePercent, Plus } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/pricing";
 import { PageHeader } from "@/components/PageHeader";
@@ -170,7 +170,11 @@ export default async function PromosPage({
                         {p.minOrderAmount ? formatRupiah(p.minOrderAmount) : "—"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                        {dateFmt(p.startDate)} → {dateFmt(p.endDate)}
+                        <span className="inline-flex items-center gap-1.5">
+                          {dateFmt(p.startDate)}
+                          <ArrowRight className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+                          {dateFmt(p.endDate)}
+                        </span>
                       </TableCell>
                       <TableCell className="text-center tabular-nums">
                         {p.usedCount}

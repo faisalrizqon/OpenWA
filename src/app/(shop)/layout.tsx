@@ -39,7 +39,7 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
           </div>
 
           {/* Papan kayu OPEN/CLOSED mobile — menggantung melewati (overlay) bawah top bar */}
-          <div className="pointer-events-none absolute right-10 top-5 z-40 sm:hidden">
+          <div className="pointer-events-none absolute right-24 top-5 z-40 sm:hidden">
             <div className="pointer-events-auto scale-[0.68]" style={{ transformOrigin: "top right" }}>
               <OpenClosedSign hours={shop.hours} />
             </div>

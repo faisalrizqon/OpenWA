@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Loader2, CheckCircle2, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, Loader2, CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -142,7 +142,7 @@ export function InstallUpdateModal({
                   <>
                     <span>Versi saat ini:</span>
                     <Badge variant="secondary">v{currentVersion}</Badge>
-                    <span aria-hidden>→</span>
+                    <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                   </>
                 )}
                 {targetTag ? (

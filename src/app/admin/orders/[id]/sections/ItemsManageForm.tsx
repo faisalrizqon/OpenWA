@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Plus, Save, Trash2, X } from "lucide-react";
-import { manageOrderItems } from "@/actions/orders";
+import { Check, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { calcSubtotal, formatRupiah, getTierPrice } from "@/lib/pricing";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,6 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useOptionalOrderDraft } from "@/components/order-draft/OrderDraftContext";
 
 export interface ManageableItem {
   id: number;
@@ -36,33 +36,40 @@ export interface ProductOption {
 
 const DURATIONS = [6, 12, 24, 48];
 
-/** Ikon edit (pensil) di pojok kanan atas card Item → buka dialog overlay
- *  untuk kelola item order: ubah qty/durasi, hapus item, dan tambah item baru.
- *  Harga otomatis mengikuti tier durasi produk. */
+/**
+ * Ikon edit (pensil) di pojok kanan atas card Item → kelola item order:
+ * ubah qty/durasi, hapus item, dan tambah item baru.
+ *
+ * Perubahan TIDAK langsung disimpan — masuk draft order dan baru ditulis ke
+ * database setelah tombol "Simpan" di header ditekan.
+ */
 export function ItemsManageForm({
-  orderId,
   items,
   products,
   locked,
 }: {
-  orderId: string;
+  orderId?: string;
   items: ManageableItem[];
   products: ProductOption[];
   locked: boolean;
 }) {
+  // Semua hook dipanggil tanpa syarat; guard `draft` dilakukan setelahnya.
+  const draft = useOptionalOrderDraft();
+
   const [open, setOpen] = useState(false);
-  // qty & durasi per item (draft)
-  const [draft, setDraft] = useState<Record<number, { quantity: number; durationHours: number }>>(() =>
+  // qty & durasi per item (nilai lokal dialog, sebelum "Terapkan")
+  const [localDraft, setLocalDraft] = useState<Record<number, { quantity: number; durationHours: number }>>(() =>
     Object.fromEntries(items.map((it) => [it.id, { quantity: it.quantity, durationHours: it.durationHours }]))
   );
   const [removed, setRemoved] = useState<number[]>([]);
-  // item baru yang mau ditambah
   const [newItems, setNewItems] = useState<Array<{ productId: number; quantity: number; durationHours: number }>>([]);
+
+  if (!draft) return null;
 
   const productOf = (pid: number) => products.find((p) => p.id === pid);
 
   function subtotalOf(it: ManageableItem) {
-    const d = draft[it.id];
+    const d = localDraft[it.id];
     if (!d) return it.subtotal;
     const product = productOf(it.productId);
     if (!product) return it.subtotal;
@@ -72,14 +79,45 @@ export function ItemsManageForm({
 
   const anyChanged =
     items.some((it) => {
-      const d = draft[it.id];
+      const d = localDraft[it.id];
       return d && (d.quantity !== it.quantity || d.durationHours !== it.durationHours);
     }) || removed.length > 0 || newItems.length > 0;
 
-  function resetAndClose() {
-    setDraft(Object.fromEntries(items.map((it) => [it.id, { quantity: it.quantity, durationHours: it.durationHours }])));
-    setRemoved([]);
-    setNewItems([]);
+  /** Kembalikan dialog ke kondisi draft yang sudah pernah diterapkan. */
+  function revertToDraft() {
+    const stagedUpdates = draft?.itemsToUpdate ?? [];
+    const stagedDeletes = draft?.itemsToDelete ?? [];
+    setLocalDraft(
+      Object.fromEntries(
+        items.map((it) => {
+          const staged = stagedUpdates.find((u) => u.itemId === it.id);
+          return [it.id, staged ? { quantity: staged.quantity, durationHours: staged.durationHours } : { quantity: it.quantity, durationHours: it.durationHours }];
+        })
+      )
+    );
+    setRemoved(stagedDeletes.filter((id) => items.some((it) => it.id === id)));
+    setNewItems(draft?.itemsToAdd ?? []);
+  }
+
+  /** Tulis seluruh perubahan dialog ke draft order. Belum masuk DB. */
+  function applyToDraft() {
+    if (!draft) return;
+
+    // Item yang ditandai hapus.
+    for (const rid of removed) draft.deleteItem(rid);
+
+    // Perubahan qty/durasi pada item yang tidak dihapus.
+    for (const it of items) {
+      if (removed.includes(it.id)) continue;
+      const d = localDraft[it.id];
+      if (!d) continue;
+      if (d.quantity === it.quantity && d.durationHours === it.durationHours) continue;
+      draft.updateItem({ itemId: it.id, quantity: d.quantity, durationHours: d.durationHours });
+    }
+
+    // Item baru.
+    for (const ni of newItems) draft.addItem(ni);
+
     setOpen(false);
   }
 
@@ -88,7 +126,13 @@ export function ItemsManageForm({
   );
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) revertToDraft();
+        setOpen(next);
+      }}
+    >
       <DialogTrigger
         render={
           <button
@@ -106,33 +150,25 @@ export function ItemsManageForm({
         <DialogHeader>
           <DialogTitle>Kelola Item Order</DialogTitle>
           <DialogDescription>
-            Ubah jumlah/durasi, hapus, atau tambah item. Harga otomatis mengikuti tier durasi produk.
+            Ubah jumlah/durasi, hapus, atau tambah item. Harga otomatis mengikuti
+            tier durasi produk. Perubahan baru tersimpan setelah tombol{" "}
+            <strong>Simpan</strong> di atas ditekan.
           </DialogDescription>
         </DialogHeader>
 
-        <form action={manageOrderItems} onSubmit={() => setOpen(false)} className="space-y-4">
-          <input type="hidden" name="orderId" value={orderId} />
-          <input type="hidden" name="adds" value={JSON.stringify(newItems)} />
-          <input
-            type="hidden"
-            name="updates"
-            value={JSON.stringify(
-              items
-                .filter((it) => !removed.includes(it.id))
-                .map((it) => ({ itemId: it.id, ...(draft[it.id] ?? { quantity: it.quantity, durationHours: it.durationHours }) }))
-            )}
-          />
-          {removed.map((rid) => (
-            <input key={rid} type="hidden" name="removeItemId" value={rid} />
-          ))}
-
+        <div className="space-y-4">
           {/* Item existing */}
           <div className="space-y-3">
             {items.map((it) => {
               if (removed.includes(it.id)) {
                 return (
-                  <div key={it.id} className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                    <span className="line-through">{it.productName} ×{it.quantity}</span>
+                  <div
+                    key={it.id}
+                    className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                  >
+                    <span className="line-through">
+                      {it.productName} ×{it.quantity}
+                    </span>
                     <button
                       type="button"
                       onClick={() => setRemoved((r) => r.filter((id) => id !== it.id))}
@@ -143,7 +179,7 @@ export function ItemsManageForm({
                   </div>
                 );
               }
-              const d = draft[it.id] ?? { quantity: it.quantity, durationHours: it.durationHours };
+              const d = localDraft[it.id] ?? { quantity: it.quantity, durationHours: it.durationHours };
               return (
                 <div key={it.id} className="rounded-lg border p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
@@ -159,30 +195,42 @@ export function ItemsManageForm({
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label htmlFor={`qty-${it.id}`} className="text-xs">Jumlah</Label>
+                      <Label htmlFor={`qty-${it.id}`} className="text-xs">
+                        Jumlah
+                      </Label>
                       <input
                         id={`qty-${it.id}`}
                         type="number"
                         min={1}
                         value={d.quantity}
                         onChange={(e) =>
-                          setDraft((p) => ({ ...p, [it.id]: { ...d, quantity: Math.max(1, Number(e.target.value) || 1) } }))
+                          setLocalDraft((p) => ({
+                            ...p,
+                            [it.id]: { ...d, quantity: Math.max(1, Number(e.target.value) || 1) },
+                          }))
                         }
                         className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm tabular-nums"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor={`dur-${it.id}`} className="text-xs">Durasi (jam)</Label>
+                      <Label htmlFor={`dur-${it.id}`} className="text-xs">
+                        Durasi (jam)
+                      </Label>
                       <select
                         id={`dur-${it.id}`}
                         value={d.durationHours}
                         onChange={(e) =>
-                          setDraft((p) => ({ ...p, [it.id]: { ...d, durationHours: Number(e.target.value) } }))
+                          setLocalDraft((p) => ({
+                            ...p,
+                            [it.id]: { ...d, durationHours: Number(e.target.value) },
+                          }))
                         }
                         className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
                       >
                         {DURATIONS.map((h) => (
-                          <option key={h} value={h}>{h} jam</option>
+                          <option key={h} value={h}>
+                            {h} jam
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -198,7 +246,9 @@ export function ItemsManageForm({
           {/* Tambah item baru */}
           {availableProducts.length > 0 && (
             <div className="rounded-lg border border-dashed p-3">
-              <Label className="mb-2 block text-xs font-medium text-muted-foreground">Tambah item baru</Label>
+              <Label className="mb-2 block text-xs font-medium text-muted-foreground">
+                Tambah item baru
+              </Label>
               {newItems.map((ni, idx) => {
                 const product = productOf(ni.productId);
                 const unitPrice = product ? getTierPrice(product, ni.durationHours) : 0;
@@ -208,12 +258,17 @@ export function ItemsManageForm({
                       <select
                         value={ni.productId}
                         onChange={(e) =>
-                          setNewItems((p) => p.map((x, i) => (i === idx ? { ...x, productId: Number(e.target.value) } : x)))
+                          setNewItems((p) =>
+                            p.map((x, i) => (i === idx ? { ...x, productId: Number(e.target.value) } : x))
+                          )
                         }
+                        aria-label="Produk item baru"
                         className="h-9 flex-1 rounded-lg border border-input bg-background px-3 text-sm"
                       >
                         {availableProducts.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
                         ))}
                       </select>
                       <button
@@ -231,7 +286,11 @@ export function ItemsManageForm({
                         min={1}
                         value={ni.quantity}
                         onChange={(e) =>
-                          setNewItems((p) => p.map((x, i) => (i === idx ? { ...x, quantity: Math.max(1, Number(e.target.value) || 1) } : x)))
+                          setNewItems((p) =>
+                            p.map((x, i) =>
+                              i === idx ? { ...x, quantity: Math.max(1, Number(e.target.value) || 1) } : x
+                            )
+                          )
                         }
                         aria-label="Jumlah item baru"
                         className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm tabular-nums"
@@ -239,13 +298,19 @@ export function ItemsManageForm({
                       <select
                         value={ni.durationHours}
                         onChange={(e) =>
-                          setNewItems((p) => p.map((x, i) => (i === idx ? { ...x, durationHours: Number(e.target.value) } : x)))
+                          setNewItems((p) =>
+                            p.map((x, i) =>
+                              i === idx ? { ...x, durationHours: Number(e.target.value) } : x
+                            )
+                          )
                         }
                         aria-label="Durasi item baru"
                         className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
                       >
                         {DURATIONS.map((h) => (
-                          <option key={h} value={h}>{h} jam</option>
+                          <option key={h} value={h}>
+                            {h} jam
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -272,16 +337,16 @@ export function ItemsManageForm({
           )}
 
           <div className="flex items-center justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" size="sm" onClick={resetAndClose} className="gap-1.5">
-              <X className="size-3.5" aria-hidden />
-              Batal
+            <Button type="button" variant="ghost" size="sm" onClick={revertToDraft} className="gap-1.5">
+              <RotateCcw className="size-3.5" aria-hidden />
+              Buang perubahan
             </Button>
-            <Button type="submit" size="sm" disabled={!anyChanged} className="gap-1.5">
-              <Save className="size-3.5" aria-hidden />
-              Simpan
+            <Button type="button" size="sm" disabled={!anyChanged} onClick={applyToDraft} className="gap-1.5">
+              <Check className="size-3.5" aria-hidden />
+              Terapkan
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

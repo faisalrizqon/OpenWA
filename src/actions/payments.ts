@@ -26,11 +26,11 @@ export async function approvePayment(formData: FormData) {
 
   const order = await prisma.order.findUnique({
     where: { id: payment.orderId },
-    include: { items: true },
+    include: { items: true, customer: true },
   });
   if (!order) redirect(PANEL);
 
-  await prisma.$transaction(async (tx) => {
+  const paymentStatus = await prisma.$transaction(async (tx) => {
     // 1) Konfirmasi pembayaran ini dulu.
     await tx.payment.update({
       where: { id: Number(paymentId) },
@@ -48,12 +48,12 @@ export async function approvePayment(formData: FormData) {
     const itemsSubtotal = order.items.reduce((s, it) => s + it.subtotal, 0);
     const orderTotal =
       itemsSubtotal - (order.promoDiscount ?? 0) + (order.courierFee ?? 0) + (order.tipAmount ?? 0);
-    const paymentStatus: typeof order.paymentStatus =
+    const nextStatus: typeof order.paymentStatus =
       totalPaid >= orderTotal ? "paid" : totalPaid > 0 ? "partial" : "pending";
 
     await tx.order.update({
       where: { id: payment.orderId },
-      data: { paymentStatus },
+      data: { paymentStatus: nextStatus },
     });
 
     await logAudit(tx, {
@@ -68,10 +68,40 @@ export async function approvePayment(formData: FormData) {
         amount: payment.amount,
         totalPaid,
         orderTotal,
-        paymentStatus,
+        paymentStatus: nextStatus,
       },
     });
+
+    return nextStatus;
   });
+
+  // Kirim konfirmasi WA ke customer setelah transaction commit (network I/O di luar DB).
+  // Hanya saat order benar-benar lunas; partial cukup tercatat di dashboard.
+  if (paymentStatus === "paid" && order.customer?.phone) {
+    try {
+      const sessionId = process.env.OPENWA_SESSION_ID;
+      if (process.env.OPENWA_API_KEY && sessionId) {
+        const chatId = phoneToChatId(order.customer.phone);
+        const methodLabel = (order.paymentMethod ?? payment.method ?? "").toUpperCase();
+        const text = [
+          `Halo ${order.customer.name}, pembayaran Anda sudah kami konfirmasi ✅`,
+          "",
+          `Order: *${order.orderNumber}*`,
+          `Metode: ${methodLabel || "-"}`,
+          `Total dibayar: Rp ${Math.round(payment.amount).toLocaleString("id-ID")}`,
+          "",
+          `Status pesanan: LUNAS`,
+          "",
+          "Unit siap diambil pada jadwal sewa. Terima kasih! 😊",
+        ].join("\n");
+        await logMessage({ sessionId, chatId, body: text.slice(0, 1000), status: "pending", orderId: order.id });
+        await sendMessage(sessionId, { chatId, text });
+      }
+    } catch (error) {
+      console.error(`[WhatsApp] Gagal kirim konfirmasi ke ${order.customer?.phone}:`, error instanceof Error ? error.message : error);
+      // Jangan throw — approval tetap sah di DB.
+    }
+  }
 
   revalidatePath(PANEL);
   revalidatePath(`/admin/orders/${payment.orderId}`);
@@ -225,4 +255,93 @@ export async function updatePaymentSettings(formData: FormData) {
   revalidatePath("/", "layout");
   revalidatePath(PANEL);
   redirect(`${TAB_CONFIG}&saved=1`);
+}
+/**
+ * Bulk approve pending payments — konfirmasi banyak sekaligus untuk efisiensi operasional.
+ * Hanya confirm yang benar-benar menutup total order (paid → send WA); partial tidak kirim WA.
+ */
+export async function bulkApprovePayments(formData: FormData) {
+  const user = await requireAdmin();
+  const paymentIdsRaw = formData.getAll("paymentIds").map((v) => String(v)).filter(Boolean);
+  if (paymentIdsRaw.length === 0) redirect(PANEL);
+
+  const session = process.env.OPENWA_SESSION_ID;
+  let approvedCount = 0;
+  let failed = false;
+
+  for (const idStr of paymentIdsRaw) {
+    const paymentId = Number(idStr);
+    if (!Number.isInteger(paymentId)) continue;
+
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { order: { include: { customer: true, items: true } } },
+    });
+    if (!payment || payment.status !== "pending") continue;
+
+    const order = payment.order;
+
+    try {
+      const nextStatus = await prisma.$transaction(async (tx) => {
+        // Confirm payment record
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: { status: "confirmed", note: "Dikonfirmasi admin (bulk)" },
+        });
+
+        // Recompute order payment status
+        const sum = await tx.payment.aggregate({
+          where: { orderId: order.id, status: "confirmed" },
+          _sum: { amount: true },
+        });
+        const totalPaid = sum._sum.amount ?? 0;
+        const itemsSubtotal = order.items.reduce((s, it) => s + it.subtotal, 0);
+        const orderTotal = itemsSubtotal - (order.promoDiscount ?? 0) + (order.courierFee ?? 0) + (order.tipAmount ?? 0);
+        const status: typeof order.paymentStatus = totalPaid >= orderTotal ? "paid" : totalPaid > 0 ? "partial" : "pending";
+
+        await tx.order.update({ where: { id: order.id }, data: { paymentStatus: status } });
+
+        await logAudit(tx, {
+          entityType: "payment",
+          entityId: String(payment.id),
+          action: "update",
+          summary: `Pembayaran dikonfirmasi (bulk) untuk Order ${order.orderNumber}`,
+          userId: user.id,
+          detail: { paymentId: payment.id, orderNumber: order.orderNumber, amount: payment.amount, status },
+        });
+
+        return status;
+      });
+
+      // Send WA only if fully paid
+      if (nextStatus === "paid" && order.customer?.phone) {
+        try {
+          const chatId = phoneToChatId(order.customer.phone);
+          const methodLabel = (order.paymentMethod ?? payment.method ?? "").toUpperCase();
+          const text = [
+            `Halo ${order.customer.name}, pembayaran Anda sudah kami konfirmasi ✅`,
+            "",
+            `Order: *${order.orderNumber}*`,
+            `Metode: ${methodLabel || "-"}`,
+            `Total dibayar: Rp ${Math.round(payment.amount).toLocaleString("id-ID")}`,
+            "",
+            `Status pesanan: LUNAS`,
+            "",
+            "Unit siap diambil pada jadwal sewa. Terima kasih! 😊",
+          ].join("\n");
+          await logMessage({ sessionId: session!, chatId, body: text.slice(0, 1000), status: "pending", orderId: order.id });
+          await sendMessage(session!, { chatId, text });
+        } catch { /* silent fail for network */ }
+      }
+
+      approvedCount++;
+    } catch (e) {
+      console.error(`[bulkApprove] gagal payment ${paymentId}:`, e instanceof Error ? e.message : e);
+      failed = true;
+    }
+  }
+
+  revalidatePath(PANEL);
+  revalidatePath("/admin/orders");
+  redirect(`${PANEL}?approved=${approvedCount}&failed=${failed ? 1 : 0}`);
 }

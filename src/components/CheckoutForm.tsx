@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { SelectField } from "@/components/SelectField";
 
 const TIP_OPTIONS = [0, 2000, 5000, 10000];
 
@@ -40,6 +41,7 @@ export function CheckoutForm({
   productImageUrl,
 }: CheckoutFormProps) {
   const [deliveryMode, setDeliveryMode] = React.useState<"pickup" | "courier">("pickup");
+  const [guaranteeType, setGuaranteeType] = React.useState("");
   const [courierFee, setCourierFee] = React.useState(defaultCourierFee);
   const [tip, setTip] = React.useState(0);
   const [customTip, setCustomTip] = React.useState("");
@@ -96,16 +98,40 @@ export function CheckoutForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email (opsional)</Label>
-              <Input id="email" name="email" type="email" placeholder="nama@email.com" />
+              <Label htmlFor="guaranteeType">Jaminan (wajib)</Label>
+              <SelectField
+                id="guaranteeType"
+                name="guaranteeType"
+                value={guaranteeType}
+                onValueChange={setGuaranteeType}
+                options={[
+                  { label: "— pilih jaminan —", value: "" },
+                  { label: "KTP", value: "ktp" },
+                  { label: "SIM", value: "sim" },
+                  { label: "Kartu Pelajar", value: "kartu_pelajar" },
+                  { label: "Lainnya", value: "lainnya" },
+                ]}
+                triggerClassName="min-w-0 bg-background"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="guaranteeNumber">No. Jaminan (wajib)</Label>
+              <Input
+                id="guaranteeNumber"
+                name="guaranteeNumber"
+                placeholder="mis. no. KTP / SIM"
+                required
+              />
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="address">Alamat</Label>
+              <Label htmlFor="address">Alamat (wajib)</Label>
               <Input
                 id="address"
                 name="address"
-                placeholder="Dipakai jika memilih diantar kurir"
+                placeholder="Alamat pengiriman"
+                required
               />
             </div>
 
@@ -118,6 +144,9 @@ export function CheckoutForm({
                 className="min-h-24 w-full rounded-xl border bg-background px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-primary"
                 placeholder="Permintaan khusus…"
               />
+              <p className="text-xs text-amber-600">
+                ⚠️ Sampaikan request khusus kepada admin di kolom ini.
+              </p>
             </div>
 
             {/* Metode pengantaran */}

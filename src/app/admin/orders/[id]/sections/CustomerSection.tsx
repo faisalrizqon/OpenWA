@@ -51,7 +51,6 @@ export function CustomerSection({
       <div className="mb-5 flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold tracking-tight text-foreground">Pelanggan & Aksi</h2>
         <CustomerDetailsForm
-          orderId={order.id}
           initialGuaranteeType={order.guaranteeType ?? null}
           initialGuaranteeNumber={order.guaranteeNumber ?? null}
           initialDeliveryMode={order.deliveryMode ?? null}
@@ -162,10 +161,9 @@ export function CustomerSection({
       {/* Quick action ubah tanggal sewa */}
       {isAdmin && (
         <div className="mt-4">
-          <OrderActionsSection orderId={order.id} initialStartDate={order.startDate} initialEndDate={order.endDate} />
+          <OrderActionsSection initialStartDate={order.startDate} initialEndDate={order.endDate} />
         </div>
       )}
-
       {/* Detail tambahan */}
       {(order.guaranteeType || order.deliveryMode === "courier" || order.rescheduledFrom || order.returnedAt) && (
         <dl className="mt-4 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">

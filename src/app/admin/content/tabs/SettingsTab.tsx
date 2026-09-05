@@ -47,7 +47,7 @@ export function SettingsTab({ settings }: { settings: StoreSettings }) {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-card">
                   {settings.logoPath ? (
-                    <Image src={settings.logoPath} alt="Logo toko saat ini" width={64} height={64} className="size-full object-contain" />
+                    <img src={settings.logoPath} alt="Logo toko saat ini" className="size-full object-contain" />
                   ) : (
                     <span className="text-xs text-muted-foreground">Belum ada</span>
                   )}

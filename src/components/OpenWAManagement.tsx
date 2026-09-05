@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownToLine, CheckCircle2 } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckUpdateButton } from "@/components/CheckUpdateButton";
@@ -32,7 +32,12 @@ export function OpenWAManagement() {
           {checkResult?.ok && (
             <Badge variant={checkResult.hasUpdate ? "default" : "secondary"}>
               v{checkResult.currentVersion}
-              {checkResult.hasUpdate && ` → v${checkResult.latestVersion}`}
+              {checkResult.hasUpdate && (
+                <>
+                  <ArrowRight className="size-3 mx-1 inline shrink-0" aria-hidden />
+                  v{checkResult.latestVersion}
+                </>
+              )}
             </Badge>
           )}
           <Button

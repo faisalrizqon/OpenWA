@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { BarChart3, FileSpreadsheet, ClipboardList, TrendingUp } from "lucide-react";
-import { getReportMetrics } from "@/lib/reports";
+import { AlertTriangle, BarChart3, FileSpreadsheet, TrendingUp } from "lucide-react";
+import {
+  getReportMetrics,
+  buildReportQuery,
+  MAX_ORDER_ROWS_ON_PAGE,
+  reportDateValue,
+  type ReportMetrics,
+} from "@/lib/reports";
 import { formatRupiah } from "@/lib/pricing";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { ReportPeriodFilter } from "@/components/ReportPeriodFilter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -18,12 +25,98 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
+/** Baca satu nilai query param (Next bisa memberi string[] bila param ganda). */
+function one(v: string | string[] | undefined): string {
+  return (Array.isArray(v) ? v[0] : v) ?? "";
+}
+
+/** Tombol ekspor mengikuti rentang yang sedang aktif (preset atau custom). */
+function ExportButtons({ metrics }: { metrics: ReportMetrics }) {
+  const query = metrics.custom
+    ? {
+        from: reportDateValue(metrics.rangeStart),
+        to: reportDateValue(metrics.rangeEnd),
+        days: null,
+      }
+    : { from: null, to: null, days: metrics.days };
+
+  return (
+    <div className="flex gap-2">
+      <a
+        href={`/api/reports/export?${buildReportQuery({ ...query, format: "csv" })}`}
+        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-sm font-medium text-muted-foreground shadow transition-colors hover:bg-accent"
+      >
+        <FileSpreadsheet className="size-4" aria-hidden />
+        Ekspor CSV
+      </a>
+      <a
+        href={`/api/reports/export?${buildReportQuery({ ...query, format: "xlsx" })}`}
+        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+      >
+        <FileSpreadsheet className="size-4" aria-hidden />
+        Ekspor Excel
+      </a>
+    </div>
+  );
+}
+
 export default async function ReportsPage({
   searchParams,
 }: PageProps<"/admin/reports">) {
   const sp = await searchParams;
-  const daysRaw = Number(sp.days);
-  const metrics = await getReportMetrics(daysRaw);
+  const daysParam = one(sp.days);
+  const daysRaw = Number(daysParam);
+  const fromRaw = one(sp.from);
+  const toRaw = one(sp.to);
+
+  // Rentang diminta admin — dipakai ulang untuk filter & pesan error.
+  const requested = {
+    days: Number.isFinite(daysRaw) ? daysRaw : undefined,
+    from: fromRaw || undefined,
+    to: toRaw || undefined,
+  };
+
+  // Rentang tidak valid (>365 hari, from>to, dsb.) → tampilkan pesan + filter
+  // agar admin bisa memperbaiki pilihan tanpa kehilangan konteks halaman.
+  let metrics: ReportMetrics | null = null;
+  let rangeError = "";
+  try {
+    metrics = await getReportMetrics(requested);
+  } catch (err) {
+    rangeError =
+      err instanceof RangeError
+        ? err.message
+        : "Gagal memuat laporan. Coba rentang lain.";
+  }
+
+  const filter = (
+    <ReportPeriodFilter
+      days={metrics && !metrics.custom ? metrics.days : null}
+      from={fromRaw}
+      to={toRaw}
+      error={rangeError}
+    />
+  );
+
+  if (!metrics) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Laporan" description="Periode belum dapat dimuat" />
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-destructive">{rangeError}</p>
+              <p className="text-xs text-muted-foreground">
+                Pilih preset di bawah atau persempit rentang tanggalnya.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        {filter}
+      </div>
+    );
+  }
 
   const cards = [
     { label: "Total Diterima", value: formatRupiah(metrics.totalReceived), money: true },
@@ -33,51 +126,24 @@ export default async function ReportsPage({
     { label: "Pelanggan Baru", value: String(metrics.newCustomers) },
   ];
 
+  // Rentang panjang (mis. 1 tahun) bisa memuat banyak order — batasi render
+  // di halaman, sisanya tetap lengkap di ekspor CSV/Excel.
+  const visibleOrders = metrics.orders.slice(0, MAX_ORDER_ROWS_ON_PAGE);
+  const hiddenCount = metrics.ordersTotal - visibleOrders.length;
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Laporan"
-        description={`Rentang ${format(metrics.rangeStart, "dd MMMM", { locale: localeId })} — ${format(
-          metrics.rangeEnd,
-          "dd MMMM yyyy",
-          { locale: localeId }
-        )}`}
-        action={
-          <div className="flex gap-2">
-            <a
-              href={`/api/reports/export?days=${metrics.days}&format=csv`}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-sm font-medium text-muted-foreground shadow transition-colors hover:bg-accent"
-            >
-              <FileSpreadsheet className="size-4" aria-hidden />
-              Ekspor CSV
-            </a>
-            <a
-              href={`/api/reports/export?days=${metrics.days}`}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-            >
-              <FileSpreadsheet className="size-4" aria-hidden />
-              Ekspor Excel
-            </a>
-          </div>
-        }
+        description={`Rentang ${format(metrics.rangeStart, "dd MMMM yyyy", {
+          locale: localeId,
+        })} — ${format(metrics.rangeEnd, "dd MMMM yyyy", { locale: localeId })} · ${
+          metrics.days
+        } hari`}
+        action={<ExportButtons metrics={metrics} />}
       />
 
-      <div className="flex gap-1.5">
-        {[7, 30, 90].map((d) => (
-          <Link
-            key={d}
-            href={`/admin/reports?days=${d}`}
-            className={cn(
-              "inline-flex h-8 items-center rounded-full border px-3 text-sm font-medium transition-colors",
-              metrics.days === d
-                ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            )}
-          >
-            {d} hari
-          </Link>
-        ))}
-      </div>
+      {filter}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-5">
         {cards.map((c) => (
@@ -113,7 +179,7 @@ export default async function ReportsPage({
           ) : (
             <div className="space-y-2">
               {metrics.topProducts.map((t, i) => {
-                const maxQty = metrics.topProducts[0].totalQty || 1;
+                const maxQty = metrics?.topProducts[0].totalQty || 1;
                 return (
                   <div key={t.productName} className="flex items-center gap-3 text-sm">
                     <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">
@@ -126,8 +192,11 @@ export default async function ReportsPage({
                         style={{ width: `${(t.totalQty / maxQty) * 100}%` }}
                       />
                     </div>
-                    <span className="w-8 text-right tabular-nums text-muted-foreground">
-                      {t.totalQty}
+                    <span className="w-24 shrink-0 text-right tabular-nums text-muted-foreground">
+                      {t.totalQty} ×
+                    </span>
+                    <span className="hidden w-32 shrink-0 text-right tabular-nums text-xs text-muted-foreground sm:block">
+                      {formatRupiah(t.totalRevenue)}
                     </span>
                   </div>
                 );
@@ -179,7 +248,12 @@ export default async function ReportsPage({
       <Card>
         <CardHeader>
           <CardTitle>Order dalam Rentang</CardTitle>
-          <CardDescription>{metrics.orders.length} order</CardDescription>
+          <CardDescription>
+            {metrics.ordersTotal} order
+            {hiddenCount > 0
+              ? ` · menampilkan ${visibleOrders.length} teratas, sisanya ada di ekspor`
+              : ""}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {metrics.orders.length === 0 ? (
@@ -191,50 +265,60 @@ export default async function ReportsPage({
               ctaLabel="Buat order"
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nomor</TableHead>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Pelanggan</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Dibayar</TableHead>
-                  <TableHead className="text-right">Sisa</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {metrics.orders.map((o) => (
-                  <TableRow key={o.id}>
-                    <TableCell>
-                      <Link href={`/admin/orders/${o.id}`} className="font-medium text-primary hover:underline">
-                        {o.orderNumber}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {format(new Date(o.createdAt), "dd MMMM yyyy", { locale: localeId })}
-                    </TableCell>
-                    <TableCell>{o.customerName}</TableCell>
-                    <TableCell className="max-w-48 truncate text-muted-foreground">
-                      {o.itemSummary}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {formatRupiah(o.total)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {formatRupiah(o.paid)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {formatRupiah(o.sisa)}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={o.status} />
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nomor</TableHead>
+                    <TableHead>Tanggal</TableHead>
+                    <TableHead>Periode Sewa</TableHead>
+                    <TableHead>Pelanggan</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Dibayar</TableHead>
+                    <TableHead className="text-right">Sisa</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {visibleOrders.map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell>
+                        <Link
+                          href={`/admin/orders/${o.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {o.orderNumber}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {format(new Date(o.createdAt), "dd MMM yyyy", { locale: localeId })}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        {format(new Date(o.startDate), "dd MMM", { locale: localeId })} —{" "}
+                        {format(new Date(o.endDate), "dd MMM yyyy", { locale: localeId })}
+                      </TableCell>
+                      <TableCell>{o.customerName}</TableCell>
+                      <TableCell className="max-w-48 truncate text-muted-foreground">
+                        {o.itemSummary}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {formatRupiah(o.total)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {formatRupiah(o.paid)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {formatRupiah(o.sisa)}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={o.status} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

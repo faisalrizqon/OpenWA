@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ReturnForm } from "@/components/ReturnForm";
-import { ReturnPhotoGrid, type ReturnPhotoItem } from "@/components/ReturnPhotoGrid";
-import { ReturnPhotoAddForm } from "@/components/ReturnPhotoAddForm";
+import { ReturnForm } from "./ReturnForm";
+import { ReturnPhotoGridDraft, type ReturnPhotoItem } from "./ReturnPhotoGridDraft";
+import { ReturnPhotoAddFormDraft } from "./ReturnPhotoAddFormDraft";
 
 export interface ReturnSectionProps {
   order: {
@@ -19,10 +19,12 @@ export interface ReturnSectionProps {
 }
 
 /**
- * Return & Penyelesaian di halaman detail order admin:
+ * Return & Penyelesaian di halaman detail order admin — semua perubahan DRAFT.
+ *
  * - Order aktif/terlambat: form lengkap (kondisi unit + foto + selesaikan).
  * - Order selesai: tambah/revisi foto kondisi (tanpa ubah status).
- * Foto tampil dengan zoom + tombol ✕ per foto untuk revisi bila salah upload.
+ * Foto tampil dengan zoom + tombol ✕ per foto; hapus & tambah baru tercatat ke
+ * draft dan hanya dieksekusi setelah tombol "Simpan" di header ditekan.
  */
 export function ReturnSection({ order, active, assignedUnits }: ReturnSectionProps) {
   const completed = order.status === "completed";
@@ -41,10 +43,10 @@ export function ReturnSection({ order, active, assignedUnits }: ReturnSectionPro
       </CardHeader>
       <CardContent className="space-y-4 overflow-x-auto px-3 py-3 sm:px-6 sm:py-4">
         {active && <ReturnForm orderId={order.id} units={assignedUnits} />}
-        <ReturnPhotoGrid orderId={order.id} photos={order.returnPhotos} />
+        <ReturnPhotoGridDraft photos={order.returnPhotos} />
         {completed && (
-          <div className="rounded-xl border bg-muted/30 p-4">
-            <ReturnPhotoAddForm orderId={order.id} />
+          <div className="flex min-h-[315px] flex-col rounded-xl border bg-muted/30 p-4">
+            <ReturnPhotoAddFormDraft />
           </div>
         )}
         {!active && !completed && order.returnPhotos.length === 0 && (

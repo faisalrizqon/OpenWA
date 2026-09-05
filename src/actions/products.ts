@@ -22,6 +22,7 @@ export async function createProduct(formData: FormData) {
     redirect(`/admin/products/new?error=${encodeURIComponent(`Data tidak valid (${messages})`)}`);
   }
   const data = parsed.data;
+  const newCategoryName = String(formData.get("newCategoryName") ?? "").trim();
 
   let categoryId = data.categoryId;
 
@@ -220,7 +221,7 @@ export async function addUnit(formData: FormData) {
   const condition = String(formData.get("condition") ?? "Bagus").trim();
   const back = `/admin/products/${productIdRaw}`;
 
-  if (!VALID_STATUSES.includes(condition)) redirect(`${back}?error=invalid`);
+  if (!["Bagus", "Cukup", "Rusak"].includes(condition)) redirect(`${back}?error=invalid`);
 
   try {
     await prisma.unit.create({

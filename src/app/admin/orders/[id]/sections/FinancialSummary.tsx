@@ -43,12 +43,14 @@ export function FinancialSummary({
     <div className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-6">
       <div className="mb-5 flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold tracking-tight text-foreground">Ringkasan Pembayaran</h2>
-        <FeesEditForm
-          orderId={order.id}
-          initialCourierFee={order.courierFee}
-          initialTipAmount={order.tipAmount}
-          deliveryMode={order.deliveryMode ?? null}
-        />
+        {/* ml-auto menjaga ikon tetap di kanan atas meskipun heading tidak dirender */}
+        <div className="ml-auto shrink-0">
+          <FeesEditForm
+            initialCourierFee={order.courierFee}
+            initialTipAmount={order.tipAmount}
+            deliveryMode={order.deliveryMode ?? null}
+          />
+        </div>
       </div>
 
       {/* Breakdown total */}
@@ -102,7 +104,7 @@ export function FinancialSummary({
           Simpan link folder Google Drive berisi foto hasil kamera yang disewa.
           Tampil di halaman status order customer.
         </p>
-        <PhotoDriveForm orderId={order.id} initialLink={order.photoLink} />
+        <PhotoDriveForm initialLink={order.photoLink} />
       </div>
       {/* Online payment details */}
       {order.source === "online" && (

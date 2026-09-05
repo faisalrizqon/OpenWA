@@ -25,13 +25,7 @@ dist/
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
-
-# Database files - exclude WAL and shm, keep main DB tracked
-data/*.db-shm
-data/*.db-wal
-!.env.db
 
 # Typescript build
 *.tsbuildinfo
@@ -85,9 +79,13 @@ openwa-server/
 # Local development plans
 .hermes/
 
-# Database - jangan commit DB berisi data pelanggan (PII)
+# Database & runtime data - jangan commit DB berisi data pelanggan (PII) / secrets
 data/*.db
 data/*.db-*
+data/*.sqlite
+data/*.sqlite-*
+data/.api-key
+data/plugins/
 !data/.gitkeep
 
 # OpenWA deployment mode override (ditulis switcher di /admin/whatsapp — preferensi mesin)

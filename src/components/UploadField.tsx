@@ -18,6 +18,8 @@ export function UploadField({
   required = false,
   placeholder = "Pilih file…",
   helper,
+  compact = false,
+  onFilesChange,
 }: {
   id: string;
   name: string;
@@ -25,10 +27,12 @@ export function UploadField({
   required?: boolean;
   placeholder?: string;
   helper?: string;
+  compact?: boolean;
+  /** Opsional: laporkan daftar file terpilih ke parent (dipakai mode draft). */
+  onFilesChange?: (files: File[]) => void;
 }) {
   const [files, setFiles] = React.useState<File[]>([]);
   const inputRef = React.useRef<HTMLInputElement>(null);
-
   // Sinkronkan state → input setiap kali berubah, agar FormData submit
   // selalu berisi daftar file terkini.
   React.useEffect(() => {
@@ -50,11 +54,20 @@ export function UploadField({
     setFiles((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  // Mode draft: parent butuh objek File-nya, bukan hanya isi input tersembunyi.
+  // Callback disimpan di ref agar identitas baru dari parent (inline arrow)
+  // tidak memicu effect berulang → infinite loop.
+  const onFilesChangeRef = React.useRef(onFilesChange);
+  onFilesChangeRef.current = onFilesChange;
+  React.useEffect(() => {
+    onFilesChangeRef.current?.(files);
+  }, [files]);
+
   return (
     <div className="space-y-1.5">
       <label
         htmlFor={id}
-        className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed bg-muted/40 px-3 py-3 text-sm transition-colors hover:bg-accent"
+        className={`flex cursor-pointer items-center gap-2 rounded-xl border border-dashed bg-muted/40 px-3 ${compact ? "py-2" : "py-3"} text-sm transition-colors hover:bg-accent`}
       >
         <Upload className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         <span className="truncate">

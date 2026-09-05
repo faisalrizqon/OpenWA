@@ -209,9 +209,9 @@ function revalidateOrderPaths(orderId: string) {
   revalidatePath(`/admin/orders/${orderId}`);
 }
 
-type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-async function releaseOrderUnits(tx: Tx, orderId: string) {
+export async function releaseOrderUnits(tx: Tx, orderId: string) {
   const items = await tx.orderItem.findMany({ where: { orderId }, select: { unitId: true } });
   for (const it of items) {
     if (it.unitId != null) {
@@ -228,7 +228,7 @@ const VALID_STATUSES = ["pending", "booking", "active", "late", "completed", "ca
 
 /** Efek samping perubahan status — dipakai update tunggal & bulk.
  *  Masuk "active" assign unit (+ log rented); keluar masa sewa release unit (+ log returned). */
-async function applyStatusChange(tx: Tx, orderId: string, newStatus: string, userId: string | null) {
+export async function applyStatusChange(tx: Tx, orderId: string, newStatus: string, userId: string | null) {
   const order = await tx.order.findUnique({ where: { id: orderId } });
   if (!order) throw new Error("Order tidak ditemukan");
   if (order.status === newStatus) return;

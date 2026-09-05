@@ -1,5 +1,6 @@
 import { format, differenceInMinutes } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { ArrowRight } from "lucide-react";
 import { TodayRental } from "@/lib/dashboard";
 import { cn } from "@/lib/utils";
 import { formatSisaWaktu } from "./utils";
@@ -17,8 +18,9 @@ export function RentalProgress({ rental }: { rental: TodayRental }) {
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-xs tabular-nums text-muted-foreground">
-        <span>
-          {format(rental.startDate, "dd MMMM HH:mm", { locale: localeId })} →{" "}
+        <span className="inline-flex items-center gap-1">
+          {format(rental.startDate, "dd MMMM HH:mm", { locale: localeId })}
+          <ArrowRight className="size-3 shrink-0" aria-hidden />
           {format(rental.endDate, "dd MMMM HH:mm", { locale: localeId })}
         </span>
         <span

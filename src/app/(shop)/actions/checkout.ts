@@ -76,6 +76,9 @@ export async function checkoutOrder(
   const address = String(formData.get("address") ?? "").trim();
   const startDateRaw = String(formData.get("startDate") ?? "");
   const note = String(formData.get("note") ?? "").trim();
+  const guaranteeTypeRaw = String(formData.get("guaranteeType") ?? "").trim();
+  const guaranteeType = ["ktp", "sim", "kartu_pelajar", "lainnya"].includes(guaranteeTypeRaw) ? guaranteeTypeRaw : null;
+  const guaranteeNumber = String(formData.get("guaranteeNumber") ?? "").trim() || null;
   const deliveryMode = String(formData.get("deliveryMode") ?? "pickup") === "courier" ? "courier" : "pickup";
   const methodRaw = String(formData.get("paymentMethod") ?? "cash").trim();
   const courierFee = Math.max(0, Number(formData.get("courierFee") ?? 0) || 0);
@@ -97,8 +100,7 @@ export async function checkoutOrder(
 
   const first = items[0];
   const checkoutPage = portal ? "/portal/checkout" : "/checkout";
-
-  if (isNaN(startDate.getTime()) || name.length < 2 || !PHONE_RE.test(phone)) {
+  if (isNaN(startDate.getTime()) || name.length < 2 || !PHONE_RE.test(phone) || !guaranteeType || !guaranteeNumber || !address) {
     failCheckout(first, startDateRaw, "Data pesanan tidak lengkap atau tidak valid. Periksa kembali lalu coba lagi.", checkoutPage);
   }
   // Midtrans hanya boleh dipilih kalau memang dikonfigurasi
@@ -165,6 +167,8 @@ export async function checkoutOrder(
           startDate,
           endDate,
           noteOrder: note || null,
+          guaranteeType,
+          guaranteeNumber,
           deliveryMode,
           deliveryAddress: deliveryMode === "courier" ? address || null : null,
           courierFee,
@@ -420,7 +424,6 @@ export async function submitGuarantee(formData: FormData) {
   if (!["ktp", "kartu_pelajar"].includes(docType)) redirect(`${back}?error=invalid`);
   if (!(file instanceof File) || file.size === 0) redirect(`${back}?error=nofile`);
   if (!(selfie instanceof File) || selfie.size === 0) redirect(`${back}?error=nofile`);
-
   const dir = path.join(process.cwd(), "public", "uploads", "guarantee");
   await mkdir(dir, { recursive: true });
 
@@ -428,7 +431,6 @@ export async function submitGuarantee(formData: FormData) {
     { type: docType, f: file },
     { type: "selfie_ktp", f: selfie },
   ];
-
   for (const entry of entries) {
     // Terima semua jenis file ≤ 15 MB; gambar dikompres engine ke ≤ 3 MB.
     const processed = await processUploadFile(entry.f);
@@ -442,6 +444,15 @@ export async function submitGuarantee(formData: FormData) {
         docType: entry.type,
         filePath: `/uploads/guarantee/${fileName}`,
       },
+    });
+  }
+
+  // Sinkronkan metadata order dengan jenis dokumen yang diupload supaya
+  // card "Pelanggan & Aksi" di admin menampilkan jaminan (bukan kosong).
+  if (!order.guaranteeType) {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { guaranteeType: docType },
     });
   }
 
@@ -478,6 +489,18 @@ export async function deleteGuarantee(formData: FormData) {
   }
 
   await prisma.document.delete({ where: { id: doc.id } });
+
+  // Kosongkan guaranteeType bila tidak ada lagi dokumen identitas tersisa,
+  // supaya metadata order sinkron dengan dokumen jaminan yang benar-benar ada.
+  const remainingIdentityDocs = await prisma.document.count({
+    where: { orderId, docType: { in: ["ktp", "kartu_pelajar"] } },
+  });
+  if (remainingIdentityDocs === 0 && order.guaranteeType) {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { guaranteeType: null },
+    });
+  }
 
   revalidatePath(back);
   revalidatePath(`/order-status/${order.orderNumber}`);

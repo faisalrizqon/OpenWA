@@ -130,3 +130,37 @@ export function formatOrderReceivedWA(input: OrderIncomingInput): string {
     "Kami akan hubungi kamu untuk konfirmasi berikutnya. Terima kasih! 😊",
   ].join("\n");
 }
+
+export function formatReviewRequestWA(input: {
+  customerName: string;
+  orderNumber: string;
+  reviewUrl: string;
+}): string {
+  return [
+    `Halo ${input.customerName}, bagaimana pengalaman sewamu? 🌟`,
+    "",
+    `Order: *${input.orderNumber}*`,
+    "Beri rating & review untuk membantu kami lebih baik!",
+    "",
+    `📝 Review: ${input.reviewUrl}`,
+    "",
+    "Terima kasih 😊",
+  ].join("\n");
+}
+
+export function formatCollectionReminderWA(input: {
+  customerName: string;
+  orderNumber: string;
+  daysOverdue: number;
+  outstandingAmount: number;
+}): string {
+  return [
+    `Halo ${input.customerName}, mengingatkan tunggakan sewa 📢`,
+    "",
+    `Order: *${input.orderNumber}*`,
+    `Terlambat: ${input.daysOverdue} hari`,
+    `Sisa pembayaran: Rp ${Math.round(input.outstandingAmount).toLocaleString("id-ID")}`,
+    "",
+    "Mohon segera melunasi.",
+  ].join("\n");
+}

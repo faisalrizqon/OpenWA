@@ -108,11 +108,16 @@ export function OrderBar({
             <span className={cn("size-2 rounded-full", STATUS_DOT[span.status] ?? "bg-zinc-400")} aria-hidden />
             <span className="font-medium">{STATUS_LABEL[span.status] ?? span.status}</span>
           </div>
-          <p className="text-muted-foreground">
+          <p className="flex flex-wrap items-center gap-1 text-muted-foreground">
             {format(start, "EEEE, dd MMMM yyyy, HH:mm", { locale: localeId })}
-            {sameDay
-              ? ` – ${format(end, "HH:mm", { locale: localeId })}`
-              : ` → ${format(end, "EEEE, dd MMMM yyyy, HH:mm", { locale: localeId })}`}
+            {sameDay ? (
+              <span>– {format(end, "HH:mm", { locale: localeId })}</span>
+            ) : (
+              <>
+                <ArrowRight className="size-3 shrink-0" aria-hidden />
+                {format(end, "EEEE, dd MMMM yyyy, HH:mm", { locale: localeId })}
+              </>
+            )}
           </p>
           {span.clippedStart && (
             <p className="text-muted-foreground/70 italic">Mulai sebelum bulan ini</p>

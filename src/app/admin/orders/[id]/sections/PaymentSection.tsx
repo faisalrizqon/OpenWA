@@ -1,15 +1,19 @@
-import { addPayment } from "@/actions/orders";
 import { formatRupiah } from "@/lib/pricing";
-import { storageUrl } from "@/lib/storage";
+import { storageUrl } from "@/lib/storage-url";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { SelectField } from "@/components/SelectField";
 import { PaymentRowActions } from "@/components/OrderAdminActions";
-import { UploadField } from "@/components/UploadField";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { PAYMENT_TYPES, METHODS, dateFmtDay } from "./constants";
-import { Eye, Wallet } from "lucide-react";
+import { Eye } from "lucide-react";
 import { LateFeeSuggestion } from "./LateFeeSuggestion";
+import { PaymentAddForm } from "./PaymentForm";
 
 export interface PaymentSectionProps {
   order: {
@@ -40,130 +44,59 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
     <div id="catat-pembayaran" className="min-w-0 rounded-xl border bg-card p-4 shadow-sm sm:p-6 scroll-mt-4">
       <h2 className="mb-5 text-lg font-semibold tracking-tight text-foreground">Catat Pembayaran</h2>
 
-      {/* Late fee suggestion */}
+      {/* Late fee suggestion — tercatat ke draft, bukan langsung ke DB */}
       {lateFee && (
         <div className="mb-6">
-          <LateFeeSuggestion
-            orderId={order.id}
-            suggestedFine={lateFee.suggestedFine}
-            lateDays={lateFee.lateDays}
-          />
+          <LateFeeSuggestion suggestedFine={lateFee.suggestedFine} lateDays={lateFee.lateDays} />
         </div>
       )}
 
-      {/* Form tambah pembayaran */}
-      <form action={addPayment} className="mb-6 grid gap-4 sm:grid-cols-2">
-        <input type="hidden" name="orderId" value={order.id} />
-        <div className="space-y-1">
-          <label htmlFor="amount" className="text-xs font-medium text-muted-foreground">
-            Jumlah (Rp)
-          </label>
-          <input
-            id="amount"
-            name="amount"
-            type="number"
-            min="1"
-            required
-            placeholder="30000"
-            className="h-9 w-full rounded-lg border border-input px-3 text-sm tabular-nums"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="paymentType" className="text-xs font-medium text-muted-foreground">
-            Jenis
-          </label>
-          <SelectField
-            id="paymentType"
-            name="paymentType"
-            defaultValue="dp"
-            options={Object.entries(PAYMENT_TYPES).map(([v, l]) => ({
-              label: l,
-              value: v,
-            }))}
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="method" className="text-xs font-medium text-muted-foreground">
-            Metode
-          </label>
-          <SelectField
-            id="method"
-            name="method"
-            defaultValue=""
-            options={Object.entries(METHODS).map(([v, l]) => ({ label: l, value: v }))}
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="note" className="text-xs font-medium text-muted-foreground">
-            Catatan
-          </label>
-          <input
-            id="note"
-            name="note"
-            className="h-9 w-full rounded-lg border border-input px-3 text-sm"
-          />
-        </div>
+      {/* Form catat pembayaran — masuk draft, tersimpan setelah tombol Simpan */}
+      <PaymentAddForm />
 
-        {/* Upload bukti (kiri) + bukti pembayaran yang sudah ada (kanan) */}
-        <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-start">
-          <div className="min-w-0 flex-1 space-y-1">
-            <UploadField
-              id="proof"
-              name="proof"
-              placeholder="Klik untuk pilih file…"
-              helper="Bukti transfer atau QRIS — semua format diterima, maks 15MB (dikompres otomatis)"
-            />
+      {/* Bukti pembayaran yang sudah tersimpan (klik untuk zoom) */}
+      {paymentsWithProof.length > 0 && (
+        <div className="mb-6">
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Bukti Pembayaran</p>
+          <div className="flex flex-wrap gap-2">
+            {paymentsWithProof.map((p) => (
+              <Dialog key={p.id}>
+                <DialogTrigger
+                  className="cursor-zoom-in overflow-hidden rounded-lg border transition-transform hover:scale-[1.03]"
+                  title={`${PAYMENT_TYPES[p.paymentType] ?? p.paymentType} · ${formatRupiah(p.amount)} — klik untuk lihat`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={storageUrl(p.proofPath!)}
+                    alt={`Bukti ${PAYMENT_TYPES[p.paymentType] ?? p.paymentType}`}
+                    className="h-24 w-24 object-cover"
+                  />
+                </DialogTrigger>
+                <DialogContent className="max-w-5xl sm:max-w-5xl">
+                  <DialogHeader>
+                    <DialogTitle>Bukti Pembayaran — {order.orderNumber}</DialogTitle>
+                    <DialogDescription>
+                      {PAYMENT_TYPES[p.paymentType] ?? p.paymentType} · {formatRupiah(p.amount)} ·{" "}
+                      {dateFmtDay(new Date(p.paidAt))}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex items-center justify-center bg-muted p-4">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={storageUrl(p.proofPath!)}
+                      alt="Bukti pembayaran ukuran penuh"
+                      className="max-h-[75vh] max-w-full object-contain"
+                    />
+                  </div>
+                  <p className="px-4 pb-4 text-center text-xs text-muted-foreground">
+                    Tekan ESC atau tombol tutup untuk menutup
+                  </p>
+                </DialogContent>
+              </Dialog>
+            ))}
           </div>
-          {paymentsWithProof.length > 0 && (
-            <div className="min-w-0 flex-1">
-              <p className="mb-1.5 text-xs font-medium text-muted-foreground">Bukti Pembayaran</p>
-              <div className="flex flex-wrap gap-2">
-                {paymentsWithProof.map((p) => (
-                  <Dialog key={p.id}>
-                    <DialogTrigger
-                      className="cursor-zoom-in overflow-hidden rounded-lg border transition-transform hover:scale-[1.03]"
-                      title={`${PAYMENT_TYPES[p.paymentType] ?? p.paymentType} · ${formatRupiah(p.amount)} — klik untuk lihat`}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={storageUrl(p.proofPath!)}
-                        alt={`Bukti ${PAYMENT_TYPES[p.paymentType] ?? p.paymentType}`}
-                        className="h-24 w-24 object-cover"
-                      />
-                    </DialogTrigger>
-                    <DialogContent className="max-w-5xl sm:max-w-5xl">
-                      <DialogHeader>
-                        <DialogTitle>Bukti Pembayaran — {order.orderNumber}</DialogTitle>
-                        <DialogDescription>
-                          {PAYMENT_TYPES[p.paymentType] ?? p.paymentType} · {formatRupiah(p.amount)} · {dateFmtDay(new Date(p.paidAt))}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="flex items-center justify-center bg-muted p-4">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={storageUrl(p.proofPath!)}
-                          alt="Bukti pembayaran ukuran penuh"
-                          className="max-h-[75vh] max-w-full object-contain"
-                        />
-                      </div>
-                      <p className="px-4 pb-4 text-center text-xs text-muted-foreground">
-                        Tekan ESC atau tombol tutup untuk menutup
-                      </p>
-                    </DialogContent>
-                  </Dialog>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
-
-        <div className="sm:col-span-2">
-          <Button type="submit" className="gap-1.5">
-            <Wallet className="size-4" aria-hidden />
-            Catat Pembayaran
-          </Button>
-        </div>
-      </form>
+      )}
 
       {/* Riwayat pembayaran — bisa di-scroll menyamping bila kolom tidak muat */}
       {order.payments.length > 0 && (
@@ -240,9 +173,15 @@ export function PaymentSection({ order, isAdmin, lateFee }: PaymentSectionProps)
                   </td>
                   <td className="px-3 py-3">
                     <PaymentRowActions
-                      orderId={order.id}
                       isAdmin={isAdmin}
-                      payment={{ id: Number(p.id), amount: p.amount, method: p.method, note: p.note, status: p.status }}
+                      payment={{ 
+                        id: Number(p.id), 
+                        paymentType: p.paymentType,
+                        amount: p.amount, 
+                        method: p.method, 
+                        note: p.note, 
+                        status: p.status 
+                      }}
                     />
                   </td>
                 </tr>

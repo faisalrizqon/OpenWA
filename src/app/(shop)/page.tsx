@@ -105,12 +105,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                         <Link href={`/katalog/${p.id}`} className="flex flex-1 flex-col">
                           <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
                             {main ? (
-                              <Image
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
                                 src={main.src}
                                 alt={`${p.name} — foto produk`}
-                                fill
-                                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
-                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-105"
                               />
                             ) : (
                               <Camera
@@ -135,7 +134,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                                     className="block size-9 overflow-hidden rounded-md border-2 border-card bg-card shadow-sm sm:size-10"
                                   >
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={pv.src} alt="" className="size-full object-cover" />
+                                    <img
+                                      src={pv.src}
+                                      alt="Preview produk"
+                                      className="block size-full object-cover"
+                                    />
                                   </span>
                                 ))}
                               </div>

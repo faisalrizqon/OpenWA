@@ -226,7 +226,7 @@ export function GuaranteeUpload({
       </div>
       <Button type="submit" className="h-10 w-full gap-1.5">
         <ShieldCheck className="size-4" aria-hidden />
-        Upload Jaminan
+        Upload
       </Button>
     </form>
   );
