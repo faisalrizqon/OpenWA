@@ -4,6 +4,8 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+
 import { batchCommitAllChanges } from "@/actions/orders-batch-commit";
 import { useOrderDraft } from "./OrderDraftContext";
 
@@ -23,10 +25,26 @@ export function OrderDraftSaveBar({ orderId }: { orderId: string }) {
 
   function handleSave() {
     const fd = buildFormData(orderId);
-    // Jangan reset di sini: aksi selalu redirect. Bila gagal, draft harus tetap
-    // ada supaya user tidak kehilangan perubahan yang sudah diisi.
     startTransition(async () => {
-      await batchCommitAllChanges(fd);
+      const result = await batchCommitAllChanges(fd);
+
+      if (result.ok) {
+        // Notifikasi sukses muncul SEKALI via toast client-side — bukan dari
+        // query param URL. Jadi refresh browser hanya memuat ulang tab tanpa
+        // memunculkan ulang notif "berhasil disimpan" (tidak ada loop save).
+        toast.success("Perubahan berhasil disimpan");
+        // Buang draft lalu segarkan data server. URL tetap bersih
+        // (/admin/orders/[id]) tanpa ?saved=1&changes=...
+        reset();
+        router.refresh();
+      } else {
+        // Gagal: draft DIPERTAHANKAN supaya user tidak kehilangan isian.
+        toast.error(
+          result.error === "file"
+            ? "File tidak valid — maksimal 15MB (file di atas 3MB dikompres otomatis)."
+            : result.error
+        );
+      }
     });
   }
 

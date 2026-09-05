@@ -76,7 +76,7 @@ export default async function ShopLayout({ children }: LayoutProps<"/">) {
             </Link>
             <Link
               href="/portal/login"
-              className="relative inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/30 ring-2 ring-primary/40 transition-all hover:bg-primary/90 hover:ring-primary/60 sm:text-sm"
+              className="relative inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 sm:text-sm"
             >
               <UserRound className="size-4" aria-hidden />
               <span className="hidden sm:inline">Login Member</span>

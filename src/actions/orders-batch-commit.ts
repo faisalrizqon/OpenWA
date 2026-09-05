@@ -22,6 +22,13 @@ const GUARANTEE_DOC_TYPES = ["ktp", "sim", "kartu_pelajar", "lainnya"];
 type OrderUpdateData = Parameters<typeof prisma.order.update>[0]["data"];
 type PaymentUpdateData = Parameters<typeof prisma.payment.update>[0]["data"];
 
+/** Hasil commit draft order. Dikembalikan ke client (BUKAN redirect) agar URL
+ *  detail order tetap bersih — tanpa `?saved=1&changes=...` yang membuat
+ *  notifikasi "berhasil disimpan" muncul ulang setiap kali halaman di-refresh. */
+export type BatchCommitResult =
+  | { ok: true; changes: string[] }
+  | { ok: false; error: string };
+
 /** Parse array JSON kiriman client; kosong/rusak dianggap tidak ada perubahan. */
 function parseJsonArray<T>(raw: FormDataEntryValue | null): T[] {
   if (!raw) return [];
@@ -68,7 +75,9 @@ function toNonNegativeNumber(value: unknown): number | null {
  * File diproses DI LUAR transaksi (I/O lambat tidak boleh menahan lock DB); bila
  * transaksi gagal, file yang sudah terlanjur ditulis dibersihkan kembali.
  */
-export async function batchCommitAllChanges(formData: FormData) {
+export async function batchCommitAllChanges(
+  formData: FormData
+): Promise<BatchCommitResult> {
   const user = await requireMitraOrAdmin();
   const orderId = String(formData.get("orderId") ?? "");
   if (!orderId) redirect("/admin/orders");
@@ -142,7 +151,7 @@ export async function batchCommitAllChanges(formData: FormData) {
   const proofStored: string[] = [];
   for (const f of proofFiles) {
     const processed = await processUploadFile(f);
-    if (!processed) redirect(`${back}?error=file`);
+    if (!processed) return { ok: false, error: "file" };
     const filename = `${orderId}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${processed.ext}`;
     proofStored.push((await saveUpload("proof", filename, processed.buffer)).filePath);
   }
@@ -150,7 +159,7 @@ export async function batchCommitAllChanges(formData: FormData) {
   const returnStored: StoredFile[] = [];
   for (let i = 0; i < returnPhotoFiles.length; i++) {
     const processed = await processUploadFile(returnPhotoFiles[i]);
-    if (!processed) redirect(`${back}?error=file`);
+    if (!processed) return { ok: false, error: "file" };
     const filename = `${orderId}-${i}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${processed.ext}`;
     returnStored.push(await saveUpload("return", filename, processed.buffer));
   }
@@ -166,7 +175,7 @@ export async function batchCommitAllChanges(formData: FormData) {
   for (const entry of guaranteeEntries) {
     if (!(entry.file instanceof File) || entry.file.size === 0) continue;
     const processed = await processUploadFile(entry.file);
-    if (!processed) redirect(`${back}?error=file`);
+    if (!processed) return { ok: false, error: "file" };
     const dir = path.join(process.cwd(), "public", "uploads", "guarantee");
     await mkdir(dir, { recursive: true });
     const fileName = `${order.orderNumber}-${entry.type}-${Date.now()}-${crypto
@@ -606,11 +615,11 @@ export async function batchCommitAllChanges(formData: FormData) {
 
     if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
     const msg = e instanceof Error ? e.message : "Gagal menyimpan perubahan";
-    redirect(`${back}?error=${encodeURIComponent(msg)}`);
+    return { ok: false, error: msg };
   }
 
   revalidatePath(back);
   revalidatePath("/admin/orders");
   revalidatePath("/admin");
-  redirect(`${back}?saved=1&changes=${encodeURIComponent(summary.join(","))}`);
+  return { ok: true, changes: summary };
 }

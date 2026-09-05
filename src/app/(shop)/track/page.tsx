@@ -113,7 +113,7 @@ export default async function TrackPage({ searchParams }: PageProps<"/track">) {
         </p>
       </div>
 
-      <div className="max-w-2xl">
+      <div className="mx-auto max-w-2xl">
         {/* Form pencarian */}
         <form action="/track" method="get" className="flex gap-2">
           <div className="relative flex-1">
