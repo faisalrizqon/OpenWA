@@ -1,8 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Camera, ImagePlus, Trash2, X } from "lucide-react";
-import { toast } from "sonner";
+import { useRef } from "react";
+import { Camera, ImagePlus, Trash2, X, ZoomIn } from "lucide-react";
 import { uploadProductImages, deleteProductImage } from "@/actions/products";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 const MAX_IMAGES = 10;
 
@@ -44,7 +44,7 @@ export function ProductGalleryControl({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const remaining = MAX_IMAGES - images.length;
-  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  
 
   return (
     <div className="space-y-3">
@@ -56,22 +56,46 @@ export function ProductGalleryControl({
               key={img.id}
               className="group relative aspect-square overflow-hidden rounded-xl border bg-muted/40"
             >
-              {/* Klik foto = buka lightbox (button agar bisa diakses keyboard) */}
-              <button
-                type="button"
-                onClick={() => setLightboxSrc(img.filePath)}
-                aria-label={`Perbesar foto produk ${img.id}`}
-                className="block size-full cursor-zoom-in"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={img.filePath}
-                  alt={`Foto produk ${img.id}`}
-                  className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
+              <Dialog>
+                <DialogTrigger
+                  render={
+                    <button
+                      type="button"
+                      aria-label={`Perbesar foto produk ${img.id}`}
+                      title="Klik untuk memperbesar"
+                      className="group relative block size-full cursor-zoom-in"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={img.filePath}
+                        alt={`Foto produk ${img.id}`}
+                        className="size-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                      />
+                      {/* Petunjuk zoom di pojok kiri atas */}
+                      <span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+                        <ZoomIn className="size-3" aria-hidden />
+                        Zoom
+                      </span>
+                    </button>
+                  }
                 />
-              </button>
+                <DialogContent className="max-w-5xl sm:max-w-5xl">
+                  <DialogHeader>
+                    <DialogTitle>Foto Produk #{img.id}</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex items-center justify-center bg-muted p-4">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.filePath}
+                      alt={`Foto produk ${img.id}`}
+                      className="max-h-[75vh] max-w-full object-contain"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+
               {/* Overlay gradasi saat hover — murni visual (pointer-events-none)
-                  sehingga klik foto tetap membuka lightbox. */}
+                  sehingga klik foto tetap membuka dialog zoom. */}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/25 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
 
               {/* Tombol hapus foto — muncul saat hover, konfirmasi lewat dialog in-app
@@ -149,21 +173,6 @@ export function ProductGalleryControl({
           untuk menambah foto baru.
         </p>
       )}
-
-      {/* Lightbox detail foto */}
-      <Dialog open={lightboxSrc !== null} onOpenChange={(open) => !open && setLightboxSrc(null)}>
-        <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0">
-          <DialogTitle className="sr-only">Detail foto produk</DialogTitle>
-          {lightboxSrc && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={lightboxSrc}
-              alt="Foto produk — tampilan penuh"
-              className="max-h-[80vh] w-full object-contain"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

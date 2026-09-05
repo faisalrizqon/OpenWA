@@ -90,5 +90,18 @@ data/plugins/
 
 # OpenWA deployment mode override (ditulis switcher di /admin/whatsapp — preferensi mesin)
 openwa-deployment-mode.json
+
+# OpenWA session backups, update artifacts, and debug scripts — never commit
+openwa-data-backup-*
+openwa-update-progress.json
+openwa-update.lock
+scripts/_diag-*.cjs
+scripts/_diag-*.ps1
+scripts/_kill-session-*.ps1
+scripts/openwa-updater.cjs
+scripts/openwa-*.ps1
 scripts/debug-*.mjs
 scripts/verify-openwa-login.mjs
+
+# Local development plans
+.hermes/
