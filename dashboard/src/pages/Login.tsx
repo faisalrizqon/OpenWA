@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getApiKey } from '../utils/apiKeyStore';
 import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff, Languages } from 'lucide-react';
 import { GithubIcon } from '../components/GithubIcon';
@@ -13,7 +14,8 @@ interface LoginProps {
 
 export function Login({ onLogin }: LoginProps) {
   const { t, i18n } = useTranslation();
-  const [apiKey, setApiKey] = useState('');
+  const initialApiKey = getApiKey();
+  const [apiKey, setApiKey] = useState(initialApiKey || '');
   const [showKey, setShowKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');

@@ -109,9 +109,11 @@ function AppContent() {
         <Suspense fallback={loadingFallback}>
           <Routes>
             <Route path="/" element={<Layout onLogout={handleLogout} userRole={role} />}>
-              <Route index element={<Dashboard />} />
-              <Route path="sessions" element={<Sessions />} />
+              {/* Default landing: Chats is the main feature — `/` redirects there. */}
+              <Route index element={<Navigate to="/chats" replace />} />
               <Route path="chats" element={<Chats />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="sessions" element={<Sessions />} />
               <Route path="webhooks" element={<Webhooks />} />
               <Route path="templates" element={<Templates />} />
               {role === 'admin' && <Route path="api-keys" element={<ApiKeys />} />}
@@ -119,7 +121,8 @@ function AppContent() {
               <Route path="message-tester" element={<MessageTester />} />
               {role === 'admin' && <Route path="infrastructure" element={<Infrastructure />} />}
               {role === 'admin' && <Route path="plugins" element={<Plugins />} />}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              {/* Unknown paths land on the main feature. */}
+              <Route path="*" element={<Navigate to="/chats" replace />} />
             </Route>
           </Routes>
         </Suspense>

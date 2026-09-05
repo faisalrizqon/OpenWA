@@ -884,7 +884,13 @@
     height: auto;
   }
 
+  /* `flex: none` is load-bearing here: the base rule gives this box `flex: 1` (basis 0%), which
+     overrides `height` for a column flex item. On desktop the parent has a definite height so the
+     stretch is harmless, but here the parent is `height: auto`, so the 0% basis falls back to
+     content sizing and the `calc(100vh - 7rem)` below is ignored — the pane grows to the full
+     thread height and `.room-messages` never scrolls internally. */
   .chats-page .chats-layout {
+    flex: none;
     flex-direction: column;
     height: calc(100vh - 7rem);
   }
@@ -916,6 +922,19 @@
 
   .chats-page .room-header {
     height: 60px;
+  }
+
+  /* Flex-column chain fix: tanpa min-height: 0, item flex tumbuh setinggi isi
+     (min-height: auto default) sehingga .room-messages tidak pernah bisa scroll
+     internal — seluruh halaman yang scroll dan chat terbuka di pesan PERTAMA.
+     Dengan min-height: 0, tinggi rantai dibatasi viewport dan scroll terjadi di
+     dalam .room-messages, sehingga pin-to-bottom hook bekerja (chat terbuka di
+     pesan terbaru, seperti WhatsApp native). */
+  .chats-page .chats-layout,
+  .chats-page .chats-room,
+  .chats-page .room-container,
+  .chats-page .room-messages {
+    min-height: 0;
   }
 }
 

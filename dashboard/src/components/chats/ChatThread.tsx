@@ -141,6 +141,12 @@ function ChatThread({
     setShowJumpToBottom(false);
   }, [activeChat?.id]);
 
+  // Cold-open state: show the jump button only AFTER the first scroll tick — useChatScrollPosition
+  // restores the bottom (or the saved spot) synchronously in a useLayoutEffect, which runs before
+  // the passive listener above measures geometry, so the initial onScroll() never observes a stale
+  // mid-thread position and the button never flashes during initial load. The reset above wipes any
+  // stale value while the incoming chat's content is still mounting.
+
   // Helper formats
   const formatTime = (timestamp?: number) => {
     if (!timestamp) return '';

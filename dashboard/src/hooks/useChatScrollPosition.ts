@@ -13,11 +13,11 @@ import { decideScroll, type ScrollDirection } from '../utils/scrollDecision.ts';
  *   - restore: 'saved' = write scrollTop = the saved value; 'bottom' = scrollHeight;
  *              null = do nothing (still loading / deselected).
  *
- * NOTE: there is deliberately no "save the leaving chat's scrollTop" step here. A layout effect
- * runs AFTER React has already swapped the container's content to the NEW chat, so a post-swap
- * read captures the NEW content's (possibly clamped) scrollTop, not the leaving chat's position —
- * saving then restores the returning chat to the TOP. Instead the scroll listener saves the live
- * scrollTop continuously (see below), so the map always holds each chat's last REAL position.
+ * WHATSAPP-NATIVE POLICY: a chat opens at the BOTTOM (latest message) unless the user
+ * explicitly scrolled up inside it before. The scroll listener deletes a chat's map
+ * entry whenever the user is (back) at the bottom, so "undefined" covers BOTH a true
+ * first visit AND "was at the bottom when they left" — both restore to the latest
+ * message instead of a stale mid-thread position.
  *
  * This is a pure function so it can be unit-tested without React.
  */
@@ -40,9 +40,12 @@ export function decideRestoreTarget(
  * Per-chat scroll-position memory + auto-scroll heuristic.
  *
  * - On chat switch (and once content for the new chat has actually rendered):
- *   saves the leaving chat's scrollTop, restores the entering chat's saved
- *   scrollTop, or jumps to bottom on first visit. All synchronously, before
- *   paint, via useLayoutEffect — no visible "jump" or smooth-scroll animation.
+ *   restores the entering chat's saved scrollTop (only when the user scrolled UP
+ *   inside it), or jumps to bottom on first visit / when they left it at the bottom.
+ *   All synchronously, before paint, via useLayoutEffect — no visible "jump".
+ * - The scroll listener saves the live scrollTop only while the user is away from
+ *   the bottom; scrolling back down DELETES the saved position, so the next open
+ *   behaves like WhatsApp: straight to the latest message.
  * - The hook depends on BOTH activeChatId AND isLoaded so that a cold-open
  *   (spinner first, then data) correctly waits to restore until the messages
  *   list is mounted with non-zero scrollHeight.
@@ -70,6 +73,10 @@ export function decideRestoreTarget(
 
 /** Distance from the bottom (px) within which the user still counts as "at the bottom". */
 const BOTTOM_PIN_THRESHOLD_PX = 24;
+
+/** Cold-open bottom pins re-apply for this long after the restore (covers the layout settling:
+ *  text wrapping / linkify / font swap growing scrollHeight after the first pin write). */
+const BOTTOM_SETTLE_WINDOW_MS = 1000;
 
 /** Pure geometry check, exported for tests: is the viewport (nearly) at the container's bottom? */
 export function isNearBottom(scrollTop: number, scrollHeight: number, clientHeight: number): boolean {
@@ -141,6 +148,8 @@ export function useChatScrollPosition(
   // still-short scrollHeight and the thread lands at the top. The saved value lives here and is
   // re-applied on every media decode until the user scrolls (any genuine scroll cancels it).
   const pendingRestoreRef = useRef<number | null>(null);
+  // Deadline (performance.now()) for the post-restore settle loop; 0 = no settle in flight.
+  const settleUntilRef = useRef<number>(0);
   // Marks our own writes so the scroll listener can skip them (a genuine user scroll both updates
   // the pin state / position map AND cancels pendingRestore; our writes must do neither).
   const programmaticWriteRef = useRef<boolean>(false);
@@ -170,10 +179,9 @@ export function useChatScrollPosition(
   );
 
   // Track pin state from scroll geometry: any scroll that lands at the bottom (ours or the user's)
-  // pins; any scroll away (only ever the user's) unpins. The SAME listener saves the visible
-  // chat's scrollTop on every genuine user scroll, so the per-chat position map always holds the
-  // last REAL user position — saving at switch time would read post-swap (clamped) geometry and
-  // restore garbage.
+  // pins; any scroll away (only ever the user's) unpins. While the user is AWAY from the bottom
+  // the listener saves the chat's scrollTop; scrolling back to the bottom DELETES it, so the map
+  // only ever holds a position the user deliberately parked at (WhatsApp-style: open → latest).
   // NOTE: an effect without a dep array re-runs on EVERY render, and React runs the previous
   // cleanup first — so the listener must be (re)attached unconditionally each run.
   useEffect(() => {
@@ -186,9 +194,17 @@ export function useChatScrollPosition(
       }
       // A genuine user scroll: cancels any pending restore, then updates pin + position map.
       pendingRestoreRef.current = null;
-      pinnedRef.current = isNearBottom(el.scrollTop, el.scrollHeight, el.clientHeight);
+      const atBottom = isNearBottom(el.scrollTop, el.scrollHeight, el.clientHeight);
+      pinnedRef.current = atBottom;
       const visibleChatId = prevChatIdRef.current;
-      if (visibleChatId) scrollMap.current.set(visibleChatId, el.scrollTop);
+      if (visibleChatId) {
+        if (atBottom) {
+          // Back at the bottom → forget the saved spot; next open goes to the latest message.
+          scrollMap.current.delete(visibleChatId);
+        } else {
+          scrollMap.current.set(visibleChatId, el.scrollTop);
+        }
+      }
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
@@ -202,6 +218,7 @@ export function useChatScrollPosition(
     // Same for a page still in flight: its delta belongs to the thread being left. This effect is
     // declared before the height tracker, so the flag is gone before the tracker could act on it.
     if (next !== prevChatIdRef.current) awaitingOlderPageRef.current = false;
+    settleUntilRef.current = 0; // same: an in-flight settle belongs to the previous visit
 
     const decision = decideRestoreTarget(next, isLoaded, next !== null ? scrollMap.current.get(next) : undefined);
 
@@ -215,6 +232,21 @@ export function useChatScrollPosition(
         }
       } else if (decision.restore === 'bottom') {
         pinToBottom(el);
+        // The synchronous write above runs BEFORE the browser lays out the freshly-committed
+        // message DOM, so it can land short of the true bottom (scrollHeight still reflects the
+        // pre-layout content). Re-pin every frame for a short window while pinned, so the settling
+        // layout — text wrap, linkify pass, font swap — never strands the thread above the latest
+        // message. A genuine user scroll unpins via the scroll listener, which stops the loop on
+        // its next tick; media decoding beyond the window is covered by onMediaLoad.
+        settleUntilRef.current = performance.now() + BOTTOM_SETTLE_WINDOW_MS;
+        const settle = () => {
+          const cur = containerRef.current;
+          if (!cur || !pinnedRef.current) return;
+          if (performance.now() > settleUntilRef.current) return;
+          pinToBottom(cur);
+          requestAnimationFrame(settle);
+        };
+        requestAnimationFrame(settle);
       }
     }
 

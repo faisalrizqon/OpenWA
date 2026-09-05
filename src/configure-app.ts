@@ -134,6 +134,8 @@ export function configureApp(app: INestApplication, options: ConfigureAppOptions
           connectSrc: ["'self'"],
           fontSrc: ["'self'", 'https://fonts.gstatic.com'],
           objectSrc: ["'none'"],
+          // Allow framing from localhost:3000 for admin dashboard iframe
+          frameAncestors: ["'self'", 'http://localhost:3000', 'https://dagdigdugdigicam.store'],
           // Auto-upgrade HTTP→HTTPS in production, unless CSP_UPGRADE_INSECURE_REQUESTS opts out for an
           // HTTP-only private-network deployment (otherwise the browser forces the dashboard to https). (#611)
           upgradeInsecureRequests: isUpgradeInsecureRequestsEnabled(
@@ -144,6 +146,8 @@ export function configureApp(app: INestApplication, options: ConfigureAppOptions
             : null,
         },
       },
+      // Disable xFrameOptions (frameguard) because we manage framing via CSP frame-ancestors
+      xFrameOptions: false,
       hsts: {
         maxAge: 31536000,
         includeSubDomains: true,
