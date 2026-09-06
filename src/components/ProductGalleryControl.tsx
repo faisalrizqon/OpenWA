@@ -57,28 +57,26 @@ export function ProductGalleryControl({
               className="group relative aspect-square overflow-hidden rounded-xl border bg-muted/40"
             >
               <Dialog>
-                <DialogTrigger
-                  render={
-                    <button
-                      type="button"
-                      aria-label={`Perbesar foto produk ${img.id}`}
-                      title="Klik untuk memperbesar"
-                      className="group relative block size-full cursor-zoom-in"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={img.filePath}
-                        alt={`Foto produk ${img.id}`}
-                        className="size-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
-                      />
-                      {/* Petunjuk zoom di pojok kiri atas */}
-                      <span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
-                        <ZoomIn className="size-3" aria-hidden />
-                        Zoom
-                      </span>
-                    </button>
-                  }
-                />
+                <DialogTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Perbesar foto produk ${img.id}`}
+                    title="Klik untuk memperbesar"
+                    className="group relative block size-full cursor-zoom-in"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.filePath}
+                      alt={`Foto produk ${img.id}`}
+                      className="size-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                    />
+                    {/* Petunjuk zoom di pojok kiri atas */}
+                    <span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+                      <ZoomIn className="size-3" aria-hidden />
+                      Zoom
+                    </span>
+                  </button>
+                </DialogTrigger>
                 <DialogContent className="max-w-5xl sm:max-w-5xl">
                   <DialogHeader>
                     <DialogTitle>Foto Produk #{img.id}</DialogTitle>
