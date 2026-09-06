@@ -20,7 +20,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { prisma } from "@/lib/db";
-import { classifyFetchError, httpErrorFromResponse, OpenWAError } from "@/lib/openwa-errors";
+import { classifyFetchError, httpErrorFromResponse, OpenWAError, type OpenWAErrorCode } from "@/lib/openwa-errors";
 
 // --- Tipe data ---
 
@@ -42,6 +42,8 @@ export interface SendMessageResult {
   ok: boolean;
   messageId?: string;
   error?: string;
+  /** Internal error code — consumers check `ok` first, so this is opt-in */
+  errorCode?: OpenWAErrorCode;
 }
 
 /** Baris log pesan WhatsApp (subset field yang kita butuhkan). */
@@ -202,15 +204,11 @@ async function openwaFetch(pathname: string, init?: RequestInit, timeoutMs = 10_
   }
 }
 
-[src/lib/openwa-api-client.ts#3203]
-  const res = await openwaFetch("/api/sessions");
-}
-
 /** Ambil daftar session dari gateway. Gagal (gateway mati) → lempar error. */
 export async function listSessions(): Promise<OpenWASession[]> {
   const res = await openwaFetch("/api/sessions");
   if (!res.ok) {
-    throw new Error(`OpenWA ${res.status}: ${(await res.text().catch(() => "")).slice(0, 200)}`);
+    throw httpErrorFromResponse(res.status, await res.text().catch(() => ""), "/api/sessions");
   }
   const json: unknown = await res.json();
   if (Array.isArray(json)) return json as OpenWASession[];
@@ -254,18 +252,29 @@ export interface SessionActionResult {
   ok: boolean;
   status?: string;
   error?: string;
+  /** Internal error code — consumers check `ok` first */
+  errorCode?: OpenWAErrorCode;
+}
+
+/** Ubah error (typed OpenWAError atau lainnya) menjadi hasil `{ ok:false }` untuk
+ *  fungsi yang TIDAK melempar (start/stop/sendMessage). Dipakai 3 call site supaya
+ *  bentuk kegagalan seragam: pesan + kode error ikut terbawa untuk konsumen yang
+ *  mau membedakan jenis kegagalan. */
+function toFailure(e: unknown): { ok: false; error: string; errorCode?: OpenWAErrorCode } {
+  if (e instanceof OpenWAError) {
+    return { ok: false, error: e.message, errorCode: e.code };
+  }
+  return { ok: false, error: e instanceof Error ? e.message : String(e) };
 }
 
 /** Jalankan session WhatsApp: POST /api/sessions/{id}/start.
  *  Setelah start, session menunggu QR di-scan (status "qr_ready"). */
 export async function startSession(sessionId: string): Promise<SessionActionResult> {
+  const path = `/api/sessions/${encodeURIComponent(sessionId)}/start`;
   try {
-    const res = await openwaFetch(`/api/sessions/${encodeURIComponent(sessionId)}/start`, {
-      method: "POST",
-    });
+    const res = await openwaFetch(path, { method: "POST" });
     if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      return { ok: false, error: `HTTP ${res.status}: ${errText.slice(0, 200)}` };
+      throw httpErrorFromResponse(res.status, await res.text().catch(() => ""), path);
     }
     const json: unknown = await res.json().catch(() => ({}));
     let status: string | undefined;
@@ -274,23 +283,21 @@ export async function startSession(sessionId: string): Promise<SessionActionResu
     }
     return { ok: true, status };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return toFailure(e);
   }
 }
 
 /** Hentikan session WhatsApp: POST /api/sessions/{id}/stop. */
 export async function stopSession(sessionId: string): Promise<SessionActionResult> {
+  const path = `/api/sessions/${encodeURIComponent(sessionId)}/stop`;
   try {
-    const res = await openwaFetch(`/api/sessions/${encodeURIComponent(sessionId)}/stop`, {
-      method: "POST",
-    });
+    const res = await openwaFetch(path, { method: "POST" });
     if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      return { ok: false, error: `HTTP ${res.status}: ${errText.slice(0, 200)}` };
+      throw httpErrorFromResponse(res.status, await res.text().catch(() => ""), path);
     }
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return toFailure(e);
   }
 }
 
@@ -313,15 +320,14 @@ export async function getSessionQr(sessionId: string): Promise<string | null> {
 
 /** Kirim pesan teks ke satu chatId. Gagal → SendMessageResult { ok:false }. */
 export async function sendMessage(sessionId: string, input: SendMessageInput): Promise<SendMessageResult> {
+  const path = `/api/sessions/${encodeURIComponent(sessionId)}/messages/send-text`;
   try {
-    const res = await openwaFetch(`/api/sessions/${encodeURIComponent(sessionId)}/messages/send-text`, {
+    const res = await openwaFetch(path, {
       method: "POST",
       body: JSON.stringify(input),
     }, 30_000);
     if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      console.error(`[openwa] send gagal (${res.status}):`, errText.slice(0, 300));
-      return { ok: false, error: `HTTP ${res.status}: ${errText.slice(0, 200)}` };
+      throw httpErrorFromResponse(res.status, await res.text().catch(() => ""), path);
     }
     const json: unknown = await res.json().catch(() => ({}));
     let messageId: string | undefined;
@@ -332,8 +338,8 @@ export async function sendMessage(sessionId: string, input: SendMessageInput): P
     }
     return { ok: true, messageId };
   } catch (e) {
-    console.error("[openwa] send error:", e instanceof Error ? e.message : e);
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    console.error(`[openwa] send gagal:`, e instanceof Error ? e.message : e);
+    return toFailure(e);
   }
 }
 
