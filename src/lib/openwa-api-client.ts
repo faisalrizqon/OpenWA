@@ -20,6 +20,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { prisma } from "@/lib/db";
+import { classifyFetchError, httpErrorFromResponse, OpenWAError } from "@/lib/openwa-errors";
 
 // --- Tipe data ---
 
@@ -188,12 +189,21 @@ async function openwaFetch(pathname: string, init?: RequestInit, timeoutMs = 10_
   const apiKey = process.env.OPENWA_API_KEY;
   if (apiKey) headers["X-API-Key"] = apiKey;
 
-  return fetch(`${OPENWA_URL}${pathname}`, {
-    ...init,
-    headers,
-    cache: "no-store",
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+  const url = `${OPENWA_URL}${pathname}`;
+  try {
+    return await fetch(url, {
+      ...init,
+      headers,
+      cache: "no-store",
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err) {
+    throw classifyFetchError(err, url, timeoutMs);
+  }
+}
+
+[src/lib/openwa-api-client.ts#3203]
+  const res = await openwaFetch("/api/sessions");
 }
 
 /** Ambil daftar session dari gateway. Gagal (gateway mati) → lempar error. */
