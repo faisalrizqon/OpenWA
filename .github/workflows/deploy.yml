@@ -1,8 +1,6 @@
 name: Deploy Production
 
-# CI/CD deploy ke server aaPanel (LAN-only).
-# PENTING: server 192.168.100.130 TIDAK terjangkau GitHub cloud runners,
-# jadi workflow ini WAJIB jalan di self-hosted runner yang terpasang DI SERVER.
+# CI/CD deploy ke server aaPanel (LAN-only). PENTING: server 192.168.100.130 TIDAK terjangkau GitHub cloud runners.
 
 on:
   push:
@@ -53,8 +51,7 @@ jobs:
           tar -xzf "$RUNNER_TEMP/app-head.tar.gz" -C "$STAGE"
 
       # ATURAN PENTING (pelajaran insiden 7 Sep):
-      # - Pola rsync TANPA slash depan cocok di SEMUA kedalaman → pernah
-      #   menghapus file tracked (src/app/api/storage/, gopay-gateway/.env.example).
+      # - Pola rsync TANPA slash depan cocok di SEMUA kedalaman → pernah menghapus file tracked.
       # - Semua exclude runtime di-ANCHOR (/...) supaya hanya root yang dilindungi.
       # - .env.example tracked & aman → di-INCLUDE dulu sebelum exclude .env*.
       - name: Sync code (overlay + delete strays, protect runtime data)
@@ -77,10 +74,10 @@ jobs:
             --exclude='*.log' \
             --exclude='/.git' \
             "$RUNNER_TEMP/stage/" "$APP_DIR/"
-          sudo chown -R www:www "$APP_DIR/src" "$APP_DIR/prisma" "$APP_DIR/components.json"
+          sudo chown -R www:www "$APP_DIR"
 
-      # VERIFIKASI: setiap file TRACKED yang memang harus tersync, hash-nya
-      # WAJIB sama dengan HEAD. Yang sengaja tidak disync (runtime/data) di-skip.
+      # VERIFIKASI: setiap file TRACKED yang memang harus tersync, hash-nya WAJIB sama dengan HEAD.
+      # Yang sengaja tidak disync (runtime/data) di-skip dari verifikasi.
       - name: VERIFY sync — every tracked file hash must equal HEAD
         run: |
           FAIL=0
