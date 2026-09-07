@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { syncLateOrders } from "@/lib/late";
 import { ResetThemePortalAdmin } from "@/components/ResetThemePortalAdmin";
+import { getStoreSettings } from "@/lib/content";
 export default async function AdminLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
 
@@ -27,6 +28,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/">) {
           email: session.user.email ?? "",
           role: session.user.role as "admin" | "mitra",
         }}
+        shop={await getStoreSettings()}
       />
       <main className="min-w-0 flex-1">
         <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-8">

@@ -32,10 +32,27 @@ const rubikSpray = Rubik_Spray_Paint({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "MudahSewa — Sewa Kamera & Digicam",
-  description: "Sewa digicam & kamera harian dengan harga bersahabat. Booking mudah via WhatsApp.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  // Judul tab & favicon mengikuti identitas toko (Admin > Konten > Identitas Toko),
+  // sehingga ganti logo/nama sekali langsung tersinkron ke seluruh aplikasi.
+  const settings = await getStoreSettings();
+  // Versi ikon diambil dari nama file logo (logo-<timestamp>-<rand>.ext) sehingga
+  // URL ikon hanya berubah saat logo benar-benar diganti — cache browser tetap
+  // dipakai di antara render, tapi langsung invalid begitu logo baru diupload.
+  const logoFile = settings.logoPath.split("/").pop() ?? "";
+  const logoVersion = logoFile.replace(/^logo-/, "").replace(/\.[^.]+$/, "") || "default";
+  return {
+    title: {
+      default: `${settings.storeName} — Sewa Kamera & Digicam`,
+      template: `%s — ${settings.storeName}`,
+    },
+    icons: {
+      icon: [{ url: `/favicon.ico?v=${logoVersion}`, type: "image/png" }],
+      apple: [{ url: `/apple-icon.png?v=${logoVersion}`, sizes: "180x180" }],
+      shortcut: [{ url: `/favicon.ico?v=${logoVersion}` }],
+    },
+  };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const settings = await getStoreSettings();

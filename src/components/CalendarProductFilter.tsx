@@ -42,13 +42,13 @@ export function CalendarProductFilter({
         onValueChange={(v) => handleSelect(v as string)}
         items={options}
       >
-        <SelectTrigger className="h-8 w-full min-w-[180px] sm:w-auto">
+        <SelectTrigger className="h-9 w-full min-w-[300px] sm:w-auto sm:min-w-[300px]">
           <SelectValue placeholder="Semua produk" />
         </SelectTrigger>
-        <SelectContent align="start" className="min-w-[180px] rounded-xl p-1">
+        <SelectContent align="start" className="min-w-[300px] rounded-xl p-1 max-h-80">
           {options.map((o) => (
             <SelectItem key={o.value} value={o.value}>
-              {o.label}
+              <span className="truncate">{o.label}</span>
             </SelectItem>
           ))}
         </SelectContent>

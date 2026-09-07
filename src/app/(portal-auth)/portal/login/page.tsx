@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Camera } from "lucide-react";
 import { getStoreSettings } from "@/lib/content";
 import { CustomerLoginForm } from "@/components/CustomerLoginForm";
+import { StoreLogo } from "@/components/StoreLogo";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -26,10 +26,9 @@ export default async function PortalLoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-accent/30 px-4">
       <div className="w-full max-w-sm">
         {/* Logo — link ke landing page */}
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2.5">
-          <span className="flex size-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-            <Camera className="size-5" aria-hidden />
-          </span>
+        {/* Logo toko — sinkron dengan identitas toko di Admin > Konten */}
+        <Link href="/" className="mb-8 flex items-center justify-center gap-2">
+          <StoreLogo logoPath={shop.logoPath} storeName={shop.storeName} className="size-10" rounded="rounded-2xl" />
           <span className="text-lg font-extrabold tracking-tight">{shop.storeName}</span>
         </Link>
 

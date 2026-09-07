@@ -117,7 +117,7 @@ export async function getStockSnapshot(opts: {
     where: {
       productId,
       order: {
-        status: { in: ["booking", "active", "late"] },
+        status: { in: ["booking", "active", "late"] }, // exclude 'draft': belum valid order, belum reserve stok
         startDate: { lt: rangeEnd },
         endDate: { gt: queryEndBound },
         id: excludeOrderId ? { not: excludeOrderId } : undefined,

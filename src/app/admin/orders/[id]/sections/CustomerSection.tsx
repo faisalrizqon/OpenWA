@@ -164,46 +164,43 @@ export function CustomerSection({
           <OrderActionsSection initialStartDate={order.startDate} initialEndDate={order.endDate} />
         </div>
       )}
-      {/* Detail tambahan */}
-      {(order.guaranteeType || order.deliveryMode === "courier" || order.rescheduledFrom || order.returnedAt) && (
-        <dl className="mt-4 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
-          {order.guaranteeType && (
-            <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
-              <dt className="text-muted-foreground">Jaminan</dt>
-              <dd className="min-w-0 font-medium">
-                {GUARANTEE_TYPES[order.guaranteeType] ?? order.guaranteeType}
-                {order.guaranteeNumber ? ` · ${order.guaranteeNumber}` : ""}
-              </dd>
-            </div>
-          )}
-          {order.deliveryMode === "courier" && (
-            <>
-              <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
-                <dt className="text-muted-foreground">Pengantaran</dt>
-                <dd className="min-w-0 font-medium">
-                  Diantar kurir{order.deliveryAddress ? ` · ${order.deliveryAddress}` : ""}
-                </dd>
-              </div>
-              <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
-                <dt className="text-muted-foreground">Ongkos antar</dt>
-                <dd className="min-w-0 font-medium tabular-nums">{formatRupiah(order.courierFee)}</dd>
-              </div>
-            </>
-          )}
-          {order.rescheduledFrom && (
-            <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
-              <dt className="text-muted-foreground">Reschedule dari</dt>
-              <dd className="min-w-0 font-medium">{dateFmt(order.rescheduledFrom)}</dd>
-            </div>
-          )}
-          {order.returnedAt && (
-            <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
-              <dt className="text-muted-foreground">Dikembalikan</dt>
-              <dd className="min-w-0 font-medium">{dateFmt(order.returnedAt)}</dd>
-            </div>
-          )}
-        </dl>
-      )}
+      {/* Detail tambahan — selalu ditampilkan, nilai kosong pakai strip */}
+      <dl className="mt-4 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
+        <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
+          <dt className="text-muted-foreground">Jaminan</dt>
+          <dd className="min-w-0 font-medium">
+            {order.guaranteeType
+              ? `${GUARANTEE_TYPES[order.guaranteeType] ?? order.guaranteeType}${order.guaranteeNumber ? ` · ${order.guaranteeNumber}` : ""}`
+              : "—"}
+          </dd>
+        </div>
+        <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
+          <dt className="text-muted-foreground">Pengantaran</dt>
+          <dd className="min-w-0 font-medium">
+            {order.deliveryMode === "courier"
+              ? `Diantar kurir · ${order.deliveryAddress || "—"}`
+              : order.deliveryMode === "pickup"
+                ? "Ambil sendiri"
+                : "—"}
+          </dd>
+        </div>
+        <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
+          <dt className="text-muted-foreground">Ongkos antar</dt>
+          <dd className="min-w-0 font-medium tabular-nums">
+            {order.deliveryMode === "courier" ? formatRupiah(order.courierFee) : "—"}
+          </dd>
+        </div>
+        <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
+          <dt className="text-muted-foreground">Reschedule dari</dt>
+          <dd className="min-w-0 font-medium">
+            {order.rescheduledFrom ? dateFmt(order.rescheduledFrom) : "—"}
+          </dd>
+        </div>
+        <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
+          <dt className="text-muted-foreground">Dikembalikan</dt>
+          <dd className="min-w-0 font-medium">{order.returnedAt ? dateFmt(order.returnedAt) : "—"}</dd>
+        </div>
+      </dl>
 
     </div>
   );

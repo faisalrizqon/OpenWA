@@ -63,7 +63,9 @@ function failCheckout(
   if (startDateRaw) p.set("startDate", startDateRaw);
   redirect(`${checkoutPage}?${p.toString()}`);
 }
-/** Checkout customer dari katalog: buat Order (status booking, source online).
+/** Checkout customer dari katalog: buat Order DRAFT (belum counted as incoming, stock not reserved).
+ *  Customer akan diarahkan ke halaman order-status untuk melengkapi pembayaran & jaminan, lalu
+ *  klik "Selesaikan Orderan" yang mempromosikan draft → booking.
  *  `portal` = true untuk redirect ke /portal/orders/[orderNumber],
  *  false (default) untuk /order-status/[orderNumber]. */
 export async function checkoutOrder(
@@ -156,11 +158,14 @@ export async function checkoutOrder(
       const orderNumber = await generateOrderNumber(tx);
 
       // 4) Order + items
+      // Order dibuat sebagai DRAFT: belum dihitung sebagai pesanan masuk dan
+      // belum mengunci stok. Baru jadi "booking" setelah customer menekan
+      // tombol "Selesaikan Orderan" (lihat completeOrder).
       const order = await tx.order.create({
         data: {
           orderNumber,
           customerId: customer.id,
-          status: "pending",
+          status: "draft",
           source: "online",
           paymentMethod,
           paymentStatus: "unpaid",
@@ -219,11 +224,10 @@ export async function checkoutOrder(
     failCheckout(first, startDateRaw, msg, checkoutPage);
   }
 
-  // Slot reminder COD disiapkan SETELAH transaksi commit (hindari nested-tx SQLite)
-  await ensureOrderReminders(orderId);
-
-  // Notifikasi order masuk (admin & customer) setelah transaksi commit
-  void notifyOrderIncoming(orderId);
+  // Order masih DRAFT di titik ini — reminder COD & notifikasi "order masuk"
+  // SENGAJA tidak dijalankan di sini. Keduanya baru aktif setelah customer
+  // menekan tombol "Selesaikan Orderan" (lihat completeOrder), sehingga order
+  // yang belum difinalisasi tidak pernah terhitung sebagai pesanan masuk.
 
   // Midtrans: buat transaksi Snap lalu arahkan customer ke halaman pembayaran
   if (paymentMethod === "midtrans") {
@@ -254,7 +258,6 @@ export async function checkoutOrder(
       // (admin bisa follow-up); jangan gagalkan checkout.
       if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
     }
-    redirect(`${portal ? "/portal/orders" : "/order-status"}/${orderNumber}`);
   }
 
   redirect(`${portal ? "/portal/orders" : "/order-status"}/${orderNumber}`);
@@ -289,15 +292,12 @@ export async function changePaymentMethod(formData: FormData) {
   });
   if (!order) redirect(back);
 
-  // Hanya boleh sebelum lunas & belum ada pembayaran terkonfirmasi
-  const hasConfirmed = order.payments.some((p) => p.status === "confirmed");
-  if (order.paymentStatus === "paid" || hasConfirmed) {
+  // Order harus masih draft/pending/booking — setelah aktif, pembayaran diurus admin.
+  // `draft` = order online yang belum difinalisasi customer via "Selesaikan Orderan".
+  if (!["draft", "booking", "pending"].includes(order.status)) {
     redirect(`${back}?error=locked`);
   }
-  // Order harus masih pending/booking — setelah aktif, pembayaran diurus admin
-  if (order.status !== "booking" && order.status !== "pending") {
-    redirect(`${back}?error=locked`);
-  }
+
   if (order.paymentMethod === method) redirect(back);
 
   const updates = [];
@@ -618,12 +618,37 @@ export async function completeOrder(formData: FormData) {
     paymentProofPath = stored.filePath;
   }
 
-  // Transaction: buat payment record + update order flags.
-  // Bila sudah lengkap: cukup pastikan flags konsisten (idempotent), tanpa buat payment baru.
+  // Order draft TIDAK mengunci stok, jadi ketersediaan harus dicek ulang tepat
+  // saat customer memfinalisasi. Bila unit sudah diambil order lain, tolak
+  // dengan pesan jelas alih-alih membuat order yang tidak bisa dipenuhi.
+  const promoteFromDraft = order.status === "draft";
+  if (promoteFromDraft) {
+    // Order draft TIDAK mengunci stok, jadi ketersediaan harus dicek ulang tepat
+    // saat customer memfinalisasi. Bila unit sudah diambil order lain, tolak dengan
+    // pesan jelas alih-alih membuat order yang tidak bisa dipenuhi.
+    for (const it of order.items) {
+      try {
+        await ensureStockAvailable({
+          client: prisma,
+          productId: it.productId,
+          rangeStart: order.startDate,
+          rangeEnd: order.endDate,
+          needed: it.quantity,
+          excludeOrderId: orderId,
+        });
+      } catch {
+        redirect(`${back}?error=out-of-stock`);
+      }
+    }
+  }
+
+  // Momen order resmi "masuk": draft → booking saat customer memfinalisasi
+  // (flag promoteFromDraft di atas). Status lifecycle aktif (booking/active/
+  // late/completed/cancelled) TIDAK boleh diturunkan oleh submit ulang form ini.
   if (alreadyComplete) {
     await prisma.order.update({
       where: { id: orderId },
-      data: { paymentCompleted: true },
+      data: { paymentCompleted: true, ...(promoteFromDraft ? { status: "booking" } : {}) },
     });
   } else {
     // Midtrans & gopay tidak membuat payment record di sini — gateway/polling
@@ -636,6 +661,7 @@ export async function completeOrder(formData: FormData) {
           paymentCompleted: true,
           paymentCompleteAt: new Date(),
           paymentMethod: method,
+          ...(promoteFromDraft ? { status: "booking" } : {}),
           ...(!gatewayMethod ? { paymentStatus: "pending" } : {}),
         },
       }),
@@ -655,6 +681,15 @@ export async function completeOrder(formData: FormData) {
             }),
           ]),
     ]);
+  }
+
+  // Order baru "masuk" ke sistem setelah customer menekan tombol ini.
+  // Karena itu reminder & notifikasi order masuk di-seed/dikirim DI SINI,
+  // bukan saat checkout — order yang belum difinalisasi tidak pernah
+  // dihitung sebagai pesanan masuk (lihat checkoutOrder).
+  if (!alreadyComplete) {
+    await ensureOrderReminders(orderId);
+    void notifyOrderIncoming(orderId);
   }
 
   revalidatePath(back);

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import LoginForm from "./LoginForm";
+import { getStoreSettings } from "@/lib/content";
 
 /**
  * Login page admin - redirect otomatis jika user sudah login:
@@ -22,9 +23,10 @@ export default async function LoginPage() {
   }
 
   // Belum login atau session berbeda -> tampilkan form login normal
+  const shop = await getStoreSettings();
   return (
     <Suspense fallback={null}>
-      <LoginForm />
+      <LoginForm shop={{ storeName: shop.storeName, logoPath: shop.logoPath || null }} />
     </Suspense>
   );
 }

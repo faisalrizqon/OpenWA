@@ -31,6 +31,7 @@ const GUARANTEE_LABELS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
   booking: "Booking",
   active: "Aktif",
   late: "Terlambat",

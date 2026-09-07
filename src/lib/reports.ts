@@ -77,7 +77,8 @@ export async function getReportMetrics(input: ReportRangeInput = {}): Promise<Re
       prisma.order.findMany({
         where: {
           createdAt: { gte: rangeStart, lte: rangeEnd },
-          status: { not: "cancelled" },
+          // Order draft belum dihitung masuk — jangan masuk laporan.
+          status: { notIn: ["cancelled", "draft"] },
         },
         include: {
           customer: true,
@@ -101,7 +102,7 @@ export async function getReportMetrics(input: ReportRangeInput = {}): Promise<Re
         where: {
           order: {
             createdAt: { gte: rangeStart, lte: rangeEnd },
-            status: { not: "cancelled" },
+            status: { notIn: ["cancelled", "draft"] },
           },
         },
       }),

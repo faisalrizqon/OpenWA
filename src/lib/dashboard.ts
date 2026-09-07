@@ -166,7 +166,7 @@ export async function getDashboardData(range: RentalRange): Promise<DashboardDat
 
   const [orders, revenueMonthAgg, units] = await Promise.all([
     prisma.order.findMany({
-      where: { status: { not: "cancelled" } },
+      where: { status: { notIn: ["cancelled", "draft"] } }, // exclude pending/draft yang belum valid order
       include: {
         customer: { select: { name: true, phone: true } },
         items: { include: { product: { select: { name: true } } } },

@@ -20,8 +20,8 @@ const STATUS_TABS: Record<string, string> = {
   late: "Terlambat",
   completed: "Selesai",
   cancelled: "Dibatalkan",
+  // Note: 'draft' tidak ditampilkan karena order draft belum valid untuk admin.
 };
-
 const PERIOD_TABS: Record<string, string> = {
   "": "Semua Waktu",
   today: "Hari Ini",
@@ -78,6 +78,8 @@ export default async function OrdersPage({
   const startDateRaw = get("start_date");
   const endDateRaw = get("end_date");
 
+  // 'draft' sengaja tidak termasuk: order yang belum ditekan "Selesaikan Orderan"
+  // oleh customer belum resmi masuk, jadi tidak boleh terlihat di admin.
   const validStatuses = ["pending", "booking", "active", "late", "completed", "cancelled"];
   const status = validStatuses.includes(statusParam) ? statusParam : "";
   const period = Object.keys(PERIOD_TABS).includes(periodParam) ? periodParam : "";
@@ -109,8 +111,10 @@ export default async function OrdersPage({
 
   const orders = await prisma.order.findMany({
     where: {
-      ...(status ? { status } : {}),
-      // Filter khusus antrian "siap diproses": customer sudah submit semua data pembayaran
+      // Order draft belum difinalisasi customer → tidak boleh muncul di daftar admin.
+      ...(status ? { status } : { status: { notIn: ["draft"] } }),
+      // Filter khusus antrian "siap diproses": customer sudah submit semua data
+      // pembayaran dan order sudah resmi masuk (status booking).
       ...(get("ready") === "1" ? { paymentCompleted: true, status: "booking" } : {}),
       ...(rangeStart || rangeEnd
         ? {

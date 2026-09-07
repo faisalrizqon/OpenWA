@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import { StoreLogo } from "@/components/StoreLogo";
 import {
   Menu,
   X,
@@ -123,7 +124,7 @@ interface AnyNavItem {
   adminOnly?: boolean;
 }
 
-export function Sidebar({ user }: { user: { name: string; role: AdminRole | "customer"; email: string } }) {
+export function Sidebar({ user, shop }: { user: { name: string; role: AdminRole | "customer"; email: string }; shop: { storeName?: string | null; logoPath?: string | null } }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const userIsCustomer = user.role === "customer";
@@ -141,9 +142,8 @@ export function Sidebar({ user }: { user: { name: string; role: AdminRole | "cus
     };
   }, [open]);
 
-  const headerTitle = user.role === "customer" ? "Portal Pelanggan" : "MudahSewa";
+  const headerTitle = user.role === "customer" ? "Portal Pelanggan" : shop.storeName ?? "MudahSewa";
   const headerSubtitle = user.role === "customer" ? "Kelola Sewaan Anda" : "Manajemen Rental";
-  const iconColor = user.role === "admin" ? "bg-primary text-primary-foreground" : user.role === "customer" ? "bg-accent text-accent-foreground" : "bg-sky-600 text-white";
   const badgeColor = user.role === "admin" ? "bg-primary text-primary-foreground" : user.role === "customer" ? "bg-accent text-accent-foreground" : "bg-sky-600 text-white";
   const dotColor = user.role === "admin" ? "bg-red-500" : user.role === "customer" ? "bg-emerald-500" : "bg-blue-500";
   const roleLabel = user.role === "admin" ? "Admin" : user.role === "mitra" ? "Mitra" : "Pelanggan";
@@ -237,13 +237,7 @@ export function Sidebar({ user }: { user: { name: string; role: AdminRole | "cus
         >
           <Menu className="size-5 transition-transform duration-200 ease-out active:scale-90" aria-hidden />
         </button>
-        <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl shadow-sm ${iconColor}`}>
-          {userIsCustomer ? (
-            <Users className="size-5" aria-hidden />
-          ) : (
-            <Camera className="size-5" aria-hidden />
-          )}
-        </span>
+        <StoreLogo logoPath={shop.logoPath} storeName={headerTitle} className="size-9" />
         <div className="min-w-0 leading-tight">
           <p className="truncate text-[15px] font-extrabold tracking-tight">{headerTitle}</p>
           <p className="truncate text-[11px] text-muted-foreground">{user.name} · {roleLabel}</p>
@@ -265,13 +259,7 @@ export function Sidebar({ user }: { user: { name: string; role: AdminRole | "cus
         >
             <div className="flex items-center justify-between px-5 py-4">
               <div className="flex items-center gap-2.5">
-                <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl shadow-sm ${iconColor}`}>
-                  {userIsCustomer ? (
-                    <Users className="size-5" aria-hidden />
-                  ) : (
-                    <Camera className="size-5" aria-hidden />
-                  )}
-                </span>
+                <StoreLogo logoPath={shop.logoPath} storeName={headerTitle} className="size-9" />
                 <div className="leading-tight">
                   <p className="text-[15px] font-extrabold tracking-tight">{headerTitle}</p>
                   <p className="text-xs text-muted-foreground">{headerSubtitle}</p>
@@ -297,13 +285,7 @@ export function Sidebar({ user }: { user: { name: string; role: AdminRole | "cus
       {/* ===== Desktop: sidebar tetap ===== */}
       <aside className="glass sticky top-0 z-30 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border md:flex">
         <div className="flex items-center gap-3 px-5 py-4 md:py-6">
-          <span className={`flex size-10 shrink-0 items-center justify-center rounded-2xl shadow-sm ${iconColor}`}>
-            {userIsCustomer ? (
-              <Users className="size-5" aria-hidden />
-            ) : (
-              <Camera className="size-5" aria-hidden />
-            )}
-          </span>
+          <StoreLogo logoPath={shop.logoPath} storeName={headerTitle} className="size-10" rounded="rounded-2xl" />
           <div className="leading-tight">
             <p className="text-[15px] font-extrabold tracking-tight">{headerTitle}</p>
             <p className="hidden text-xs text-muted-foreground md:block">{headerSubtitle}</p>

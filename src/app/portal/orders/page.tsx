@@ -27,8 +27,7 @@ export default async function PortalOrdersPage({ searchParams }: PageProps<"/por
   const sp = await searchParams;
   const statusParam = Array.isArray(sp.status) ? sp.status[0] : sp.status;
 
-  const validStatuses = ["pending", "booking", "active", "late", "completed", "cancelled"];
-  const status = validStatuses.includes(statusParam ?? "") ? (statusParam ?? "") : "";
+  const validStatuses = ["pending", "booking", "active", "late", "completed", "cancelled", "draft"];
 
   // Notifications (bulk actions)
   const notifications: PageNotification[] = [];
@@ -60,7 +59,8 @@ export default async function PortalOrdersPage({ searchParams }: PageProps<"/por
 
   const orderFilters = [
     { value: "", label: "Semua", count: allOrders.length },
-    { value: "pending", label: "Pending Konfirmasi", count: allOrders.filter((o) => o.status === "pending").length },
+    { value: "draft", label: "Belum Dikirim", count: allOrders.filter((o) => o.status === "draft").length },
+    { value: "pending", label: "Menunggu Konfirmasi", count: allOrders.filter((o) => o.status === "pending").length },
     { value: "booking", label: "Booking", count: allOrders.filter((o) => o.status === "booking").length },
     { value: "active", label: "Berjalan", count: allOrders.filter((o) => isOngoing(o.status)).length },
     { value: "completed", label: "Selesai", count: allOrders.filter((o) => o.status === "completed").length },
@@ -155,15 +155,17 @@ export default async function PortalOrdersPage({ searchParams }: PageProps<"/por
                 const orderTotal = o.items.reduce((s, it) => s + it.subtotal, 0);
 
                 const nextAction =
-                  o.status === "pending"
-                    ? "Menunggu Konfirmasi"
-                    : o.status === "booking"
-                    ? "Bayar deposit"
-                    : o.status === "active" || o.status === "late"
-                    ? (paidAmount >= orderTotal ? "Kembalikan barang" : "Pelunasan")
-                    : o.status === "completed"
-                    ? "Review"
-                    : "Dibatalkan";
+                  o.status === "draft"
+                    ? "Selesaikan Orderan"
+                    : o.status === "pending"
+                      ? "Menunggu Konfirmasi Admin"
+                      : o.status === "booking"
+                        ? "Bayar deposit"
+                        : o.status === "active" || o.status === "late"
+                          ? (paidAmount >= orderTotal ? "Kembalikan barang" : "Pelunasan")
+                          : o.status === "completed"
+                            ? "Review"
+                            : "Dibatalkan";
 
                 return (
                   <Link

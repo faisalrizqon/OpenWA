@@ -60,6 +60,7 @@ export default async function PortalOrderDetailPage({ params, searchParams }: Pa
       "file-type-invalid": "Format file tidak didukung.",
       "file-size-exceeded": "Ukuran file terlalu besar. Maksimal 15MB (auto-kompresi aktif).",
       "invalid-method": "Metode pembayaran tidak valid.",
+      "out-of-stock": "Stok sudah habis untuk produk ini — mohon pilih tanggal lain atau hubungi kami.",
     };
     notifications.push({ type: "error", message: errorMessages[errorParam] ?? "Terjadi kesalahan. Silakan coba lagi." });
   }

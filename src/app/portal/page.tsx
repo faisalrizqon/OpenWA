@@ -97,7 +97,7 @@ export default async function PortalHomePage({ searchParams }: PageProps<"/porta
 
   if (!customer) redirect("/portal/login");
 
-  const ongoingOrders = orders.filter((o) => o.status === "active" || o.status === "booking" || o.status === "late");
+  const ongoingOrders = orders.filter((o) => o.status === "active" || o.status === "booking" || o.status === "late"); // exclude draft yang belum valid
   const completedOrders = orders.filter((o) => o.status === "completed");
   const totalSpent = completedOrders.reduce((s, o) => s + o.items.reduce((t, i) => t + i.subtotal, 0) - o.promoDiscount, 0);
   const reviews = orders.filter((o) => o.review);

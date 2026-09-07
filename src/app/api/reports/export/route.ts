@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/permissions";
 export const runtime = "nodejs";
 
 const STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
   booking: "Booking",
   active: "Aktif",
   late: "Terlambat",

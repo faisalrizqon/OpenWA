@@ -5,8 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Camera, Loader2, LogIn, AlertCircle } from "lucide-react";
 import { signIn } from "next-auth/react";
+import { StoreLogo } from "@/components/StoreLogo";
 
-export default function LoginForm() {
+export default function LoginForm({ shop }: { shop: { storeName: string; logoPath: string | null } }) {
   const router = useRouter();
   const search = useSearchParams();
   const callbackUrl = search.get("callbackUrl") ?? "/admin";
@@ -42,10 +43,10 @@ export default function LoginForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-accent/30 px-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
+        {/* Logo toko — sinkron dengan identitas toko di Admin > Konten */}
         <Link href="/" className="mb-8 flex items-center justify-center gap-2.5">
-          <Camera className="size-8 text-primary" aria-hidden />
-          <span className="text-lg font-bold tracking-tight">MudahSewa</span>
+          <StoreLogo logoPath={shop.logoPath} storeName={shop.storeName} className="size-10" rounded="rounded-2xl" />
+          <span className="text-lg font-bold tracking-tight">{shop.storeName}</span>
         </Link>
 
         {logoutSuccess && (

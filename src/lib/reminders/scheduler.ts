@@ -196,8 +196,10 @@ async function runScan(now: Date): Promise<ReminderScanResult> {
     // Belum waktunya → biarkan pending
     if (target > now) continue;
 
-    // Order tidak relevan lagi → skip permanen
-    if (["cancelled", "completed"].includes(rem.order.status)) {
+    // Order tidak relevan lagi → skip permanen.
+    // `draft` ikut di-skip: order belum difinalisasi customer (belum "masuk"),
+    // jadi tidak boleh ada reminder yang terkirim untuknya.
+    if (["cancelled", "completed", "draft"].includes(rem.order.status)) {
       await prisma.reminder.update({ where: { id: rem.id }, data: { status: "skipped" } });
       result.skipped++;
       continue;

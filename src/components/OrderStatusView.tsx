@@ -61,12 +61,16 @@ export function OrderStatusView({
       <div className="mt-4 flex justify-center">
         <div className="flex flex-wrap items-center justify-center gap-3">
           <span className="inline-flex items-center gap-2 rounded-full bg-yellow-100 px-6 py-2.5 text-lg font-bold text-yellow-800 shadow-sm">
+            {order.status === "draft" && (<><ClipboardList className="size-5" aria-hidden />Belum Dikirim ke Admin</>)}
             {order.status === "pending" && (<><AlertTriangle className="size-5" aria-hidden />Menunggu Konfirmasi</>)}
             {order.status === "booking" && (<><ClipboardList className="size-5" aria-hidden />Booking</>)}
             {order.status === "active" && (<><CheckCircle2 className="size-5" aria-hidden />Aktif</>)}
             {order.status === "late" && (<><AlertTriangle className="size-5" aria-hidden />Terlambat</>)}
             {order.status === "completed" && (<><Flag className="size-5" aria-hidden />Selesai</>)}
             {order.status === "cancelled" && (<><Ban className="size-5" aria-hidden />Dibatalkan</>)}
+            {!["draft", "pending", "booking", "active", "late", "completed", "cancelled"].includes(order.status) && (
+              <><AlertTriangle className="size-5" aria-hidden />{order.status || "Dalam Proses"} </>
+            )}
           </span>
           <span
             className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-lg font-bold shadow-sm ${
