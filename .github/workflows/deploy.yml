@@ -1,0 +1,156 @@
+name: Deploy Production
+
+# CI/CD deploy ke server aaPanel (LAN-only).
+# PENTING: server 192.168.100.130 TIDAK terjangkau GitHub cloud runners,
+# jadi workflow ini WAJIB jalan di self-hosted runner yang terpasang DI SERVER.
+# Setup runner: lihat komentar SETUP di bagian bawah file ini.
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, linux, mudahsewa]
+    timeout-minutes: 30
+    env:
+      APP_DIR: /www/wwwroot/dagdigdugdigicam.store
+      NODE_BIN: /www/server/nodejs/v22.22.3/bin
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Show what is being deployed
+        run: |
+          echo "Commit : $(git rev-parse --short HEAD)"
+          echo "Subject: $(git log -1 --pretty=%s)"
+
+      - name: Build tarball from EXACT HEAD (no partial sync ever again)
+        run: |
+          git archive --format=tar.gz -o "$RUNNER_TEMP/app-head.tar.gz" HEAD
+          ls -l "$RUNNER_TEMP/app-head.tar.gz"
+
+      - name: Backup current code (never touches data/.env/storage)
+        run: |
+          BK="/www/backup/mudahsewa/deploy/pre-$(date +%Y%m%d_%H%M%S).tar.gz"
+          sudo mkdir -p "$(dirname "$BK")"
+          sudo tar -czf "$BK" -C "$APP_DIR" \
+            src prisma components.json package.json package-lock.json \
+            next.config.ts tsconfig.json ecosystem.config.js || true
+          echo "BACKUP=$BK" >> "$GITHUB_ENV"
+
+      - name: Extract to staging
+        run: |
+          STAGE="$RUNNER_TEMP/stage"
+          rm -rf "$STAGE"; mkdir -p "$STAGE"
+          tar -xzf "$RUNNER_TEMP/app-head.tar.gz" -C "$STAGE"
+
+      - name: Sync code (overlay + delete strays, protect runtime data)
+        run: |
+          sudo rsync -a --delete \
+            --exclude='.env*' --exclude='node_modules' --exclude='.next' \
+            --exclude='data' --exclude='storage' --exclude='logs' \
+            --exclude='openwa-server' --exclude='openwa-data*' \
+            --exclude='openwa-patches' --exclude='deploy-tmp' \
+            --exclude='notion' --exclude='*.log' --exclude='.git' \
+            "$RUNNER_TEMP/stage/" "$APP_DIR/"
+          sudo chown -R www:www "$APP_DIR/src" "$APP_DIR/prisma" "$APP_DIR/components.json"
+
+      - name: VERIFY sync — every tracked file hash must equal HEAD
+        run: |
+          FAIL=0
+          # File runtime/data sengaja TIDAK di-sync — lewati dari verifikasi
+          skip() {
+            case "$1" in
+              data/*|.env*|openwa-server/*|openwa-data*|openwa-patches/*|storage/*|logs/*|notion/*|*.log) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+          while IFS=$'\t' read -r meta path; do
+            skip "$path" && continue
+            want=$(printf '%s' "$meta" | awk '{print $3}')
+            got=$(git hash-object "$APP_DIR/$path" 2>/dev/null || echo MISSING)
+            if [ "$want" != "$got" ]; then
+              echo "MISMATCH: $path (want=$want got=$got)"
+              FAIL=1
+            fi
+          done < <(git ls-tree -r HEAD)
+          if [ "$FAIL" -ne 0 ]; then
+            echo "::error::Sync verification failed — aborting before build"
+            exit 1
+          fi
+          echo "VERIFY-OK: all synced files identical to HEAD"
+
+      - name: Install deps + Prisma + build + restart
+        run: |
+          cd "$APP_DIR"
+          S="sudo -u www env HOME=/home/www PATH=$NODE_BIN:$PATH"
+          $S npm install --no-audit --no-fund
+          $S npx prisma generate
+          $S npx prisma db push --accept-data-loss
+          $S npx next build
+          $S pm2 restart mudahsewa_app --update-env || $S pm2 start ecosystem.config.js --only mudahsewa_app
+          $S pm2 save
+
+      - name: Health check (auto-rollback on failure)
+        run: |
+          ok=0
+          for i in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/ --max-time 5 || true)
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            sleep 5
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::Health check failed — restoring backup $BACKUP"
+            sudo tar -xzf "$BACKUP" -C "$APP_DIR"
+            sudo -u www env HOME=/home/www PATH=$NODE_BIN:$PATH pm2 restart mudahsewa_app
+            exit 1
+          fi
+          echo "HEALTH-OK: app responding 200"
+
+      # ---------------------------------------------------------------
+      # OpenWA gateway (opsional): hanya jalan bila file openwa.ref ada.
+      # File itu berisi: <fork-url> <commit-sha> dari repo OpenWA fork Anda
+      # (patch custom seperti apiKeyStore auto-login hidup di fork tersebut).
+      # Sampai fork dibuat, step ini skip dan OpenWA tetap dikelola manual.
+      # ---------------------------------------------------------------
+      - name: OpenWA — update from fork ref (skip if openwa.ref absent)
+        run: |
+          REF_FILE="$APP_DIR/openwa.ref"
+          [ -f "$REF_FILE" ] || { echo "openwa.ref tidak ada — skip update OpenWA"; exit 0; }
+          read -r FORK_URL REF_SHA < "$REF_FILE"
+          OW="$APP_DIR/openwa-server"
+          S="sudo -u www env HOME=/home/www PATH=$NODE_BIN:$PATH"
+          git -C "$OW" remote get-url fork >/dev/null 2>&1 || git -C "$OW" remote add fork "$FORK_URL"
+          sudo -u www git -C "$OW" fetch fork
+          sudo -u www git -C "$OW" checkout --detach "$REF_SHA"
+          $S npm --prefix "$OW" install --no-audit --no-fund
+          $S npm --prefix "$OW" run build
+          $S npm --prefix "$OW" run dashboard:build
+          $S pm2 restart openwa_server --update-env
+          $S pm2 save
+          echo "OPENWA-OK: $REF_SHA"
+
+# ============================================================
+# SETUP SELF-HOSTED RUNNER (sekali saja, di server 192.168.100.130)
+#
+# 1. GitHub repo → Settings → Actions → Runners → New self-hosted runner
+#    → salin token registrasi (berlaku ~1 jam).
+# 2. Di server (via SSH):
+#      mkdir -p ~/actions-runner && cd ~/actions-runner
+#      curl -o runner.tar.gz -L https://github.com/actions/runner/releases/latest/download/actions-runner-linux-x64-2.320.0.tar.gz
+#      tar xzf runner.tar.gz
+#      ./config.sh --url https://github.com/faisalrizqon/MudahSewa \
+#        --token <TOKEN> --labels self-hosted,linux,mudahsewa --name mudahsewa-prod
+#      sudo ./svc.sh install faisal && sudo ./svc.sh start
+#    (user faisal sudah punya sudo NOPASSWD — dibutuhkan step backup/rsync)
+# 3. Push ke master → deploy otomatis + terverifikasi checksum.
+# ============================================================
