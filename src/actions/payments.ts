@@ -176,7 +176,8 @@ const QRIS_MAX_BYTES = 15 * 1024 * 1024;
 /** Konfigurasi metode pembayaran: toggle metode aktif + data QRIS & rekening.
  *  Checkbox yang tidak dicentang tidak ikut FormData -> dianggap false.
  *  Gambar QRIS diupload sebagai PNG — disimpan di /public/uploads/qris/ dengan
- *  nama ber-timestamp, bukan path statis /qris.png. */
+ *  nama ber-timestamp, bukan path statis /qris.png. Folder ini dilindungi rsync 
+ *  excludes agar tidak hilang saat deploy. */
 export async function updatePaymentSettings(formData: FormData) {
   const _user = await requireAdmin();
 
