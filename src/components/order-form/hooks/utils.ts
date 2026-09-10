@@ -1,5 +1,7 @@
 import { type ItemDraft, type ProductOption } from "../types";
 
+export { parseWhatsAppPhone, isValidWaPhone, phoneDigits } from "@/lib/phone";
+
 /** Convert a Date object to local HTML input value (datetime-local format). */
 export function toLocalInputValue(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");

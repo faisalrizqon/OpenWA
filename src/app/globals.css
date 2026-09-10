@@ -356,6 +356,260 @@
 }
 
 /* Film roll decorative element */
+/* Sembunyikan scrollbar (rail sidebar compact) tapi tetap bisa di-scroll */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+@keyframes heart-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8px) scale(1.2); }
+}
+
+@keyframes sparkle-float {
+  0% { background-position: 0px 0px, 200px 100px, 150px 200px, 200px 0px; }
+  50% { background-position: 100px 100px, 300px 200px, 250px 300px, 300px 100px; }
+  100% { background-position: 200px 200px, 400px 300px, 350px 400px, 400px 200px; }
+}
+
+@keyframes ribbon-sway {
+  0% { transform: rotate(-3deg); }
+  100% { transform: rotate(3deg); }
+}
+
+@keyframes emoji-dance {
+  from { opacity: 0.15; transform: translateY(0); }
+  50% { opacity: 0.2; transform: translateY(-20px) scale(1.1); }
+  to { opacity: 0.15; transform: translateY(0); }
+}
+
+@keyframes emoji-reverse {
+  from { opacity: 0.12; transform: translateX(0); }
+  50% { opacity: 0.2; transform: translateX(-20px) rotate(5deg); }
+  to { opacity: 0.12; transform: translateX(0); }
+}
+
+@keyframes sparkle-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2) rotate(15deg); opacity: 0.7; }
+}
+
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes sparkle-twinkle {
+  0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  50% { opacity: 0.5; transform: scale(1.2) rotate(180deg); }
+}
+/* ===== THEME-GATED COQUETTE ENHANCEMENTS ===== */
+
+/* Base: hide cute decorative elements by default */
+.cute-bg-sparkles,
+.cute-divider,
+.cute-marquee,
+.marquee-content {
+  display: none !important;
+}
+
+html.theme-coquette .cute-bg-sparkles::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image: 
+    radial-gradient(circle 2px at 20px 30px, var(--primary) 99%, transparent),
+    radial-gradient(circle 2px at 120px 80px, var(--accent) 99%, transparent),
+    radial-gradient(circle 3px at 70px 150px, var(--primary) 99%, transparent),
+    radial-gradient(circle 2px at 160px 20px, var(--accent) 99%, transparent);
+  background-size: 200px 200px;
+  animation: sparkle-float 10s ease-in-out infinite alternate;
+}
+
+html.theme-coquette .cute-bg-sparkles,
+html.theme-coquette .cute-divider,
+html.theme-coquette .cute-marquee {
+  display: block !important;
+}
+
+html.theme-coquette .marquee-content {
+  display: inline-flex !important;
+}
+/* ===== SAKURA PETALS — jatuh + berayun (wavy) + berputar (swirl) ===== */
+/* Default disembunyikan; hanya muncul saat <html class="theme-coquette"> */
+.sakura-field {
+  display: none;
+}
+html.theme-coquette .sakura-field {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sakura-petal {
+  position: absolute;
+  top: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 1px 2px rgba(255, 147, 192, 0.35));
+  animation-name: sakura-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* Gerakan: jatuh (translateY) + ayun kiri-kanan (translateX = wavy) + putar (swirl).
+   Semua pakai transform agar GPU-accelerated & mulus. --sway dari inline style. */
+@keyframes sakura-fall {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.9;
+  }
+  25% {
+    transform: translate3d(var(--sway), 22vh, 0) rotate(120deg);
+  }
+  50% {
+    transform: translate3d(calc(var(--sway) * -1), 50vh, 0) rotate(220deg);
+  }
+  75% {
+    transform: translate3d(var(--sway), 78vh, 0) rotate(320deg);
+  }
+  92% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(calc(var(--sway) * -0.4), 112vh, 0) rotate(420deg);
+    opacity: 0;
+  }
+}
+
+/* Hormati reduced-motion: hentikan animasi sakura */
+@media (prefers-reduced-motion: reduce) {
+  html.theme-coquette .sakura-field {
+    display: none;
+  }
+}
+
+/* Cute card hover — styling only, no display override (cards keep their own display) */
+html.theme-coquette .cute-card {
+  transition: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+html.theme-coquette .cute-divider {
+  position: relative;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  overflow: hidden;
+}
+
+html.theme-coquette .cute-divider::before,
+html.theme-coquette .cute-divider::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--primary) 50%, transparent);
+  border-radius: 2px;
+}
+
+html.theme-coquette .cute-divider span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.5rem;
+  animation: sparkle-pulse 2s ease-in-out infinite;
+  text-shadow: 0 0 10px rgba(255, 100, 150, 0.4);
+}
+
+/* Cute marquee announcement */
+html.theme-coquette .cute-marquee {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, oklch(0.985 0.015 340), oklch(0.955 0.025 345));
+  padding: 0.8rem 1.2rem;
+  border-radius: calc(var(--radius) * 1.5);
+  box-shadow: 0 4px 12px rgba(255, 150, 200, 0.25);
+  margin: 1.5rem 0;
+}
+
+html.theme-coquette .cute-marquee .marquee-content {
+  display: inline-flex;
+  gap: 5rem;
+  animation: marquee-scroll 30s linear infinite;
+}
+
+html.theme-coquette .cute-marquee:hover .marquee-content {
+  animation-play-state: paused;
+}
+
+html.theme-coquette .cute-marquee span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+
+html.theme-coquette .cute-marquee span .sparkle {
+  animation: sparkle-twinkle 1.5s ease-in-out infinite;
+}
+
+html.theme-coquette .cute-marquee span:nth-child(even) .sparkle {
+  animation-delay: 0.5s;
+}
+
+html.theme-coquette .cute-marquee span:nth-child(odd) .sparkle {
+  animation-delay: 1s;
+}
+
+/* Cute floating emoji decorations — FIXED position so they don't consume layout space */
+html.theme-coquette .cute-floating-emoji-top {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  font-size: 2rem;
+  opacity: 0.15;
+  animation: emoji-dance 15s linear infinite;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 0;
+}
+
+html.theme-coquette .cute-floating-emoji-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  font-size: 1.8rem;
+  opacity: 0.12;
+  animation: emoji-reverse 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Film roll decorative element */
 .film-roll-icon {
   width: 1rem;
   height: 1rem;

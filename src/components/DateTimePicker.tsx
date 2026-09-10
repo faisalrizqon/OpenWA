@@ -167,9 +167,10 @@ export function DateTimePicker({
             </span>
           </PopoverTrigger>
           <PopoverContent>
+            {/* Tanpa prop `month`: Calendar mengelola navigasi bulannya sendiri
+                sehingga panah kiri/kanan berfungsi. */}
             <Calendar
               selected={valid ? date : null}
-              month={valid ? date : undefined}
               onSelect={(d) => {
                 setDatePart(d);
                 setOpen(false);
@@ -177,7 +178,6 @@ export function DateTimePicker({
             />
           </PopoverContent>
         </Popover>
-
         <Popover open={timeOpen} onOpenChange={setTimeOpen}>
           <PopoverTrigger
             className="flex h-9 items-center gap-2 rounded-xl border border-input bg-transparent px-3 text-sm transition-colors hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[popup-open]:border-ring"
@@ -220,6 +220,7 @@ export function DatePicker({
   const [open, setOpen] = React.useState(false);
   const date = value ? new Date(`${value}T00:00`) : null;
   const valid = date != null && !isNaN(date.getTime());
+  
   // Root <div> wajib: saat popover terbuka Base UI menginjeksi elemen helper
   // di root Popover. Tanpa wrapper, elemen itu menjadi saudara trigger di
   // dalam kontainer `space-y-*` pemakai → trigger tak lagi :last-child →
@@ -240,9 +241,9 @@ export function DatePicker({
           </span>
         </PopoverTrigger>
         <PopoverContent>
+          {/* Tanpa prop `month`: Kalender mengelola navigasi bulannya sendiri. */}
           <Calendar
             selected={valid ? date : null}
-            month={valid ? date! : undefined}
             onSelect={(d) => {
               onChange(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
               setOpen(false);

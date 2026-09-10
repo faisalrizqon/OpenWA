@@ -12,6 +12,7 @@ import {
   updateItem as updateItemUtil,
   removeItem as removeItemUtil,
 } from "@/components/order-form/hooks/utils";
+import { parseWhatsAppPhone } from "@/lib/phone";
 import { WaImportSection } from "@/components/order-form/sections/WaImportSection";
 import { CustomerSection } from "@/components/order-form/sections/CustomerSection";
 import { DateSection } from "@/components/order-form/sections/DateSection";
@@ -143,9 +144,10 @@ export function OrderForm({
     return errors;
   }, [uniqueProductIds, items, availability, products]);
 
+  // Accept flexible phone input; validate using parser that handles separators/prefixes.
   const customerValid =
-    customerId !== "new" || (newName.trim().length > 0 && /^0\d{8,13}$/.test(newPhone.trim()));
-
+    customerId !== "new" ||
+    (newName.trim().length > 0 && /^0\d{8,13}$/.test(parseWhatsAppPhone(newPhone.trim())));
   const canSubmit =
     items.length > 0 && stockErrors.length === 0 && customerValid && !selectedCustomer?.isBlacklisted;
 

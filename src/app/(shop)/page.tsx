@@ -16,6 +16,7 @@ import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Card, CardContent } from "@/components/ui/card";
 import { ShopHero, type HeroVariant } from "@/components/ShopHero";
 import { productPhotosOf } from "@/lib/productPhotos";
+import { CuteBackground, CuteMarquee, CuteDivider } from "@/components/cute/CuteDecorations";
 
 export const dynamic = "force-dynamic";
 
@@ -55,8 +56,12 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
   return (
     <div>
+      {/* Cute floating emoji background — only visible in coquette theme */}
+      <CuteBackground />
       {/* Hero — konten dari admin */}
       <ShopHero variant={hero} products={heroProducts} settings={settings} perks={perks} />
+      {/* Cute marquee announcement — only visible in coquette theme */}
+      <CuteMarquee className="max-w-6xl mx-auto px-4" />
 
       {/* Katalog section with reveal animation */}
       <section id="katalog" className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8">
@@ -101,7 +106,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                     const { main, previews } = productPhotosOf(p);
                     return (
                     <Reveal key={p.id} delay={0.2 + catIdx * 0.15 + prodIdx * 0.08} className="h-full">
-                      <div className="group film-frame-hover flash-hover flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/10">
+                      <div className="group film-frame-hover flash-hover flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/10 cute-card">
                         <Link href={`/katalog/${p.id}`} className="flex flex-1 flex-col">
                           <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
                             {main ? (
@@ -189,6 +194,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         )}
       </section>
 
+      {/* Cute decorative divider between sections */}
+      <CuteDivider emoji="💖" />
+
       {/* Testimonials — dari admin */}
       {testimonials.length > 0 && (
         <section className="mx-auto w-full max-w-6xl px-4 py-12 md:px-8">
@@ -227,6 +235,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </div>
         </section>
       )}
+      {/* Cute decorative divider between sections */}
+      <CuteDivider emoji="✨" />
 
       {/* Video & Tutorial — dari admin */}
       {videos.length > 0 && (
@@ -270,6 +280,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         </section>
       )}
 
+      {/* Cute decorative divider before CTA */}
+      <CuteDivider emoji="💖" />
+
       {/* CTA — teks dari admin */}
       <section className="mx-auto w-full max-w-6xl px-4 pb-4 md:px-8">
         <Reveal delay={0.15}>
@@ -281,7 +294,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                 href={waLink(settings.whatsapp, generalMessage(settings.storeName))}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-retro inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                className="btn-retro btn-cute inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
               >
                 <WhatsAppIcon aria-hidden />
                 Tanya via WhatsApp

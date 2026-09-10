@@ -14,6 +14,8 @@ import { saveUpload, deleteStoredFile } from "@/lib/storage";
 import { requireAdmin, requireMitraOrAdmin } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
 import { processUploadFile } from "@/lib/image";
+import { parseWhatsAppPhone } from "@/lib/phone";
+
 interface ItemInput {
   productId: number;
   quantity: number;
@@ -27,7 +29,8 @@ export async function createOrder(formData: FormData) {
   const user = await requireMitraOrAdmin();
   const customerIdRaw = String(formData.get("customerId") ?? "");
   const newCustomerName = String(formData.get("newCustomerName") ?? "").trim();
-  const newCustomerPhone = String(formData.get("newCustomerPhone") ?? "").trim();
+  const newCustomerPhoneRaw = String(formData.get("newCustomerPhone") ?? "").trim();
+  const newCustomerPhone = parseWhatsAppPhone(newCustomerPhoneRaw);
   const startDateRaw = String(formData.get("startDate") ?? "");
   const noteOrder = String(formData.get("noteOrder") ?? "").trim();
   const guaranteeType = String(formData.get("guaranteeType") ?? "").trim();
