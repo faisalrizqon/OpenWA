@@ -34,33 +34,41 @@ export function WhatsAppDashboardFrame({
   // Sinkronkan state dengan fullscreen browser — penting karena user bisa
   // keluar pakai ESC / tombol back Android, bukan hanya lewat tombol kita.
   useEffect(() => {
-    const handleChange = () => setIsFullscreen(Boolean(getFullscreenElement()));
+    const handleChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
     document.addEventListener("fullscreenchange", handleChange);
     return () => document.removeEventListener("fullscreenchange", handleChange);
   }, []);
 
+  const [isScrolledLocked, setIsScrolledLocked] = useState(false);
+
   // Kunci scroll latar belakang saat maximize. Berguna terutama untuk fallback
   // iOS (tanpa Fullscreen API) di mana sidebar admin masih ada di belakang dan
-  // body tetap bisa ter-scroll kalau tidak dikunci.
+  // body tetap bisa ter-scroll kalau tidak dikunci. Hanya aktif untuk device non-mobile.
+  const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   useEffect(() => {
-    if (!isFullscreen) return;
+    if (!isFullscreen || isMobile()) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    setIsScrolledLocked(true);
     return () => {
       document.body.style.overflow = prev;
+      setIsScrolledLocked(false);
     };
   }, [isFullscreen]);
-
-  // Hint hanya berguna sebelum user sadar ada tombolnya — sembunyikan sendiri.
-  useEffect(() => {
-    const timer = setTimeout(() => setShowHint(false), 6_000);
-    return () => clearTimeout(timer);
-  }, []);
 
   const toggleFullscreen = async () => {
     setShowHint(false);
     const el = containerRef.current;
     if (!el) return;
+    // Browser mobile (Chrome/Samsung Internet) menampilkan bar sistem
+    // "Untuk keluar dari layar penuh..." setiap kali Fullscreen API dipakai,
+    // dan bar itu TIDAK bisa disembunyikan lewat setting maupun kode.
+    // Di mobile cukup andalkan layout `fixed inset-0` (pseudo-fullscreen)
+    // yang sudah ada — tampilan sama, tanpa bar sistem.
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+      setIsFullscreen((prev) => !prev);
+      return;
+    }
     try {
       if (!getFullscreenElement()) {
         // Fullscreen pada CONTAINER, bukan documentElement — supaya header &
