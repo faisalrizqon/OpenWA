@@ -168,16 +168,15 @@ function ChatSidebar({
           <FullChatToggle />
         </div>
 
-        {/* Session selector */}
+        {/* Session selector — judul sudah dirender di header row di atas, jadi
+            select cukup pakai aria-label (accessible name tanpa teks dobel). */}
         <div className="session-select-group">
-          <label className="form-label" htmlFor="csb-1">
-            {t('chats.sessionLabel')}
-          </label>
           <select
             id="csb-1"
             value={selectedSessionId}
             onChange={e => onSelectSession(e.target.value)}
             className="session-selector"
+            aria-label={t('chats.sessionLabel')}
           >
             {sessions.map(s => (
               <option key={s.id} value={s.id}>
