@@ -1,5 +1,5 @@
 /**
- * Store kecil (pola useSyncExternalStore) untuk mode pseudo-fullscreen mobile.
+ * Store kecil (pola useSyncExternalStore) untuk mode pseudo-fullscreen.
  *
  * Kenapa store, bukan classList.add imperatif: elemen `.chats-layout` dirender
  * React dengan template className di Chats.tsx — setiap re-render (mis. saat
@@ -7,16 +7,29 @@
  * class yang ditambah imperatif. Dengan store, class dipasang DEKLARATIF dari
  * state sehingga selamat dari re-render apa pun.
  *
- * Store ini juga mengabstraksi dua efek samping:
+ * Ada DUA tingkat pseudo-fullscreen:
+ * - 'chat': hanya area `.chats-layout` (sidebar chat + room) yang memenuhi
+ *   layar; chrome dashboard (sidebar navigasi, header halaman) tetap ada.
+ *   Dipakai tombol maximize di dalam sidebar chat.
+ * - 'page': SELURUH halaman Chats memenuhi layar — chrome dashboard
+ *   (sidebar navigasi + header mobile) disembunyikan. Dipakai tombol
+ *   fullscreen TERLUAR di header halaman; di desktop tombol yang sama memakai
+ *   Fullscreen API asli pada documentElement sehingga terasa seperti app WA.
+ *
+ * Efek samping yang diabstraksi store:
  * 1. Mengunci scroll body (class `__pseudo_fullscreen_lock`).
- * 2. Memberitahu induk yang menanam dashboard via iframe (halaman admin
+ * 2. Menandai body dengan class `__page_fullscreen` saat mode 'page' aktif,
+ *    dipakai CSS untuk menyembunyikan chrome dashboard.
+ * 3. Memberitahu induk yang menanam dashboard via iframe (halaman admin
  *    MudahSewa) supaya bingkai iframe-nya ikut melebar sepenuh layar ponsel —
  *    pseudo-fullscreen di dalam iframe hanya menutup viewport iframe, bukan
  *    layar perangkat. Komunikasi pakai postMessage dua arah.
  */
 type Listener = () => void;
 
-let active = false;
+export type PseudoFullscreenMode = 'none' | 'chat' | 'page';
+
+let mode: PseudoFullscreenMode = 'none';
 const listeners = new Set<Listener>();
 
 const emit = () => {
@@ -30,21 +43,28 @@ const notifyParent = (isActive: boolean) => {
 };
 
 export const pseudoFullscreenStore = {
-  getSnapshot: (): boolean => active,
+  getSnapshot: (): PseudoFullscreenMode => mode,
   subscribe(listener: Listener): () => void {
     listeners.add(listener);
     return () => {
       listeners.delete(listener);
     };
   },
-  setActive(next: boolean): void {
-    if (active === next) return;
-    active = next;
+  setMode(next: PseudoFullscreenMode): void {
+    if (mode === next) return;
+    const wasActive = mode !== 'none';
+    const isActive = next !== 'none';
+    mode = next;
     if (typeof document !== 'undefined') {
-      document.body.classList.toggle('__pseudo_fullscreen_lock', active);
+      document.body.classList.toggle('__pseudo_fullscreen_lock', isActive);
+      document.body.classList.toggle('__page_fullscreen', next === 'page');
     }
-    notifyParent(active);
+    if (wasActive !== isActive) notifyParent(isActive);
     emit();
+  },
+  /** Kompatibilitas pemanggil lama: true = 'chat', false = 'none'. */
+  setActive(next: boolean): void {
+    pseudoFullscreenStore.setMode(next ? 'chat' : 'none');
   },
 };
 
