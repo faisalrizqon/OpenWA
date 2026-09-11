@@ -47,15 +47,6 @@ interface ChatSidebarProps {
 // Fullscreen toggle button untuk area chat. Menargetkan elemen `.chats-layout`
 // (sidebar + chat room) supaya hanya div chat yang memenuhi layar — seperti
 // WhatsApp native di HP — tanpa menyembunyikan sidebar navigasi dashboard.
-function FullChatToggle() {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  useEffect(() => {
-    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
-  }, []);
-
 // Deteksi perangkat mobile — di mobile kita hindari Fullscreen API karena
 // browser mobile menampilkan bar sistem "Untuk keluar dari layar penuh..."
 // yang tidak bisa disembunyikan. Sebagai gantinya pakai pseudo-fullscreen CSS.
