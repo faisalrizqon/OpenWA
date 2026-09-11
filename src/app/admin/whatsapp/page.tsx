@@ -6,8 +6,6 @@ import {
   pingGateway,
   pingDashboard,
   listSessions,
-  getSessionQr,
-  resolveSessionId,
   openwaDeploymentMode,
   resolveDashboardUrl,
 } from "@/lib/openwa-api-client";
@@ -19,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Phone, CheckCircle2, QrCode, ExternalLink, BookOpen, Settings } from "lucide-react";
 import { GatewayToggleForm } from "@/components/GatewayToggleForm";
 import { OpenWAManagement } from "@/components/OpenWAManagement";
+import { WhatsAppDashboardFrame } from "@/components/WhatsAppDashboardFrame";
 import { ReminderTab } from "@/components/ReminderTab";
 import { getReminderSettings } from "@/lib/reminders/config";
 
@@ -114,14 +113,9 @@ function DashboardTab({ dashboardBaseUrl }: { dashboardBaseUrl: string }) {
   if (process.env.OPENWA_API_KEY) {
     autoLoginUrl = `${dashboardBaseUrl}/#key=${encodeURIComponent(process.env.OPENWA_API_KEY)}`;
   }
-  return (
-    <iframe
-      src={autoLoginUrl}
-      className="w-full h-[95vh] min-h-[800px] rounded-xl border border-border"
-      title="OpenWA Dashboard"
-      allow="clipboard-write"
-    />
-  );
+  // Iframe dibungkus client component supaya ada tombol maximize/minimize —
+  // API key tetap dihitung di server (tidak pernah dikirim sebagai env ke klien).
+  return <WhatsAppDashboardFrame dashboardUrl={autoLoginUrl} />;
 }
 
 // --- Tab 2: Setup & Konfigurasi ---
