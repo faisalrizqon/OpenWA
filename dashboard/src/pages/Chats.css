@@ -86,6 +86,28 @@
   border: none;
 }
 
+/* Pseudo-fullscreen untuk MOBILE: Fullscreen API memicu bar sistem browser
+   ("Untuk keluar dari layar penuh...") yang tidak bisa disembunyikan lewat
+   setting maupun kode. Sebagai gantinya pin layout ke viewport dengan
+   position: fixed — tampilan sama, tanpa bar sistem. */
+.chats-page .chats-layout.__pseudo_fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  z-index: 9999;
+  background: var(--bg-white);
+}
+
+/* Kunci scroll latar belakang selama pseudo-fullscreen aktif */
+body.__pseudo_fullscreen_lock {
+  overflow: hidden;
+}
+
 .chats-page .session-select-group {
   display: flex;
   flex-direction: column;

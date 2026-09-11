@@ -71,31 +71,45 @@ function FullChatToggle() {
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
+  const enterPseudoFullscreen = (el: Element) => {
+    el.classList.add('__pseudo_fullscreen');
+    document.body.classList.add('__pseudo_fullscreen_lock');
+    setIsFullscreen(true);
+  };
+
+  const exitPseudoFullscreen = (el: Element) => {
+    el.classList.remove('__pseudo_fullscreen');
+    document.body.classList.remove('__pseudo_fullscreen_lock');
+    setIsFullscreen(false);
+  };
+
   const handleToggle = async () => {
     const layoutEl = document.querySelector('.chats-layout');
     if (!layoutEl) return;
 
     try {
-      // On mobile, avoid Fullscreen API to prevent "Exit full screen" bar.
-      // Instead use CSS pseudo-fullscreen (position: fixed inset-0) — same visual, no browser system bar.
       if (!isFullscreen) {
         if (isMobile()) {
-          layoutEl.classList.add('__pseudo_fullscreen');
-          setIsFullscreen(true);
+          // Mobile: hindari Fullscreen API — browser mobile menampilkan bar
+          // sistem "Untuk keluar dari layar penuh..." yang tidak bisa
+          // disembunyikan. Pseudo-fullscreen CSS memberi tampilan sama.
+          enterPseudoFullscreen(layoutEl);
         } else {
           await layoutEl.requestFullscreen();
         }
+      } else if (layoutEl.classList.contains('__pseudo_fullscreen')) {
+        exitPseudoFullscreen(layoutEl);
+      } else if (document.fullscreenElement) {
+        await document.exitFullscreen();
       } else {
-        if (isMobile()) {
-          layoutEl.classList.remove('__pseudo_fullscreen');
-        } else {
-          await document.exitFullscreen();
-        }
         setIsFullscreen(false);
       }
     } catch (err) {
-      console.warn('Fullscreen toggle failed:', err);
-      setIsFullscreen(prev => !prev);
+      // API ditolak (mis. iPad Safari): jatuh ke pseudo-fullscreen supaya
+      // tombol tetap berfungsi di semua perangkat.
+      console.warn('Fullscreen API ditolak, pakai pseudo-fullscreen:', err);
+      if (!isFullscreen) enterPseudoFullscreen(layoutEl);
+      else exitPseudoFullscreen(layoutEl);
     }
   };
 
