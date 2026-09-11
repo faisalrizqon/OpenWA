@@ -138,6 +138,12 @@ export default async function DashboardPage({
         action={<HeaderLink href="/admin/orders/new" label="Buat Order" />}
       />
       <PageNotifier notifications={notifications} />
+      {/* Periode tanggal (picker) — kontrol rentang "Sewa Berjalan", di kepala halaman */}
+      <DashboardPeriodFilter
+        period={period}
+        startDate={startDateRaw}
+        endDate={endDateRaw}
+      />
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         {stats.map((s) => {
@@ -163,6 +169,61 @@ export default async function DashboardPage({
           );
         })}
       </div>
+      {/* Perlu perhatian */}
+      {(dash.dueToday.length > 0 || dash.overdueCount > 0) && (
+        <Card className={dash.overdueCount > 0 ? "border-red-200" : "border-amber-200"}>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle
+                className={cn(
+                  "size-4",
+                  dash.overdueCount > 0 ? "text-red-500" : "text-amber-500"
+                )}
+                aria-hidden
+              />
+              Perlu Perhatian
+            </CardTitle>
+            <CardDescription>Harus kembali hari ini & order terlambat</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {dash.dueToday.map((r) => (
+              <Link
+                key={r.id}
+                href={`/admin/orders/${r.id}`}
+                className="flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50/80 px-4 py-2 text-sm shadow-sm backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-amber-100 hover:shadow-md"
+              >
+                <span className="min-w-0">
+                  <span className="font-medium">{r.customerName}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {r.orderNumber} · {r.items}
+                  </span>
+                </span>
+                <span className="shrink-0 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                  Kembali {format(r.endDate, "dd MMMM HH:mm", { locale: localeId })}
+                </span>
+              </Link>
+            ))}
+            {dash.overdueOrders.map((r) => (
+              <Link
+                key={r.id}
+                href={`/admin/orders/${r.id}`}
+                className="flex items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50/80 px-4 py-2 text-sm shadow-sm backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-red-100 hover:shadow-md"
+              >
+                <span className="min-w-0">
+                  <span className="font-medium text-red-700">{r.customerName}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {r.orderNumber} · {r.items}
+                  </span>
+                </span>
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-red-200 px-2 py-0.5 text-xs font-semibold text-red-800">
+                  Terlambat sejak {format(r.endDate, "dd MMMM", { locale: localeId })}
+                  <ArrowRight className="size-3" aria-hidden />
+                </span>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Sewa berjalan — bisa difilter per periode */}
       <Card>
@@ -203,15 +264,6 @@ export default async function DashboardPage({
               </div>
             </div>
           </div>
-
-          {/* Filter periode: Hari Ini / Minggu Ini / Bulan Ini / Rentang custom */}
-          <div className="mt-3">
-            <DashboardPeriodFilter
-              period={period}
-              startDate={startDateRaw}
-              endDate={endDateRaw}
-            />
-          </div>
         </CardHeader>
         <CardContent>
           {dash.periodRentals.length === 0 ? (
@@ -233,62 +285,6 @@ export default async function DashboardPage({
         <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Aksi Cepat</h2>
         <QuickActionGrid pendingBookings={dash.pendingBookings} pendingConfirmation={dash.pendingConfirmation} />
       </div>
-
-      {/* Perlu perhatian */}
-      {(dash.dueToday.length > 0 || dash.overdueCount > 0) && (
-        <Card className={dash.overdueCount > 0 ? "border-red-200" : "border-amber-200"}>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle
-                className={cn(
-                  "size-4",
-                  dash.overdueCount > 0 ? "text-red-500" : "text-amber-500"
-                )}
-                aria-hidden
-              />
-              Perlu Perhatian
-            </CardTitle>
-            <CardDescription>Harus kembali hari ini & order terlambat</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {dash.dueToday.map((r) => (
-              <Link
-                key={r.id}
-                href={`/admin/orders/${r.id}`}
-                className="flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50/80 px-4 py-2.5 text-sm shadow-sm backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-amber-100 hover:shadow-md"
-              >
-                <span className="min-w-0">
-                  <span className="font-medium">{r.customerName}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {r.orderNumber} · {r.items}
-                  </span>
-                </span>
-                <span className="shrink-0 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                  Kembali {format(r.endDate, "dd MMMM HH:mm", { locale: localeId })}
-                </span>
-              </Link>
-            ))}
-            {dash.overdueOrders.map((r) => (
-              <Link
-                key={r.id}
-                href={`/admin/orders/${r.id}`}
-                className="flex items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50/80 px-4 py-2.5 text-sm shadow-sm backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-red-100 hover:shadow-md"
-              >
-                <span className="min-w-0">
-                  <span className="font-medium text-red-700">{r.customerName}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {r.orderNumber} · {r.items}
-                  </span>
-                </span>
-                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-red-200 px-2 py-0.5 text-xs font-semibold text-red-800">
-                  Terlambat sejak {format(r.endDate, "dd MMMM", { locale: localeId })}
-                  <ArrowRight className="size-3" aria-hidden />
-                </span>
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Chart pendapatan + top produk — admin only */}
       {isAdmin && (
