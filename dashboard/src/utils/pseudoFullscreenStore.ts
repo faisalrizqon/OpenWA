@@ -82,3 +82,8 @@ export function listenForParentExitRequest(onExit: () => void): () => void {
   window.addEventListener('message', handler);
   return () => window.removeEventListener('message', handler);
 }
+
+/** Deteksi perangkat mobile via User-Agent — dipakai memilih antara Fullscreen
+ *  API (desktop) dan pseudo-fullscreen (mobile, agar bar sistem browser tidak muncul). */
+export const isMobileUA = (): boolean =>
+  typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);

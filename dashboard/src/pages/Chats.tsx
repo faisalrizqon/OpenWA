@@ -4,7 +4,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { nextReconnectState } from '../utils/reconnectState';
 import { applyIncomingToChatList } from '../utils/chatList';
 import { filterChats, filterChannels, groupStatusesByContact } from '../utils/chatFilters';
-import { ArrowLeft, Loader2, Megaphone, CircleDashed, AlertCircle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Loader2, Megaphone, CircleDashed, AlertCircle, MessageSquare, Maximize2, Minimize2 } from 'lucide-react';
 import { useProfilePicture } from '../hooks/useProfilePicture';
 import { useProfilePictures } from '../hooks/useProfilePictures';
 import { useResolvedPhone } from '../hooks/useResolvedPhone';
@@ -50,7 +50,7 @@ import ChatComposer, { type StagedAttachment } from '../components/chats/ChatCom
 import StatusMedia from '../components/chats/StatusMedia';
 import StatusComposeModal from '../components/chats/StatusComposeModal';
 import './Chats.css';
-import { pseudoFullscreenStore } from '../utils/pseudoFullscreenStore';
+import { isMobileUA, listenForParentExitRequest, pseudoFullscreenStore } from '../utils/pseudoFullscreenStore';
 
 // Quiet window for coalescing mark-as-read RPCs (see markReadCoalescer below).
 const MARK_READ_DEBOUNCE_MS = 750;
@@ -112,11 +112,51 @@ export function Chats() {
   // Pseudo-fullscreen mobile dipasang DEKLARATIF dari store: React menulis ulang
   // template className `.chats-layout` tiap re-render, jadi class yang ditambah
   // imperatif (classList.add) akan hilang saat user membuka chat personal.
-  const pseudoFullscreen = useSyncExternalStore(
+  const pseudoMode = useSyncExternalStore(
     pseudoFullscreenStore.subscribe,
     pseudoFullscreenStore.getSnapshot,
     pseudoFullscreenStore.getSnapshot,
   );
+  const pseudoFullscreen = pseudoMode === 'chat';
+  const isPageFullscreen = pseudoMode === 'page';
+
+  // Tombol fullscreen TERLUAR (header halaman): desktop = Fullscreen API asli
+  // pada documentElement (real fullscreen, chrome dashboard hilang seluruhnya);
+  // mobile = pseudo-fullscreen mode 'page' (hindari bar sistem browser).
+  const handlePageFullscreenToggle = () => {
+    if (isPageFullscreen) {
+      pseudoFullscreenStore.setMode('none');
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+      return;
+    }
+    pseudoFullscreenStore.setMode('page');
+    if (!isMobileUA()) {
+      void document.documentElement.requestFullscreen().catch(err => {
+        console.warn('Fullscreen API ditolak, pseudo-fullscreen tetap aktif:', err);
+      });
+    }
+  };
+
+  // Sinkron keluar bila fullscreen API berakhir dari luar (ESC desktop) atau
+  // induk iframe meminta keluar — jaga state store tetap konsisten.
+  useEffect(() => {
+    const onFsChange = () => {
+      if (!document.fullscreenElement && pseudoFullscreenStore.getSnapshot() === 'page' && !isMobileUA()) {
+        pseudoFullscreenStore.setMode('none');
+      }
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    const offParent = listenForParentExitRequest(() => {
+      if (pseudoFullscreenStore.getSnapshot() === 'page') {
+        pseudoFullscreenStore.setMode('none');
+        if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+      }
+    });
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      offParent();
+    };
+  }, []);
   useDocumentTitle(t('nav.chats'));
   const { error: showErrorToast, warning: showWarningToast } = useToast();
 
@@ -807,7 +847,19 @@ export function Chats() {
   );
 
   return (
-    <div className="chats-page">
+    <div className={`chats-page ${isPageFullscreen ? '__is_page_fullscreen' : ''}`}>
+      {/* Tombol fullscreen TERLUAR: di atas semua chrome dashboard. Desktop = real
+          fullscreen API; mobile = pseudo-fullscreen tanpa bar sistem browser. */}
+      <button
+        type="button"
+        onClick={handlePageFullscreenToggle}
+        title={isPageFullscreen ? t('common.collapse') : t('common.expand')}
+        aria-label={isPageFullscreen ? t('common.collapse') : t('common.expand')}
+        aria-pressed={isPageFullscreen}
+        className="chats-page-fullscreen-btn"
+      >
+        {isPageFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+      </button>
       <PageHeader title={t('nav.chats')} subtitle={t('chats.subtitle')} />
       {/* Real-time connection permanently dropped — let the user re-establish it instead of
           silently showing stale chats. */}
