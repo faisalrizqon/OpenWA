@@ -59,11 +59,14 @@ const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera
 // akan terhapus setiap React menulis ulang template className saat re-render
 // (mis. ketika user membuka chat personal).
 function FullChatToggle() {
-  const active = useSyncExternalStore(
+  const pseudoMode = useSyncExternalStore(
     pseudoFullscreenStore.subscribe,
     pseudoFullscreenStore.getSnapshot,
     pseudoFullscreenStore.getSnapshot,
   );
+  // Store menyimpan MODE ('none' | 'chat' | 'page'), bukan boolean — string
+  // 'none' itu truthy, jadi jangan pakai nilai mentahnya sebagai boolean.
+  const active = pseudoMode === 'chat';
   const [isApiFullscreen, setIsApiFullscreen] = useState(false);
 
   // Sinkron dengan Fullscreen API desktop (keluar via ESC dll).
@@ -78,7 +81,7 @@ function FullChatToggle() {
   useEffect(
     () =>
       listenForParentExitRequest(() => {
-        pseudoFullscreenStore.setActive(false);
+        pseudoFullscreenStore.setMode('none');
         if (document.fullscreenElement) void document.exitFullscreen();
       }),
     [],
@@ -95,16 +98,18 @@ function FullChatToggle() {
         // Mobile: hindari Fullscreen API — browser mobile menampilkan bar
         // sistem "Untuk keluar dari layar penuh..." yang tidak bisa
         // disembunyikan. Pseudo-fullscreen CSS memberi tampilan sama.
-        pseudoFullscreenStore.setActive(true);
+        pseudoFullscreenStore.setMode('chat');
       } else {
-        await layoutEl.requestFullscreen().catch(err => {
+        try {
+          await layoutEl.requestFullscreen();
+        } catch (err) {
           // API ditolak (mis. iPad Safari): jatuh ke pseudo-fullscreen.
           console.warn('Fullscreen API ditolak, pakai pseudo-fullscreen:', err);
-          pseudoFullscreenStore.setActive(true);
-        });
+          pseudoFullscreenStore.setMode('chat');
+        }
       }
     } else if (active) {
-      pseudoFullscreenStore.setActive(false);
+      pseudoFullscreenStore.setMode('none');
     } else {
       await document.exitFullscreen();
     }

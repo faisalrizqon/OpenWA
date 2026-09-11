@@ -125,11 +125,25 @@
   transform: scale(0.95);
 }
 
-/* Mode 'page': sembunyikan seluruh chrome dashboard (sidebar navigasi +
-   header mobile) dan biarkan halaman Chats memenuhi viewport. */
-body.__page_fullscreen .sidebar,
+/* =============================================================================
+   MODE FULLSCREEN ('chat' & 'page')
+   'chat': area chat menutup viewport (pseudo-fullscreen mobile / Fullscreen
+   API pada .chats-layout di desktop). 'page': SELURUH halaman Chats menutup
+   viewport — chrome dashboard disembunyikan via class di body.
+   ============================================================================= */
+
+/* Header mobile & overlay disembunyikan di kedua mode supaya chat benar-benar
+   memenuhi layar; tombol minimize di dalam area chat tetap terjangkau. */
+body.__pseudo_fullscreen_lock .mobile-header,
+body.__pseudo_fullscreen_lock .sidebar-overlay,
 body.__page_fullscreen .mobile-header,
 body.__page_fullscreen .sidebar-overlay {
+  display: none !important;
+}
+
+/* Mode 'page': sidebar navigasi hilang dan area konten mulai dari puncak
+   viewport (desktop & mobile). */
+body.__page_fullscreen .sidebar {
   display: none !important;
 }
 
@@ -137,34 +151,54 @@ body.__page_fullscreen .main-content {
   margin-left: 0 !important;
   width: 100% !important;
   padding-top: 0 !important;
-  height: 100dvh;
-  overflow: hidden;
 }
 
-/* Halaman Chats memenuhi viewport saat mode 'page' — padding & tinggi normal
-   dilepas supaya layout chat benar-benar full-bleed seperti app native. */
+/* Halaman Chats memenuhi viewport saat mode 'page'; layout pakai flex supaya
+   daftar chat / thread scroll internal, bukan halaman yang scroll. */
 .chats-page.__is_page_fullscreen {
   padding: 0;
   height: 100dvh;
 }
 
 .chats-page.__is_page_fullscreen .chats-layout {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  height: auto;
   margin-top: 0;
   border-radius: 0;
   border: none;
   box-shadow: none;
 }
 
-/* Saat mode 'page' aktif, header halaman disembunyikan di mobile (judul tidak
-   perlu — yang penting daftar chat & room); desktop tetap menampilkannya. */
 @media (max-width: 767px) {
+  /* Mode 'page' di mobile: judul halaman tidak perlu — yang penting daftar
+     chat & room. */
   .chats-page.__is_page_fullscreen .page-header {
     display: none;
   }
+
+  body.__page_fullscreen .main-content {
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
 }
 
-/* Real fullscreen (desktop): tombol tetap terlihat di pojok kanan atas. */
+/* Real fullscreen (desktop): halaman & layout mengisi elemen fullscreen;
+   tombol tetap terlihat di pojok kanan atas. */
+:fullscreen .chats-page {
+  padding: 0;
+  height: 100dvh;
+}
+
+:fullscreen .chats-page .chats-layout {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  margin-top: 0;
+  border-radius: 0;
+  border: none;
+}
+
 :fullscreen .chats-page .chats-page-fullscreen-btn {
   position: fixed;
   top: 1rem;
@@ -174,7 +208,8 @@ body.__page_fullscreen .main-content {
 /* Pseudo-fullscreen mode untuk MOBILE browser yang menampilkan bar sistem.
    Class ini dipasang DEKLARATIF di .chats-layout via React store, sehingga
    tetap ada bahkan saat user membuka chat personal (tidak hilang seperti
-   classList.add imperatif). */
+   classList.add imperatif). Mobile: chat area menutup seluruh viewport dengan
+   `fixed inset: 0` dan tinggi dvh; desktop menggunakan Fullscreen API asli. */
 .chats-page .chats-layout.__pseudo_fullscreen {
   position: fixed;
   inset: 0;
@@ -186,6 +221,14 @@ body.__page_fullscreen .main-content {
   box-shadow: none;
   z-index: 9999;
   background: var(--bg-white);
+}
+
+@media (max-width: 768px) {
+  /* Di mobile, pseudo-fullscreen tidak perlu flex override — sudah di-set
+     `flex: none` oleh responsive base rule; fokus ke positioning & sizing. */
+  .chats-page .chats-layout.__pseudo_fullscreen {
+    flex: none;
+  }
 }
 
 /* Kelas ini dipasang di body oleh store global saat pseudo-fullscreen aktif.
