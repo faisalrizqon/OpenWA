@@ -1,0 +1,151 @@
+/* UnifiedSearch sidebar input — single search box replacing GlobalSearch + "Search chats" */
+.unified-search {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.unified-search-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--bg-light, #f9fafb);
+  border-radius: var(--radius, 8px);
+  transition: box-shadow 0.15s ease;
+}
+
+.unified-search-input:focus-within {
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.unified-search-input svg {
+  color: var(--text-muted, #6b7280);
+  flex-shrink: 0;
+}
+
+.unified-search-input input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 0.875rem;
+  color: var(--text-primary, #111827);
+  outline: none;
+}
+
+.unified-search-input input::placeholder {
+  color: var(--text-placeholder, #9ca3af);
+}
+
+/* Results dropdown panel */
+.unified-search-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 400px;
+  overflow-y: auto;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: var(--radius, 8px);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
+  z-index: 20;
+}
+
+/* Loading / error states */
+.unified-search-state {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary, #6b7280);
+}
+
+.unified-search-state span {
+  flex: 1;
+}
+
+.unified-search-state .animate-spin {
+  color: var(--primary, #3b82f6);
+}
+
+/* Individual message hit row */
+.unified-search-hit {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  background: transparent;
+  border-top: 1px solid var(--border-light, #e5e7eb);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  transition: background-color 0.15s ease;
+}
+
+.unified-search-hit:hover,
+.unified-search-hit:focus-visible {
+  background: var(--bg-hover, #f3f4f6);
+  outline: none;
+}
+
+.unified-search-hit-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.unified-search-hit-chat-name {
+  color: var(--text-primary, #111827);
+  font-weight: 500;
+  min-width: 0;
+}
+
+.unified-search-hit-time {
+  color: var(--text-muted, #6b7280);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.unified-search-hit-snippet {
+  color: var(--text-secondary, #374151);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.unified-search-hit-snippet mark {
+  background: var(--warning, #fef3c7);
+  color: inherit;
+  padding: 0;
+  border-radius: 2px;
+}
+
+/* Load more button */
+.unified-search-more {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  background: var(--bg-light, #f9fafb);
+  border: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+  color: var(--text-primary, #111827);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.unified-search-more:hover {
+  background: var(--primary-soft, #eff6ff);
+  color: var(--primary-text, #1e40af);
+}

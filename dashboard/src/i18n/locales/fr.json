@@ -999,6 +999,7 @@
   },
   "search": {
     "placeholder": "Rechercher des messages…",
+    "unifiedPlaceholder": "Rechercher discussions et messages…",
     "results": "{{count}} résultats",
     "empty": "Aucun message trouvé.",
     "error": "Échec de la recherche. Réessayez.",

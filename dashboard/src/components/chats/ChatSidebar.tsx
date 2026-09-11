@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, CircleDashed, Loader2, Megaphone, Plus, Search } from 'lucide-react';
+import { AlertCircle, CircleDashed, Loader2, Maximize2, Megaphone, Minimize2, Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
-import type { Channel, Chat, ContactStatusGroup, Session } from '../../services/api';
+import type { Channel, Chat, ContactStatusGroup, SearchHit, Session } from '../../services/api';
 import ChatAvatar from './ChatAvatar';
+import { UnifiedSearch } from '../UnifiedSearch';
 
 export type ChatsTab = 'chats' | 'channels' | 'status';
 
@@ -14,6 +16,8 @@ interface ChatSidebarProps {
   onSwitchTab: (tab: ChatsTab) => void;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
+  /** Message-search hits from the unified box — the page navigates to the chat/message. */
+  onMessageHit: (hit: SearchHit) => void;
   onComposeStatus: () => void;
   formatChatTime: (timestamp?: number) => string;
   chatsTab: {
@@ -40,6 +44,46 @@ interface ChatSidebarProps {
   };
 }
 
+// Fullscreen toggle button untuk area chat. Menargetkan elemen `.chats-layout`
+// (sidebar + chat room) supaya hanya div chat yang memenuhi layar — seperti
+// WhatsApp native di HP — tanpa menyembunyikan sidebar navigasi dashboard.
+function FullChatToggle() {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
+  const handleToggle = async () => {
+    // Cari kontainer .chats-layout terdekat dari tombol ini (sidebar ada di dalamnya)
+    const layoutEl = document.querySelector('.chats-layout');
+    try {
+      if (!document.fullscreenElement && layoutEl) {
+        await layoutEl.requestFullscreen();
+      } else if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.warn('Fullscreen API not supported or denied:', err);
+      setIsFullscreen(prev => !prev);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleToggle()}
+      title={isFullscreen ? 'Perkecil chat' : 'Perbesar chat satu layar penuh'}
+      aria-label={isFullscreen ? 'Minimize' : 'Maximize'}
+      className="icon-btn-full-chat"
+    >
+      {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+    </button>
+  );
+}
+
 // LEFT SIDEBAR: session selector, Chats/Channels/Status tab bar, search, and the per-tab lists.
 // The page owns all queries/state; this component renders them and reports interactions up.
 function ChatSidebar({
@@ -50,6 +94,7 @@ function ChatSidebar({
   onSwitchTab,
   searchQuery,
   onSearchQueryChange,
+  onMessageHit,
   onComposeStatus,
   formatChatTime,
   chatsTab,
@@ -91,7 +136,7 @@ function ChatSidebar({
               <span className={`chat-kind-badge kind-${chat.kind}`}>{t(`chats.kind.${chat.kind}`)}</span>
             )}
             {/* Ternary, not `&&`: a chat with no messages carries timestamp 0, and React
-                renders the number 0 as text — so `0 && <span/>` painted a literal "0"
+                renders 0 as text. The ternary keeps the layout stable by reserving the slot
                 where the time belongs, on every such row. */}
             {chat.timestamp ? <span className="chat-item-time">{formatChatTime(chat.timestamp)}</span> : null}
           </div>
@@ -117,6 +162,12 @@ function ChatSidebar({
   return (
     <aside className="chats-sidebar">
       <div className="sidebar-header-box">
+        {/* Header row: judul sesi + tombol fullscreen di kanan */}
+        <div className="sidebar-header-row">
+          <span className="sidebar-header-title">{t('chats.sessionLabel')}</span>
+          <FullChatToggle />
+        </div>
+
         {/* Session selector */}
         <div className="session-select-group">
           <label className="form-label" htmlFor="csb-1">
@@ -152,16 +203,13 @@ function ChatSidebar({
           ))}
         </div>
 
-        {/* Search bar */}
-        <div className="chat-search-input">
-          <Search size={18} />
-          <input
-            type="text"
-            placeholder={t('chats.searchPlaceholder')}
-            value={searchQuery}
-            onChange={e => onSearchQueryChange(e.target.value)}
-          />
-        </div>
+        {/* Unified search: one box filters the lists below AND searches message bodies. */}
+        <UnifiedSearch
+          query={searchQuery}
+          onQueryChange={onSearchQueryChange}
+          onMessageHit={onMessageHit}
+          currentSessionId={selectedSessionId}
+        />
 
         {/* Compose a new status — only meaningful on the Status tab. */}
         {activeTab === 'status' && (

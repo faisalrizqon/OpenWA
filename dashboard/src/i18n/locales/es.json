@@ -999,6 +999,7 @@
   },
   "search": {
     "placeholder": "Buscar mensajes…",
+    "unifiedPlaceholder": "Buscar chats y mensajes…",
     "results": "{{count}} resultados",
     "empty": "No se encontraron mensajes.",
     "error": "Error en la búsqueda. Inténtalo de nuevo.",

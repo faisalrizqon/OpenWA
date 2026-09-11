@@ -19,51 +19,98 @@ import type { LoggerService } from '../../common/services/logger.service';
 /** Just enough of the logger to report; the adapter passes its own so spies keep observing it. */
 type HygieneLogger = Pick<LoggerService, 'debug' | 'log'>;
 
+/** One enumerated OS process: its pid and full command line. */
+interface ProcessCommandLine {
+  pid: number;
+  args: string;
+}
+
+/**
+ * Run a binary with no shell and resolve its stdout. execFile hands the arg array to the binary
+ * verbatim, so nothing here is injectable and the sessionId is never interpolated into a shell.
+ * maxBuffer is raised because full command lines (Chromium carries dozens of flags per process,
+ * and a busy host runs many) can exceed the 1MB default.
+ */
+function execFilePromise(command: string, args: string[]): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    execFile(command, args, { maxBuffer: 8 * 1024 * 1024 }, (error, stdout) => {
+      // The @types/node ExecFileException is an Omit<> of ErrnoException, which the type
+      // checker no longer recognises as an Error — narrow it explicitly for the reject.
+      if (error) reject(error instanceof Error ? error : new Error(error.message));
+      else resolve(stdout);
+    });
+  });
+}
+
+/**
+ * Enumerate every OS process as {pid, command line} using the platform's native tool: `ps` on
+ * darwin/linux, the CIM Win32_Process class via PowerShell on Windows (wmic is deprecated and
+ * removed on newer Windows builds). Best-effort callers treat a throw as "no processes".
+ */
+async function enumerateProcessCommandLines(platform: NodeJS.Platform): Promise<ProcessCommandLine[]> {
+  const result: ProcessCommandLine[] = [];
+  if (platform === 'win32') {
+    // PowerShell emits "<pid>|<commandline>" per line; split on the FIRST '|' so a command line
+    // that itself contains '|' stays intact. Processes whose CommandLine is null (access denied
+    // for some system processes) yield an empty args string, which the marker filter then skips.
+    const script =
+      'Get-CimInstance Win32_Process | ForEach-Object { $_.ProcessId.ToString() + "|" + $_.CommandLine }';
+    const out = await execFilePromise('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script]);
+    for (const line of out.split(/\r?\n/)) {
+      const idx = line.indexOf('|');
+      if (idx <= 0) continue;
+      const pid = Number(line.slice(0, idx));
+      if (!Number.isInteger(pid) || pid <= 0) continue;
+      result.push({ pid, args: line.slice(idx + 1) });
+    }
+    return result;
+  }
+  // darwin / linux: `ps -eo pid=,args=` prints "<pid> <full command line>", no header.
+  const out = await execFilePromise('ps', ['-eo', 'pid=,args=']);
+  for (const line of out.split('\n')) {
+    const match = /^\s*(\d+)\s+(.*)$/.exec(line);
+    if (!match) continue;
+    result.push({ pid: Number(match[1]), args: match[2] });
+  }
+  return result;
+}
+
 /**
  * SIGKILL any Chromium orphaned by a previous lifetime of this process. When OpenWA dies hard
  * (kill -9, crash, host reboot) Puppeteer's exit hook never runs, so the browser survives as an
- * orphan — leaking memory and pinning the session profile dir. Orphans are identified by the
- * `--openwa-session=<id>` marker arg appended to the puppeteer args at launch (Chromium ignores
- * the unknown flag; it is purely a `ps` label). Best-effort: never throws — a `ps` failure only
- * logs at debug, so the sweep can never block an engine start.
+ * orphan — leaking memory and pinning the session profile dir, which makes the next launch fail
+ * with "the browser is already running". Orphans are identified by the `--openwa-session=<id>`
+ * marker arg appended to the puppeteer args at launch (Chromium ignores the unknown flag; it is
+ * purely a process-table label). Killing the browser process tears down its renderer/GPU/utility
+ * children too. Best-effort: never throws — an enumeration failure only logs at debug, so the
+ * sweep can never block an engine start.
  */
 export async function killOrphanedChromiumProcesses(sessionId: string, logger: HygieneLogger): Promise<void> {
-  if (process.platform !== 'darwin' && process.platform !== 'linux') {
-    logger.debug(`Skipping orphaned Chromium sweep: unsupported platform ${process.platform}`);
+  const platform = process.platform;
+  if (platform !== 'darwin' && platform !== 'linux' && platform !== 'win32') {
+    logger.debug(`Skipping orphaned Chromium sweep: unsupported platform ${platform}`);
     return;
   }
   try {
-    // No shell: the args array is handed to ps verbatim, so nothing here is injectable.
-    // maxBuffer is raised because `ps -eo args` prints full command lines, which on a busy host
-    // (many Chromium renderers carrying dozens of flags each) can exceed the 1MB default.
-    const psOutput = await new Promise<string>((resolve, reject) => {
-      execFile('ps', ['-eo', 'pid=,args='], { maxBuffer: 8 * 1024 * 1024 }, (error, stdout) => {
-        // The @types/node ExecFileException is an Omit<> of ErrnoException, which the type
-        // checker no longer recognises as an Error — narrow it explicitly for the reject.
-        if (error) reject(error instanceof Error ? error : new Error(error.message));
-        else resolve(stdout);
-      });
-    });
+    const processes = await enumerateProcessCommandLines(platform);
     // Token-exact marker match: the marker is a single argv token, so it must appear delimited by
     // whitespace or string boundaries. A plain substring test would let restarting session
     // `sales` SIGKILL the LIVE browser of sibling `sales2` (their markers share a prefix).
     const marker = `--openwa-session=${sessionId}`;
     const markerRe = new RegExp('(?:^|\\s)' + marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=\\s|$)');
     const killedPids: number[] = [];
-    for (const line of psOutput.split('\n')) {
-      const match = /^\s*(\d+)\s+(.*)$/.exec(line);
-      if (!match) continue;
-      const pid = Number(match[1]);
-      const args = match[2];
+    for (const { pid, args } of processes) {
       if (pid === process.pid || !markerRe.test(args)) continue;
       // Never kill a non-browser process that happens to carry the marker string
       // (e.g. a `grep --openwa-session=…` probing the process table).
       if (!/chrome|chromium|headless/i.test(args)) continue;
       try {
+        // On Windows Node emulates SIGKILL with TerminateProcess; the browser's children observe
+        // the parent's death and exit, so the whole tree goes down with the matched browser pid.
         process.kill(pid, 'SIGKILL');
         killedPids.push(pid);
       } catch (error) {
-        // ESRCH: the process exited between `ps` and the kill — nothing left to do.
+        // ESRCH: the process exited between enumeration and the kill — nothing left to do.
         if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
           logger.debug(`Could not SIGKILL orphaned Chromium pid ${pid}`, { error: String(error) });
         }

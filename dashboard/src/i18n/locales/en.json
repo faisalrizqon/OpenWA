@@ -998,6 +998,7 @@
   },
   "search": {
     "placeholder": "Search messages…",
+    "unifiedPlaceholder": "Search chats & messages…",
     "results": "{{count}} results",
     "empty": "No messages found.",
     "error": "Search failed. Try again.",

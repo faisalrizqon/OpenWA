@@ -999,6 +999,7 @@
   },
   "search": {
     "placeholder": "搜尋訊息…",
+    "unifiedPlaceholder": "搜尋聊天和訊息…",
     "results": "{{count}} 個結果",
     "empty": "未找到訊息。",
     "error": "搜尋失敗。請重試。",

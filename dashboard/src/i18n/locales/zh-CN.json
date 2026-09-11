@@ -999,6 +999,7 @@
   },
   "search": {
     "placeholder": "搜索消息…",
+    "unifiedPlaceholder": "搜索聊天和消息…",
     "results": "{{count}} 条结果",
     "empty": "未找到消息。",
     "error": "搜索失败。请重试。",

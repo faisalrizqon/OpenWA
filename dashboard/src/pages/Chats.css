@@ -39,6 +39,53 @@
   gap: 1rem;
 }
 
+/* Header row: judul sesi + tombol fullscreen di kanan */
+.chats-page .sidebar-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* Tombol maximize/minimize — gaya mengikuti .icon-btn di halaman lain */
+.chats-page .icon-btn-full-chat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.chats-page .icon-btn-full-chat:hover {
+  background: var(--bg-light);
+  color: var(--text-primary);
+  border-color: var(--primary);
+}
+
+.chats-page .icon-btn-full-chat:active {
+  transform: scale(0.95);
+}
+
+/* Saat chat di-maximize: sembunyikan chrome dashboard supaya terasa seperti app WA */
+:fullscreen .chats-page {
+  padding: 0;
+  height: 100vh;
+}
+
+:fullscreen .chats-page .chats-layout {
+  height: calc(100vh - 6rem);
+  border-radius: 0;
+  border: none;
+}
+
 .chats-page .session-select-group {
   display: flex;
   flex-direction: column;

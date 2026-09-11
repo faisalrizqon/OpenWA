@@ -1008,6 +1008,7 @@
   },
   "search": {
     "placeholder": "חיפוש הודעות…",
+    "unifiedPlaceholder": "חיפוש שיחות והודעות…",
     "results": "{{count}} תוצאות",
     "empty": "לא נמצאו הודעות.",
     "error": "החיפוש נכשל. נסה שוב.",

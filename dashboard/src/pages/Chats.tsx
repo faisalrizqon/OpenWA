@@ -35,14 +35,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useToast } from '../hooks/useToast';
 import { PageHeader } from '../components/PageHeader';
-import { GlobalSearch } from '../components/GlobalSearch';
-import {
-  useChatMessages,
-  useChatMessagesActions,
-  messagesQueryKey,
-  updateCachedMessages,
-  cachedSessionThreads,
-} from '../hooks/useChatMessages';
+import { useChatMessages, useChatMessagesActions, updateCachedMessages, cachedSessionThreads, messagesQueryKey } from '../hooks/useChatMessages';
 import { useChannelMessages } from '../hooks/useChannelMessages';
 import { useContactStatuses } from '../hooks/useContactStatuses';
 import { useChatScrollPosition } from '../hooks/useChatScrollPosition';
@@ -806,12 +799,7 @@ export function Chats() {
 
   return (
     <div className="chats-page">
-      <PageHeader
-        title={t('nav.chats')}
-        subtitle={t('chats.subtitle')}
-        actions={sessions.length > 0 && <GlobalSearch currentSessionId={selectedSessionId} onHit={handleSearchHit} />}
-      />
-
+      <PageHeader title={t('nav.chats')} subtitle={t('chats.subtitle')} />
       {/* Real-time connection permanently dropped — let the user re-establish it instead of
           silently showing stale chats. */}
       {connectionFailed && (
@@ -852,6 +840,7 @@ export function Chats() {
             onSearchQueryChange={setSearchQuery}
             onComposeStatus={() => setComposeOpen(true)}
             formatChatTime={formatChatTime}
+            onMessageHit={handleSearchHit}
             chatsTab={{
               loading: loadingChats,
               chats: filteredChats,

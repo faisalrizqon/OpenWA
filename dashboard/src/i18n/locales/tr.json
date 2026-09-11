@@ -999,6 +999,7 @@
   },
   "search": {
     "placeholder": "Mesajlarda ara…",
+    "unifiedPlaceholder": "Sohbetlerde ve mesajlarda ara…",
     "results": "{{count}} sonuç",
     "empty": "Mesaj bulunamadı.",
     "error": "Arama başarısız oldu. Tekrar deneyin.",
