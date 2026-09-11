@@ -5,6 +5,12 @@ import { Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+/** Deteksi perangkat mobile — di mobile kita hindari Fullscreen API karena
+ * browser mobile menampilkan bar sistem "Untuk keluar dari layar penuh..."
+ * yang tidak bisa disembunyikan lewat setting maupun kode. */
+const isMobile = () =>
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
 /**
  * Bingkai dashboard OpenWA dengan tombol maximize/minimize.
  *
@@ -13,6 +19,13 @@ import { cn } from "@/lib/utils";
  * layar penuh dan header/sidebar admin benar-benar hilang dari tampilan — rasa
  * pemakaian seperti WhatsApp di HP. Tombolnya digambar di atas iframe (bukan di
  * dalam dashboard) supaya tetap bisa di-klik saat iframe full-bleed.
+ *
+ * DI MOBILE: Fullscreen API dilewati (bar sistem browser). Sebagai gantinya
+ * layout `fixed inset-0` dipakai, DAN dashboard di dalam iframe ikut memberi
+ * tahu lewat postMessage (`openwa-dashboard` / `pseudo-fullscreen`) supaya
+ * bingkai iframe melebar sepenuh layar ponsel — tanpa pesan itu, pseudo-
+ * fullscreen di dalam iframe hanya menutup kotak iframe, menyisakan latar
+ * halaman admin di sekelilingnya.
  *
  * `sandbox` sengaja TIDAK dipasang: dashboard OpenWA login via fragment hash,
  * memutar WebSocket event, dan men-generate QR — sandbox membatasi semuanya
@@ -34,27 +47,40 @@ export function WhatsAppDashboardFrame({
   // Sinkronkan state dengan fullscreen browser — penting karena user bisa
   // keluar pakai ESC / tombol back Android, bukan hanya lewat tombol kita.
   useEffect(() => {
-    const handleChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    const handleChange = () => setIsFullscreen(Boolean(getFullscreenElement()));
     document.addEventListener("fullscreenchange", handleChange);
     return () => document.removeEventListener("fullscreenchange", handleChange);
   }, []);
 
-  const [isScrolledLocked, setIsScrolledLocked] = useState(false);
+  // Hint hanya berguna sebelum user sadar ada tombolnya — sembunyikan sendiri.
+  useEffect(() => {
+    const timer = setTimeout(() => setShowHint(false), 6_000);
+    return () => clearTimeout(timer);
+  }, []);
 
-  // Kunci scroll latar belakang saat maximize. Berguna terutama untuk fallback
-  // iOS (tanpa Fullscreen API) di mana sidebar admin masih ada di belakang dan
-  // body tetap bisa ter-scroll kalau tidak dikunci. Hanya aktif untuk device non-mobile.
-  const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  // Kunci scroll latar belakang saat maximize (desktop). Di mobile body scroll
+  // sudah dikunci oleh dashboard sendiri lewat class `__pseudo_fullscreen_lock`.
   useEffect(() => {
     if (!isFullscreen || isMobile()) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    setIsScrolledLocked(true);
     return () => {
       document.body.style.overflow = prev;
-      setIsScrolledLocked(false);
     };
   }, [isFullscreen]);
+
+  // Dengarkan dashboard di dalam iframe: saat pseudo-fullscreen mobile aktif
+  // atau mati, bingkai iframe di sini ikut melebar/menyempit sepenuh layar.
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data as { source?: string; type?: string; active?: boolean } | null;
+      if (!data || data.source !== "openwa-dashboard" || data.type !== "pseudo-fullscreen") return;
+      if (!isMobile()) return; // desktop: Fullscreen API sudah menangani
+      setIsFullscreen(Boolean(data.active));
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   const toggleFullscreen = async () => {
     setShowHint(false);
@@ -65,8 +91,17 @@ export function WhatsAppDashboardFrame({
     // dan bar itu TIDAK bisa disembunyikan lewat setting maupun kode.
     // Di mobile cukup andalkan layout `fixed inset-0` (pseudo-fullscreen)
     // yang sudah ada — tampilan sama, tanpa bar sistem.
-    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-      setIsFullscreen((prev) => !prev);
+    if (isMobile()) {
+      const next = !isFullscreen;
+      setIsFullscreen(next);
+      // Kalau mengecilkan, kabari dashboard agar melepas pseudo-fullscreen-nya.
+      if (!next) {
+        const frame = el.querySelector("iframe");
+        frame?.contentWindow?.postMessage(
+          { source: "openwa-parent", type: "pseudo-fullscreen-exit" },
+          "*"
+        );
+      }
       return;
     }
     try {
