@@ -86,6 +86,91 @@
   border: none;
 }
 
+/* =============================================================================
+   TOMBOL FULLSCREEN TERLUAR (header halaman Chats)
+   Desktop: Fullscreen API asli pada documentElement — chrome dashboard hilang
+   seluruhnya, terasa seperti app WA. Mobile: pseudo-fullscreen mode 'page'
+   (tanpa bar sistem browser) — chrome dashboard disembunyikan via body class.
+   ============================================================================= */
+.chats-page .chats-page-fullscreen-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 130; /* di atas mobile-header (90), sidebar (100), overlay (95) */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-white);
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.chats-page .chats-page-fullscreen-btn:hover {
+  background: var(--bg-light);
+  color: var(--text-primary);
+  border-color: var(--primary);
+}
+
+.chats-page .chats-page-fullscreen-btn:active {
+  transform: scale(0.95);
+}
+
+/* Mode 'page': sembunyikan seluruh chrome dashboard (sidebar navigasi +
+   header mobile) dan biarkan halaman Chats memenuhi viewport. */
+body.__page_fullscreen .sidebar,
+body.__page_fullscreen .mobile-header,
+body.__page_fullscreen .sidebar-overlay {
+  display: none !important;
+}
+
+body.__page_fullscreen .main-content {
+  margin-left: 0 !important;
+  width: 100% !important;
+  padding-top: 0 !important;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Halaman Chats memenuhi viewport saat mode 'page' — padding & tinggi normal
+   dilepas supaya layout chat benar-benar full-bleed seperti app native. */
+.chats-page.__is_page_fullscreen {
+  padding: 0;
+  height: 100dvh;
+}
+
+.chats-page.__is_page_fullscreen .chats-layout {
+  height: 100%;
+  margin-top: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+/* Saat mode 'page' aktif, header halaman disembunyikan di mobile (judul tidak
+   perlu — yang penting daftar chat & room); desktop tetap menampilkannya. */
+@media (max-width: 767px) {
+  .chats-page.__is_page_fullscreen .page-header {
+    display: none;
+  }
+}
+
+/* Real fullscreen (desktop): tombol tetap terlihat di pojok kanan atas. */
+:fullscreen .chats-page .chats-page-fullscreen-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+}
+
 /* Pseudo-fullscreen mode untuk MOBILE browser yang menampilkan bar sistem.
    Class ini dipasang DEKLARATIF di .chats-layout via React store, sehingga
    tetap ada bahkan saat user membuka chat personal (tidak hilang seperti
