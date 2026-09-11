@@ -56,17 +56,45 @@ function FullChatToggle() {
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
+// Deteksi perangkat mobile — di mobile kita hindari Fullscreen API karena
+// browser mobile menampilkan bar sistem "Untuk keluar dari layar penuh..."
+// yang tidak bisa disembunyikan. Sebagai gantinya pakai pseudo-fullscreen CSS.
+const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+// Fullscreen toggle button untuk area chat. Menargetkan elemen `.chats-layout`
+function FullChatToggle() {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
   const handleToggle = async () => {
-    // Cari kontainer .chats-layout terdekat dari tombol ini (sidebar ada di dalamnya)
     const layoutEl = document.querySelector('.chats-layout');
+    if (!layoutEl) return;
+
     try {
-      if (!document.fullscreenElement && layoutEl) {
-        await layoutEl.requestFullscreen();
-      } else if (document.fullscreenElement) {
-        await document.exitFullscreen();
+      // On mobile, avoid Fullscreen API to prevent "Exit full screen" bar.
+      // Instead use CSS pseudo-fullscreen (position: fixed inset-0) — same visual, no browser system bar.
+      if (!isFullscreen) {
+        if (isMobile()) {
+          layoutEl.classList.add('__pseudo_fullscreen');
+          setIsFullscreen(true);
+        } else {
+          await layoutEl.requestFullscreen();
+        }
+      } else {
+        if (isMobile()) {
+          layoutEl.classList.remove('__pseudo_fullscreen');
+        } else {
+          await document.exitFullscreen();
+        }
+        setIsFullscreen(false);
       }
     } catch (err) {
-      console.warn('Fullscreen API not supported or denied:', err);
+      console.warn('Fullscreen toggle failed:', err);
       setIsFullscreen(prev => !prev);
     }
   };
