@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, CircleDashed, Loader2, Maximize2, Megaphone, Minimize2, Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { Channel, Chat, ContactStatusGroup, SearchHit, Session } from '../../services/api';
 import ChatAvatar from './ChatAvatar';
 import { UnifiedSearch } from '../UnifiedSearch';
+import { listenForParentExitRequest, pseudoFullscreenStore } from '../../utils/pseudoFullscreenStore';
 
 export type ChatsTab = 'chats' | 'channels' | 'status';
 
@@ -52,55 +53,60 @@ interface ChatSidebarProps {
 // yang tidak bisa disembunyikan. Sebagai gantinya pakai pseudo-fullscreen CSS.
 const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-// Fullscreen toggle button untuk area chat. Menargetkan elemen `.chats-layout`
+// Tombol maximize/minimize area chat. State pseudo-fullscreen disimpan di
+// store global (utils/pseudoFullscreenStore) dan dipasang DEKLARATIF sebagai
+// class pada `.chats-layout` di Chats.tsx — bukan lewat classList.add, yang
+// akan terhapus setiap React menulis ulang template className saat re-render
+// (mis. ketika user membuka chat personal).
 function FullChatToggle() {
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const active = useSyncExternalStore(
+    pseudoFullscreenStore.subscribe,
+    pseudoFullscreenStore.getSnapshot,
+    pseudoFullscreenStore.getSnapshot,
+  );
+  const [isApiFullscreen, setIsApiFullscreen] = useState(false);
 
+  // Sinkron dengan Fullscreen API desktop (keluar via ESC dll).
   useEffect(() => {
-    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    const handleFsChange = () => setIsApiFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
-  const enterPseudoFullscreen = (el: Element) => {
-    el.classList.add('__pseudo_fullscreen');
-    document.body.classList.add('__pseudo_fullscreen_lock');
-    setIsFullscreen(true);
-  };
+  // Induk (halaman admin yang menanam iframe) bisa minta keluar — tombol
+  // minimize di sana mengirim pesan ini.
+  useEffect(
+    () =>
+      listenForParentExitRequest(() => {
+        pseudoFullscreenStore.setActive(false);
+        if (document.fullscreenElement) void document.exitFullscreen();
+      }),
+    [],
+  );
 
-  const exitPseudoFullscreen = (el: Element) => {
-    el.classList.remove('__pseudo_fullscreen');
-    document.body.classList.remove('__pseudo_fullscreen_lock');
-    setIsFullscreen(false);
-  };
+  const isFullscreen = active || isApiFullscreen;
 
   const handleToggle = async () => {
     const layoutEl = document.querySelector('.chats-layout');
     if (!layoutEl) return;
 
-    try {
-      if (!isFullscreen) {
-        if (isMobile()) {
-          // Mobile: hindari Fullscreen API — browser mobile menampilkan bar
-          // sistem "Untuk keluar dari layar penuh..." yang tidak bisa
-          // disembunyikan. Pseudo-fullscreen CSS memberi tampilan sama.
-          enterPseudoFullscreen(layoutEl);
-        } else {
-          await layoutEl.requestFullscreen();
-        }
-      } else if (layoutEl.classList.contains('__pseudo_fullscreen')) {
-        exitPseudoFullscreen(layoutEl);
-      } else if (document.fullscreenElement) {
-        await document.exitFullscreen();
+    if (!isFullscreen) {
+      if (isMobile()) {
+        // Mobile: hindari Fullscreen API — browser mobile menampilkan bar
+        // sistem "Untuk keluar dari layar penuh..." yang tidak bisa
+        // disembunyikan. Pseudo-fullscreen CSS memberi tampilan sama.
+        pseudoFullscreenStore.setActive(true);
       } else {
-        setIsFullscreen(false);
+        await layoutEl.requestFullscreen().catch(err => {
+          // API ditolak (mis. iPad Safari): jatuh ke pseudo-fullscreen.
+          console.warn('Fullscreen API ditolak, pakai pseudo-fullscreen:', err);
+          pseudoFullscreenStore.setActive(true);
+        });
       }
-    } catch (err) {
-      // API ditolak (mis. iPad Safari): jatuh ke pseudo-fullscreen supaya
-      // tombol tetap berfungsi di semua perangkat.
-      console.warn('Fullscreen API ditolak, pakai pseudo-fullscreen:', err);
-      if (!isFullscreen) enterPseudoFullscreen(layoutEl);
-      else exitPseudoFullscreen(layoutEl);
+    } else if (active) {
+      pseudoFullscreenStore.setActive(false);
+    } else {
+      await document.exitFullscreen();
     }
   };
 

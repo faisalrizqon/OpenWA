@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect, useSyncExternalStore } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import { nextReconnectState } from '../utils/reconnectState';
@@ -50,6 +50,7 @@ import ChatComposer, { type StagedAttachment } from '../components/chats/ChatCom
 import StatusMedia from '../components/chats/StatusMedia';
 import StatusComposeModal from '../components/chats/StatusComposeModal';
 import './Chats.css';
+import { pseudoFullscreenStore } from '../utils/pseudoFullscreenStore';
 
 // Quiet window for coalescing mark-as-read RPCs (see markReadCoalescer below).
 const MARK_READ_DEBOUNCE_MS = 750;
@@ -108,6 +109,14 @@ const statusFontStyle = (font?: number): { fontFamily?: string; fontWeight?: num
 
 export function Chats() {
   const { t } = useTranslation();
+  // Pseudo-fullscreen mobile dipasang DEKLARATIF dari store: React menulis ulang
+  // template className `.chats-layout` tiap re-render, jadi class yang ditambah
+  // imperatif (classList.add) akan hilang saat user membuka chat personal.
+  const pseudoFullscreen = useSyncExternalStore(
+    pseudoFullscreenStore.subscribe,
+    pseudoFullscreenStore.getSnapshot,
+    pseudoFullscreenStore.getSnapshot,
+  );
   useDocumentTitle(t('nav.chats'));
   const { error: showErrorToast, warning: showWarningToast } = useToast();
 
@@ -828,7 +837,9 @@ export function Chats() {
           </p>
         </div>
       ) : (
-        <div className={`chats-layout ${activeChat || activeChannel || activeStatusGroup ? 'has-active-chat' : ''}`}>
+        <div
+          className={`chats-layout ${activeChat || activeChannel || activeStatusGroup ? 'has-active-chat' : ''} ${pseudoFullscreen ? '__pseudo_fullscreen' : ''}`}
+        >
           {/* LEFT SIDEBAR: session & chat rooms */}
           <ChatSidebar
             sessions={sessions}

@@ -86,16 +86,16 @@
   border: none;
 }
 
-/* Pseudo-fullscreen untuk MOBILE: Fullscreen API memicu bar sistem browser
-   ("Untuk keluar dari layar penuh...") yang tidak bisa disembunyikan lewat
-   setting maupun kode. Sebagai gantinya pin layout ke viewport dengan
-   position: fixed — tampilan sama, tanpa bar sistem. */
+/* Pseudo-fullscreen mode untuk MOBILE browser yang menampilkan bar sistem.
+   Class ini dipasang DEKLARATIF di .chats-layout via React store, sehingga
+   tetap ada bahkan saat user membuka chat personal (tidak hilang seperti
+   classList.add imperatif). */
 .chats-page .chats-layout.__pseudo_fullscreen {
   position: fixed;
   inset: 0;
   width: 100vw;
+  height: 100dvh; /* dvh: dynamic viewport height — mengatasi bug status bar */
   max-width: none;
-  height: 100dvh;
   border-radius: 0;
   border: none;
   box-shadow: none;
@@ -103,7 +103,8 @@
   background: var(--bg-white);
 }
 
-/* Kunci scroll latar belakang selama pseudo-fullscreen aktif */
+/* Kelas ini dipasang di body oleh store global saat pseudo-fullscreen aktif.
+   Hanya dipakai di desktop — mobile mengandalkan viewport-height & postMessage. */
 body.__pseudo_fullscreen_lock {
   overflow: hidden;
 }

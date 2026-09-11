@@ -1,0 +1,24 @@
+# docker-compose.override.yml
+#
+# Auto-loaded by `docker compose` on top of docker-compose.yml.
+#
+# WHY THIS EXISTS:
+#   OpenWA's gateway runs NATIVELY on Windows here (`node dist/main.js`), not
+#   inside Docker. The stock `redis` service in docker-compose.yml has NO
+#   `ports:` mapping — it is only reachable from other containers on the
+#   `openwa-network`. A native gateway using REDIS_HOST=localhost therefore
+#   could never connect (the symptom: ETIMEDOUT, /infrastructure hanging).
+#
+#   This override publishes Redis on 127.0.0.1:6379 (loopback only — not exposed
+#   to the LAN/internet) so the native gateway can reach it via localhost.
+#
+# To start:   docker compose --profile redis up -d redis
+# To stop:    docker compose --profile redis stop redis
+
+services:
+  redis:
+    ports:
+      # Bind to loopback only: reachable from this Windows host (the native
+      # gateway) but NOT from other machines. Redis here has no auth, so
+      # publishing on 0.0.0.0 would expose it to the LAN.
+      - '127.0.0.1:6379:6379'
