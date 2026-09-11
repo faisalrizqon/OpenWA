@@ -223,7 +223,13 @@ export function ReminderTab({ settings }: ReminderTabProps) {
                       onChange={(e) => setAdminPhoneList((prev) => prev.map((p, i) => (i === idx ? e.target.value : p)))}
                       className="flex-1"
                     />
-                    <Button type="button" variant="outline" size="icon" onClick={() => setAdminPhoneList((prev) => prev.filter((_, i) => i !== idx))}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label={`Hapus nomor admin WA ke-${idx + 1}${phone ? ` (${phone})` : ""}`}
+                      onClick={() => setAdminPhoneList((prev) => prev.filter((_, i) => i !== idx))}
+                    >
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
@@ -374,7 +380,13 @@ export function ReminderTab({ settings }: ReminderTabProps) {
                     onChange={(e) => setTestPhones((prev) => prev.map((p, i) => (i === idx ? e.target.value : p)))}
                     className="flex-1"
                   />
-                  <Button type="button" variant="outline" size="icon" onClick={() => setTestPhones((prev) => prev.filter((_, i) => i !== idx))}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label={`Hapus nomor telepon pengujian ke-${idx + 1}${phone ? ` (${phone})` : ""}`}
+                    onClick={() => setTestPhones((prev) => prev.filter((_, i) => i !== idx))}
+                  >
                     <Trash2 className="size-4" />
                   </Button>
                 </div>
