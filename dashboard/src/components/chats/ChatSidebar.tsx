@@ -45,13 +45,6 @@ interface ChatSidebarProps {
   };
 }
 
-// Fullscreen toggle button untuk area chat. Menargetkan elemen `.chats-layout`
-// (sidebar + chat room) supaya hanya div chat yang memenuhi layar — seperti
-// WhatsApp native di HP — tanpa menyembunyikan sidebar navigasi dashboard.
-// Deteksi perangkat mobile — di mobile kita hindari Fullscreen API karena
-// browser mobile menampilkan bar sistem "Untuk keluar dari layar penuh..."
-// yang tidak bisa disembunyikan. Sebagai gantinya pakai pseudo-fullscreen CSS.
-const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 // Tombol maximize/minimize area chat. State pseudo-fullscreen disimpan di
 // store global (utils/pseudoFullscreenStore) dan dipasang DEKLARATIF sebagai
@@ -86,28 +79,16 @@ function FullChatToggle() {
       }),
     [],
   );
-
   const isFullscreen = active || isApiFullscreen;
 
   const handleToggle = async () => {
-    const layoutEl = document.querySelector('.chats-layout');
-    if (!layoutEl) return;
-
+    // "Fullscreen di browser saja": pseudo-fullscreen CSS membuat area chat
+    // menutup viewport browser (fixed inset-0) TANPA menyembunyikan chrome
+    // browser (status bar + URL bar). Fullscreen TOTAL (chrome browser hilang)
+    // adalah tugas tombol header halaman (.chats-page-fullscreen-btn) lewat
+    // Fullscreen API — dua tombol, dua tingkat fullscreen yang berbeda.
     if (!isFullscreen) {
-      if (isMobile()) {
-        // Mobile: hindari Fullscreen API — browser mobile menampilkan bar
-        // sistem "Untuk keluar dari layar penuh..." yang tidak bisa
-        // disembunyikan. Pseudo-fullscreen CSS memberi tampilan sama.
-        pseudoFullscreenStore.setMode('chat');
-      } else {
-        try {
-          await layoutEl.requestFullscreen();
-        } catch (err) {
-          // API ditolak (mis. iPad Safari): jatuh ke pseudo-fullscreen.
-          console.warn('Fullscreen API ditolak, pakai pseudo-fullscreen:', err);
-          pseudoFullscreenStore.setMode('chat');
-        }
-      }
+      pseudoFullscreenStore.setMode('chat');
     } else if (active) {
       pseudoFullscreenStore.setMode('none');
     } else {

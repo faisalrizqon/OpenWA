@@ -50,6 +50,18 @@ export const pseudoFullscreenStore = {
       listeners.delete(listener);
     };
   },
+  /** Aktifkan pseudo-fullscreen dari parent (iframe) — digunakan saat user klik tombol maximize di halaman admin. */
+  activateFromParent(): void {
+    if (mode !== 'chat') {
+      pseudoFullscreenStore.setMode('chat');
+    }
+  },
+  /** Deactivate pseudo-fullscreen dari parent — dipanggil via postMessage type "pseudo-fullscreen-exit". */
+  deactivateFromParent(): void {
+    if (mode === 'chat' || mode === 'page') {
+      pseudoFullscreenStore.setMode('none');
+    }
+  },
   setMode(next: PseudoFullscreenMode): void {
     if (mode === next) return;
     const wasActive = mode !== 'none';
@@ -62,7 +74,6 @@ export const pseudoFullscreenStore = {
     if (wasActive !== isActive) notifyParent(isActive);
     emit();
   },
-  /** Kompatibilitas pemanggil lama: true = 'chat', false = 'none'. */
   setActive(next: boolean): void {
     pseudoFullscreenStore.setMode(next ? 'chat' : 'none');
   },

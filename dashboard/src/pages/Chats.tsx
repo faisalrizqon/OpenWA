@@ -50,7 +50,7 @@ import ChatComposer, { type StagedAttachment } from '../components/chats/ChatCom
 import StatusMedia from '../components/chats/StatusMedia';
 import StatusComposeModal from '../components/chats/StatusComposeModal';
 import './Chats.css';
-import { isMobileUA, listenForParentExitRequest, pseudoFullscreenStore } from '../utils/pseudoFullscreenStore';
+import { isMobileUA, pseudoFullscreenStore } from '../utils/pseudoFullscreenStore';
 
 // Quiet window for coalescing mark-as-read RPCs (see markReadCoalescer below).
 const MARK_READ_DEBOUNCE_MS = 750;
@@ -119,22 +119,30 @@ export function Chats() {
   );
   const pseudoFullscreen = pseudoMode === 'chat';
   const isPageFullscreen = pseudoMode === 'page';
+  // Satu kendali untuk SEMUA keadaan fullscreen: selama mode apa pun aktif
+  // ('chat' maupun 'page') tombol header tampil sebagai "Perkecil" dan menjadi
+  // jalan keluar — termasuk saat pseudo-fullscreen chat menutup viewport.
+  const anyFullscreen = pseudoMode !== 'none';
 
   // Tombol fullscreen TERLUAR (header halaman): desktop = Fullscreen API asli
   // pada documentElement (real fullscreen, chrome dashboard hilang seluruhnya);
   // mobile = pseudo-fullscreen mode 'page' (hindari bar sistem browser).
   const handlePageFullscreenToggle = () => {
-    if (isPageFullscreen) {
+    if (anyFullscreen) {
       pseudoFullscreenStore.setMode('none');
       if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
       return;
     }
     pseudoFullscreenStore.setMode('page');
-    if (!isMobileUA()) {
-      void document.documentElement.requestFullscreen().catch(err => {
-        console.warn('Fullscreen API ditolak, pseudo-fullscreen tetap aktif:', err);
-      });
-    }
+    // MOBILE JUGA memakai Fullscreen API: pseudo-fullscreen CSS hanya menutup
+    // viewport dan TIDAK bisa menyembunyikan chrome browser (status bar + URL
+    // bar), sehingga hasilnya bukan 100% layar penuh. Notifikasi sistem sesaat
+    // saat masuk lebih dapat diterima daripada browser chrome yang menetap.
+    // Bila API ditolak (iOS Safari / iframe tanpa izin), pseudo-fullscreen di
+    // atas tetap aktif sebagai fallback.
+    void document.documentElement.requestFullscreen().catch(err => {
+      console.warn('Fullscreen API ditolak, pseudo-fullscreen tetap aktif:', err);
+    });
   };
 
   // Sinkron keluar bila fullscreen API berakhir dari luar (ESC desktop) atau
@@ -146,16 +154,38 @@ export function Chats() {
       }
     };
     document.addEventListener('fullscreenchange', onFsChange);
-    const offParent = listenForParentExitRequest(() => {
-      if (pseudoFullscreenStore.getSnapshot() === 'page') {
+
+    // Induk (halaman admin yang menanam dashboard via iframe) mengendalikan
+    // pseudo-fullscreen lewat postMessage. Tanpanya bingkai iframe memang
+    // melebar sepenuh layar ponsel, tetapi chrome dashboard di dalamnya
+    // (header mobile 56px + judul halaman + padding) tetap tampil — sehingga
+    // hasilnya terlihat SAMA saja seperti belum di-maximize.
+    const onParentMessage = (event: MessageEvent) => {
+      const data = event.data as { source?: string; type?: string } | null;
+      if (!data || data.source !== 'openwa-parent') return;
+      if (data.type === 'pseudo-fullscreen-enter') {
+        pseudoFullscreenStore.setMode('page');
+      } else if (data.type === 'pseudo-fullscreen-exit') {
         pseudoFullscreenStore.setMode('none');
         if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
       }
-    });
+    };
+    window.addEventListener('message', onParentMessage);
+
     return () => {
       document.removeEventListener('fullscreenchange', onFsChange);
-      offParent();
+      window.removeEventListener('message', onParentMessage);
     };
+  }, []);
+
+  // Saat dashboard ditanam via iframe (halaman admin MudahSewa), induk sudah
+  // menyediakan tombol maximize sendiri di pojok kanan atas bingkai. Tanpa
+  // penanda ini tombol fullscreen terluar di bawah ikut tampil di posisi yang
+  // sama dan keduanya bertumpuk. Class dibaca CSS untuk menyembunyikannya.
+  useEffect(() => {
+    const embedded = window.parent !== window;
+    if (embedded) document.body.classList.add('__in_iframe');
+    return () => document.body.classList.remove('__in_iframe');
   }, []);
   useDocumentTitle(t('nav.chats'));
   const { error: showErrorToast, warning: showWarningToast } = useToast();
@@ -847,20 +877,24 @@ export function Chats() {
   );
 
   return (
-    <div className={`chats-page ${isPageFullscreen ? '__is_page_fullscreen' : ''}`}>
+    <div className={`chats-page ${isPageFullscreen ? '__is_page_fullscreen' : ''} ${anyFullscreen ? '__is_any_fullscreen' : ''}`}>
       {/* Tombol fullscreen TERLUAR: di atas semua chrome dashboard. Desktop = real
           fullscreen API; mobile = pseudo-fullscreen tanpa bar sistem browser. */}
       <button
         type="button"
         onClick={handlePageFullscreenToggle}
-        title={isPageFullscreen ? t('common.collapse') : t('common.expand')}
-        aria-label={isPageFullscreen ? t('common.collapse') : t('common.expand')}
-        aria-pressed={isPageFullscreen}
+        title={anyFullscreen ? t('common.collapse') : t('common.expand')}
+        aria-label={anyFullscreen ? t('common.collapse') : t('common.expand')}
+        aria-pressed={anyFullscreen}
         className="chats-page-fullscreen-btn"
       >
-        {isPageFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+        {anyFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
       </button>
-      <PageHeader title={t('nav.chats')} subtitle={t('chats.subtitle')} />
+      {/* Sembunyikan PageHeader & subtitle saat mode fullscreen aktif (chat atau page).
+          Tanpa ini, judul "Chats" + subtitle tetap "nongol" dari celah overlay. */}
+      {!anyFullscreen && (
+        <PageHeader title={t('nav.chats')} subtitle={t('chats.subtitle')} />
+      )}
       {/* Real-time connection permanently dropped — let the user re-establish it instead of
           silently showing stale chats. */}
       {connectionFailed && (

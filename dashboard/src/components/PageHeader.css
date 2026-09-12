@@ -61,19 +61,23 @@
       'subtitle'
       'actions';
     column-gap: 0;
+    margin-bottom: 1rem; /* Kurangi dari 1.5rem menjadi 1rem untuk mobile */
   }
 
   .page-header__title-group h1 {
-    font-size: 1.5rem;
+    font-size: 1.75rem; /* Perbesar dari 1.5rem jadi lebih terlihat */
+    margin-bottom: 0.25rem;
   }
 
   .page-header__actions {
     justify-self: stretch;
-    margin-top: 0.25rem;
+    margin-top: 0.5rem;
   }
 
   .page-header__subtitle {
-    font-size: 0.875rem;
+    font-size: 0.9375rem; /* Perbesar dari 0.875rem agar lebih readable */
+    margin-top: 0.375rem; /* Kurangi dari 0.5rem (8px) jadi 6px */
+    line-height: 1.4;
   }
 }
 

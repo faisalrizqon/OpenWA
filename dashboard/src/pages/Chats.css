@@ -96,19 +96,19 @@
   position: fixed;
   top: 1rem;
   right: 1rem;
-  z-index: 130; /* di atas mobile-header (90), sidebar (100), overlay (95) */
+  z-index: 10000; /* di atas overlay pseudo-fullscreen (z-9999) supaya tombol TETAP terlihat & bisa diklik saat fullscreen */
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
   background: var(--bg-white);
   color: var(--text-secondary);
   cursor: pointer;
-  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: none;
   transition:
     background 0.15s ease,
     color 0.15s ease,
@@ -139,6 +139,14 @@ body.__pseudo_fullscreen_lock .sidebar-overlay,
 body.__page_fullscreen .mobile-header,
 body.__page_fullscreen .sidebar-overlay {
   display: none !important;
+}
+/* Judul halaman ("Chats" + subtitle) tidak boleh "nongol" saat area chat
+   memenuhi layar: tanpa aturan ini judul tetap render di atas baris header
+   sidebar (tempat tombol minimize berada) dan memakan tinggi vertikal.
+   Berlaku untuk pseudo-fullscreen (body lock) maupun Fullscreen API asli. */
+body.__pseudo_fullscreen_lock .chats-page .page-header,
+:fullscreen .chats-page .page-header {
+  display: none;
 }
 
 /* Mode 'page': sidebar navigasi hilang dan area konten mulai dari puncak
@@ -184,9 +192,10 @@ body.__page_fullscreen .main-content {
 }
 
 /* Real fullscreen (desktop): halaman & layout mengisi elemen fullscreen;
-   tombol tetap terlihat di pojok kanan atas. */
+   tombol tetap terlihat di pojok kanan atas. Pastikan tidak ada gap/whitespace. */
 :fullscreen .chats-page {
-  padding: 0;
+  padding: 0 !important;
+  margin: 0 !important;
   height: 100dvh;
 }
 
@@ -197,6 +206,8 @@ body.__page_fullscreen .main-content {
   margin-top: 0;
   border-radius: 0;
   border: none;
+  width: 100%;
+  max-width: none;
 }
 
 :fullscreen .chats-page .chats-page-fullscreen-btn {
@@ -235,6 +246,187 @@ body.__page_fullscreen .main-content {
    Hanya dipakai di desktop — mobile mengandalkan viewport-height & postMessage. */
 body.__pseudo_fullscreen_lock {
   overflow: hidden;
+}
+/* Samakan warna & hapus offset shell saat fullscreen aktif (SEMUA lebar layar).
+   Strip berwarna berbeda yang "nongol" di tepi atas berasal dari padding/margin
+   + background shell (body/.layout/.main-content) yang sebelumnya hanya dinolkan
+   di mobile: akibatnya overlay fixed tidak mulai persis dari tepi viewport dan
+   background shell terlihat sebagai pita warna lain. Dengan aturan ini seluruh
+   lapisan memakai permukaan chat (--bg-white) dan overlay menempel ke tepi. */
+body.__pseudo_fullscreen_lock,
+body.__pseudo_fullscreen_lock .layout,
+body.__pseudo_fullscreen_lock .main-content,
+body.__pseudo_fullscreen_lock .chats-page,
+body.__page_fullscreen,
+body.__page_fullscreen .layout,
+body.__page_fullscreen .main-content,
+body.__page_fullscreen .chats-page {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: var(--bg-white);
+}
+/* =============================================================================
+   HIDE CHROME DASHBOARD WHEN ANY FULLSCREEN MODE (chat or page) IS ACTIVE
+   ========================================================================== */
+
+/* Sembunyikan PageHeader & subtitle supaya tidak "nongol" dari celah overlay.
+   Selector luas: body.__pseudo_fullscreen_lock (mode chat) maupun __page_fullscreen (mode page). */
+body.__pseudo_fullscreen_lock .chats-page .page-header,
+body.__page_fullscreen .chats-page .page-header {
+  display: none !important;
+}
+
+/* Hapus margin/padding top dari chats-layout saat fullscreen agar overlay menempel ke tepi atas tanpa gap */
+body.__pseudo_fullscreen_lock .chats-page .chats-layout,
+body.__page_fullscreen .chats-page .chats-layout {
+  margin-top: 0 !important;
+}
+/* Netralkan ancestor yang bisa mengubah containing block elemen `fixed`
+   (transform / filter / backdrop-filter / will-change / contain). Tanpa ini,
+   overlay pseudo-fullscreen (.chats-layout fixed inset-0) bisa "menggantung"
+   pada ancestor tersebut alih-alih viewport — akibatnya overlay kurang full
+   ke atas dan menyisakan pita di tepi atas. */
+body.__pseudo_fullscreen_lock .layout,
+body.__pseudo_fullscreen_lock .main-content,
+body.__pseudo_fullscreen_lock .chats-page,
+body.__page_fullscreen .layout,
+body.__page_fullscreen .main-content,
+body.__page_fullscreen .chats-page {
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+  contain: none !important;
+}
+
+/* =============================================================================
+   MOBILE PSEUDO-FULLSCREEN — HAPUS SEMUA GAP DARI ALL SOURCES
+   ========================================================================== */
+
+/* Pastikan .chats-page kehilangan semua margin/padding dari parent saat fullscreen */
+body.__pseudo_fullscreen_lock .chats-page {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Hapus padding dari .mobile-header agar tidak ada gap di atas */
+@media (max-width: 768px) {
+  body.__pseudo_fullscreen_lock .mobile-header {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  
+  /* Pastikan layout mengisi seluruh viewport tanpa celah */
+  .chats-layout.__pseudo_fullscreen {
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+  }
+  /* Parent container harus bersih — HANYA saat fullscreen aktif. Tanpa scope
+     body class ini, padding halaman hilang juga di tampilan default mobile dan
+     judul/subtitle menempel tepi kiri ("texting berantakan"). */
+  body.__pseudo_fullscreen_lock .layout > .main-content.mobile > .chats-page,
+  body.__page_fullscreen .layout > .main-content.mobile > .chats-page {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+/* Sembunyikan chrome dashboard mobile (header + overlay) saat pseudo-fullscreen aktif. */
+body.__pseudo_fullscreen_lock .mobile-header,
+body.__pseudo_fullscreen_lock .sidebar-overlay {
+  display: none !important;
+}
+
+/* Pastikan main-content tidak punya extra padding/top-bar margin saat fullscreen. */
+@media (max-width: 768px) {
+  body.__pseudo_fullscreen_lock .main-content.mobile,
+  body.__page_fullscreen .main-content {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+}
+
+/* =============================================================================
+   DOUBLE FULLSCREEN BUTTON FIX
+   Hide internal dashboard fullscreen button when external iframe maximize is active
+   ========================================================================== */
+/* Pembagian kendali tombol fullscreen saat dashboard ditanam via iframe
+   (halaman admin MudahSewa) supaya tidak ada dua tombol bertumpuk:
+   - Desktop (≥768px): induk punya tombol maximize di pojok kanan atas bingkai
+     → tombol internal dashboard disembunyikan.
+   - Mobile (<768px): tombol internal yang dipakai — sudah dicenter vertikal di
+     baris header (lihat rule di bawah) dan mengirim postMessage ke induk agar
+     bingkai iframe ikut melebar → tombol induk disembunyikan via `max-md:hidden`
+     di WhatsAppDashboardFrame. */
+@media (min-width: 768px) {
+  body.__in_iframe .chats-page-fullscreen-btn {
+    display: none !important;
+  }
+}
+
+/* =============================================================================
+   DOUBLE FULLSCREEN BUTTON HIDE LOGIC - TWO DIFFERENT MODES
+   ========================================================================== */
+
+/* Header button (.chats-page-fullscreen-btn) adalah kendali universal: tampil
+   di atas semua mode fullscreen (z-index 10000 > overlay 9999) dan berubah
+   menjadi "Perkecil" sebagai jalan keluar. Sebaliknya tombol sidebar
+   (.icon-btn-full-chat) disembunyikan saat mode apa pun aktif supaya tidak
+   ada dua tombol bertumpuk di pojok yang sama. */
+body.__pseudo_fullscreen_lock .icon-btn-full-chat,
+body.__page_fullscreen .icon-btn-full-chat {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  /* Posisi tombol fullscreen header disesuaikan baris header mobile (tinggi
+     56px): center vertikal (56-36)/2 = 10px, right 1rem. Box overlay TETAP
+     seragam dengan .icon-btn-full-chat — 36x36, border 1px, radius 6px —
+     supaya kedua tombol fullscreen tampil dengan bahasa visual yang sama. */
+  .chats-page .chats-page-fullscreen-btn {
+    top: 10px !important;
+    right: 1rem !important;
+    width: 36px !important;
+    height: 36px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px;
+    background: var(--bg-white) !important;
+    box-shadow: none !important;
+    color: var(--text-secondary);
+  }
+
+  .chats-page .chats-page-fullscreen-btn:hover {
+    background: var(--bg-light) !important;
+    color: var(--text-primary);
+    border-color: var(--primary) !important;
+  }
+}
+/* =============================================================================
+   IFRAME EMBEDDED MODE — LEPAS CHROME DASHBOARD KE KARTU INDUK
+   ========================================================================== */
+/* Saat ditanam via iframe (halaman admin MudahSewa), induk sudah menyediakan
+   chrome kartu sendiri (border, radius, shadow, tombol maximize). Maka chrome
+   dashboard dilepas: judul halaman disembunyikan dan .chats-layout mengisi
+   iframe dari tepi ke tepi — tanpa ini judul "Chats" nongol di atas baris
+   header sidebar dan tinggi terbuang untuk border/radius dobel. */
+body.__in_iframe .chats-page {
+  padding: 0;
+  height: 100dvh;
+}
+
+body.__in_iframe .chats-page .page-header {
+  display: none;
+}
+
+body.__in_iframe .chats-page .chats-layout {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  margin-top: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .chats-page .session-select-group {
@@ -896,16 +1088,13 @@ body.__pseudo_fullscreen_lock {
   align-items: center;
   justify-content: center;
   background: var(--bg-white);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 4rem 2rem;
-  margin-top: 1rem;
-  text-align: center;
-  color: var(--text-secondary);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius, 8px);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
+  /* `flex: 1` makes the card fill the page column; on mobile the page gets a
+     viewport-based min-height (see RESPONSIVENESS block) so this stretches. */
   flex: 1;
+  min-height: 0;
 }
-
 .chats-page .chats-error-state h3 {
   font-size: 1.25rem;
   margin: 1rem 0 0.5rem;
@@ -1079,7 +1268,7 @@ body.__pseudo_fullscreen_lock {
 @media (max-width: 768px) {
   .chats-page {
     padding: 1rem;
-    height: auto;
+    min-height: 100dvh; /* Use dvh to avoid status bar jump while keeping scroll when content > viewport */
   }
 
   /* `flex: none` is load-bearing here: the base rule gives this box `flex: 1` (basis 0%), which
