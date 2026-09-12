@@ -55,90 +55,80 @@ export function ReturnForm({ units }: { orderId?: string; units: ReturnUnit[] })
         unitId: Number(unitId),
         condition,
       })),
-      notes: notes.trim(),
-      photos,
+      notes,
+      files: photos,
     });
   }
 
   function clearDraft() {
-    setConditions({});
+    if (!draft) return;
+    setConditions(Object.fromEntries(staged.map((c) => [c.unitId, ""])));
     setNotes("");
     setPhotos([]);
     setComplete(false);
-    draft?.setReturn({ complete: false, conditions: [], notes: "", photos: [] });
   }
 
-  return (
-    <div className="space-y-4">
-      {units.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Tidak ada unit ter-assign pada order ini.</p>
-      ) : (
-        <div className="space-y-3">
-          {units.map((u) => (
-            <div
-              key={u.unitId}
-              className="flex items-center justify-between gap-4 rounded-lg bg-muted/40 px-3 py-2"
-            >
-              <div className="text-sm">
-                <span className="font-medium">{u.productName}</span>
-                {u.serialNumber && (
-                  <span className="ml-2 text-muted-foreground">#{u.serialNumber}</span>
-                )}
-              </div>
-              <div className="w-40">
-                <Label htmlFor={`cond-${u.unitId}`} className="sr-only">
-                  Kondisi {u.productName}
-                </Label>
-                <SelectField
-                  id={`cond-${u.unitId}`}
-                  value={conditions[u.unitId] || undefined}
-                  onValueChange={(v) => setConditions((prev) => ({ ...prev, [u.unitId]: v }))}
-                  placeholder="— pilih kondisi —"
-                  options={CONDITION_OPTIONS}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+  if (units.length === 0) return null;
 
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-        <div className="space-y-1.5">
-          <Label htmlFor="return-photos">Foto kondisi barang (opsional, bisa banyak)</Label>
-          <UploadField
-            id="return-photos"
-            name="returnPhotos"
-            multiple
-            placeholder="Pilih foto kondisi barang…"
-            helper="Semua format diterima, maksimal 15 MB per foto (dikompres otomatis)."
-            onFilesChange={setPhotos}
-          />
-        </div>
-        <div className="flex flex-col gap-3">
-          <label className="flex cursor-pointer items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={complete}
-              onChange={(e) => setComplete(e.target.checked)}
-              className="mt-0.5 size-4 shrink-0 accent-primary"
-            />
-            <span>Tandai order selesai (barang kembali, unit dilepas ke stok)</span>
-          </label>
-          <Button
-            type="button"
-            onClick={applyToDraft}
-            disabled={!anyInput}
-            variant={anyInput ? "default" : "outline"}
-            className="w-full gap-1.5"
+  return (
+    <>
+      <div className="mb-4 space-y-3">
+        <p className="text-sm font-semibold">Kondisi unit</p>
+        {units.map((u) => (
+          <div
+            key={u.unitId}
+            className="flex items-center justify-between gap-4 rounded-lg bg-muted/40 px-3 py-2"
           >
-            <CheckCircle2 className="size-4" aria-hidden />
-            Catat Pengembalian
-          </Button>
-        </div>
+            <div className="text-sm">
+              <span className="font-medium">{u.productName}</span>
+              {u.serialNumber && (
+                <span className="ml-2 text-muted-foreground">#{u.serialNumber}</span>
+              )}
+            </div>
+            <div className="w-40">
+              <Label htmlFor={`cond-${u.unitId}`} className="sr-only">
+                Kondisi {u.productName}
+              </Label>
+              <SelectField
+                id={`cond-${u.unitId}`}
+                value={conditions[u.unitId] || undefined}
+                onValueChange={(v) => setConditions((prev) => ({ ...prev, [u.unitId]: v }))}
+                placeholder="— pilih kondisi —"
+                options={CONDITION_OPTIONS}
+              />
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="return-notes">Catatan (opsional)</Label>
+        <Label htmlFor="return-photos" className="text-sm font-semibold">
+          Foto kondisi barang
+        </Label>
+        <UploadField
+          id="return-photos"
+          name="returnPhotos"
+          multiple
+          placeholder="Pilih foto..."
+          helper="Semua format diterima, maksimal 15 MB per foto (dikompres otomatis)."
+          onFilesChange={setPhotos}
+        />
+      </div>
+
+      <label className="flex cursor-pointer items-start gap-2 text-sm pt-1">
+        <input
+          type="checkbox"
+          checked={complete}
+          onChange={(e) => setComplete(e.target.checked)}
+          className="mt-0.5 size-4 shrink-0 accent-primary"
+        />
+        <span>Tandai order selesai (barang kembali, unit dilepas ke stok)</span>
+      </label>
+
+      <div className="space-y-1.5 pt-4">
+        <Label htmlFor="return-notes" className="text-sm font-semibold">
+          Catatan (opsional)
+        </Label>
         <textarea
           id="return-notes"
           value={notes}
@@ -147,8 +137,19 @@ export function ReturnForm({ units }: { orderId?: string; units: ReturnUnit[] })
         />
       </div>
 
+      <Button
+        type="button"
+        onClick={applyToDraft}
+        disabled={!anyInput}
+        variant={anyInput ? "default" : "outline"}
+        className="mt-4 w-full gap-1.5"
+      >
+        <CheckCircle2 className="size-4" aria-hidden />
+        Catat Pengembalian
+      </Button>
+
       {(staged.length > 0 || draft.returnNotes || draft.returnPhotos.length > 0 || draft.returnComplete) && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 pt-4">
           <p className="text-xs text-muted-foreground">
             Perubahan return sudah tercatat — tekan <strong>Simpan</strong> di atas halaman
             untuk menyimpannya ke database.
@@ -158,6 +159,6 @@ export function ReturnForm({ units }: { orderId?: string; units: ReturnUnit[] })
           </Button>
         </div>
       )}
-    </div>
+    </>
   );
 }

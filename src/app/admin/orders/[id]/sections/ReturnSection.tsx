@@ -34,23 +34,23 @@ export function ReturnSection({ order, active, assignedUnits }: ReturnSectionPro
       <CardHeader>
         <CardTitle>Return & Penyelesaian</CardTitle>
         <CardDescription>
-          {active
-            ? "Foto kondisi barang + set kondisi unit, lalu selesaikan."
-            : completed
-              ? "Order selesai — tambah/revisi foto kondisi barang tanpa mengubah status order."
-              : "Tersedia saat order aktif / terlambat"}
+          Foto kondisi barang + set kondisi unit, lalu selesaikan.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 overflow-x-auto px-3 py-3 sm:px-6 sm:py-4">
-        {active && <ReturnForm orderId={order.id} units={assignedUnits} />}
+        {!active && !completed && order.returnPhotos.length === 0 && (
+          <p className="text-sm text-muted-foreground">Belum ada proses return.</p>
+        )}
+        {active && (
+          <div className="flex min-h-[315px] flex-col rounded-xl border bg-muted/30 p-4">
+            <ReturnForm orderId={order.id} units={assignedUnits} />
+          </div>
+        )}
         <ReturnPhotoGridDraft photos={order.returnPhotos} />
-        {completed && (
+        {!active && completed && (
           <div className="flex min-h-[315px] flex-col rounded-xl border bg-muted/30 p-4">
             <ReturnPhotoAddFormDraft />
           </div>
-        )}
-        {!active && !completed && order.returnPhotos.length === 0 && (
-          <p className="text-sm text-muted-foreground">Belum ada proses return.</p>
         )}
       </CardContent>
     </Card>

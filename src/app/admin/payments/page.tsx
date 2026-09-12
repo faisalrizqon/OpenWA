@@ -56,7 +56,7 @@ const TAB_LABELS: Record<TabId, string> = {
   config: "Konfigurasi Metode",
 };
 
-function PaymentTabs({ active, pendingCount }: { active: TabId; pendingCount: number }) {
+function PaymentTabs({ active }: { active: TabId }) {
   return (
     <div className="flex flex-wrap gap-2">
       {TAB_IDS.map((id) => (
@@ -77,11 +77,6 @@ function PaymentTabs({ active, pendingCount }: { active: TabId; pendingCount: nu
             <Settings2 className="size-4" aria-hidden />
           )}
           {TAB_LABELS[id]}
-          {id === "history" && pendingCount > 0 && (
-            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-amber-700">
-              {pendingCount}
-            </span>
-          )}
         </Link>
       ))}
     </div>
@@ -181,7 +176,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
           description={`${pendingPayments.length} menunggu verifikasi · ${confirmedPayments.length} terkonfirmasi`}
         />
         <PageNotifier notifications={notifications} />
-        <PaymentTabs active={tab} pendingCount={pendingPayments.length} />
+        <PaymentTabs active={tab} />
 
         {/* ── Pending Payments ── */}
         <Card>
@@ -370,7 +365,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         description="Atur metode pembayaran yang tersedia untuk pelanggan di checkout."
       />
       <PageNotifier notifications={notifications} />
-      <PaymentTabs active={tab} pendingCount={pendingPayments.length} />
+      <PaymentTabs active={tab} />
 
       {/* ── GoPay Merchant (login GoPay Merchant + status sesi) ── */}
       <GoPayAdminCard

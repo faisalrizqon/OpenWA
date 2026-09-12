@@ -75,11 +75,13 @@ export default async function OrdersPage({
 
   const statusParam = get("status");
   const periodParam = get("period");
+  // Filter for startDate (tanggal sewa mulai) — dari periode picker custom
   const startDateRaw = get("start_date");
   const endDateRaw = get("end_date");
-
+  // Filter for orderDate (tanggal order dibuat) — dari date picker terpisah
+  const orderStartDateRaw = get("order_start_date");
+  const orderEndDateRaw = get("order_end_date");
   // 'draft' sengaja tidak termasuk: order yang belum ditekan "Selesaikan Orderan"
-  // oleh customer belum resmi masuk, jadi tidak boleh terlihat di admin.
   const validStatuses = ["pending", "booking", "active", "late", "completed", "cancelled"];
   const status = validStatuses.includes(statusParam) ? statusParam : "";
   const period = Object.keys(PERIOD_TABS).includes(periodParam) ? periodParam : "";
@@ -96,6 +98,16 @@ export default async function OrdersPage({
   } else if (preset) {
     rangeStart = preset.gte;
     rangeEnd = preset.lt;
+  }
+
+  // Rentang untuk orderDate (tanggal order dibuat): custom saja, inklusif
+  let orderRangeStart: Date | null = null;
+  let orderRangeEnd: Date | null = null;
+  if (orderStartDateRaw || orderEndDateRaw) {
+    const osd = orderStartDateRaw ? new Date(`${orderStartDateRaw}T00:00`) : null;
+    const oed = orderEndDateRaw ? new Date(`${orderEndDateRaw}T23:59:59.999`) : null;
+    if (osd && !isNaN(osd.getTime())) orderRangeStart = osd;
+    if (oed && !isNaN(oed.getTime())) orderRangeEnd = oed;
   }
   // Hasil bulk action (redirect balik dari bulkUpdateOrderStatus)
   const notifications: PageNotification[] = [];
@@ -116,11 +128,21 @@ export default async function OrdersPage({
       // Filter khusus antrian "siap diproses": customer sudah submit semua data
       // pembayaran dan order sudah resmi masuk (status booking).
       ...(get("ready") === "1" ? { paymentCompleted: true, status: "booking" } : {}),
+      // Filter rentang startDate (tanggal sewa mulai) — dari periode picker custom
       ...(rangeStart || rangeEnd
         ? {
             startDate: {
               ...(rangeStart ? { gte: rangeStart } : {}),
               ...(rangeEnd ? { lt: rangeEnd } : {}),
+            },
+          }
+        : {}),
+      // Filter rentang orderDate (tanggal order dibuat) — dari date picker terpisah
+      ...(orderRangeStart || orderRangeEnd
+        ? {
+            orderDate: {
+              ...(orderRangeStart ? { gte: orderRangeStart } : {}),
+              ...(orderRangeEnd ? { lte: orderRangeEnd } : {}),
             },
           }
         : {}),
@@ -140,6 +162,7 @@ export default async function OrdersPage({
     source: o.source,
     status: o.status,
     startDate: o.startDate.toISOString(),
+    orderDate: o.orderDate?.toISOString(),
     customerName: o.customer.name,
     itemSummary: o.items.map((it) => `${it.product.name} ×${it.quantity}`).join(", "),
     total:

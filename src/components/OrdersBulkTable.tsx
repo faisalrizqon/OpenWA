@@ -27,6 +27,7 @@ export interface OrderRow {
   source: string;
   status: string;
   startDate: string; // ISO
+  orderDate?: string; // ISO - tanggal order dibuat
   customerName: string;
   itemSummary: string;
   total: number;
@@ -135,6 +136,7 @@ export function OrdersBulkTable({ rows }: { rows: OrderRow[] }) {
               />
             </TableHead>
             <TableHead className="min-w-[120px] text-xs font-bold uppercase tracking-wider text-foreground">Nomor</TableHead>
+            <TableHead className="min-w-[100px] text-xs font-bold uppercase tracking-wider text-foreground">Tanggal Order</TableHead>
             <TableHead className="min-w-[100px] text-xs font-bold uppercase tracking-wider text-foreground">Mulai</TableHead>
             <TableHead className="max-w-[180px] text-xs font-bold uppercase tracking-wider text-foreground">Pelanggan</TableHead>
             <TableHead className="max-w-[200px] text-xs font-bold uppercase tracking-wider text-foreground">Item</TableHead>
@@ -171,6 +173,11 @@ export function OrdersBulkTable({ rows }: { rows: OrderRow[] }) {
                       </Badge>
                     )}
                   </Link>
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-muted-foreground">
+                  {o.orderDate
+                    ? format(new Date(o.orderDate), "dd MMM yyyy", { locale: localeId })
+                    : <span className="text-muted-foreground/60">—</span>}
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-muted-foreground">
                   {format(new Date(o.startDate), "dd MMMM yyyy", { locale: localeId })}

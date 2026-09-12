@@ -66,7 +66,7 @@ export default async function AdminWhatsAppPage({ searchParams }: PageProps<"/ad
   return (
     <div className="space-y-6">
       {/* Navigasi halaman — di luar card */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-card p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg">
         <h1 className="text-xl font-bold tracking-tight md:text-2xl">WhatsApp</h1>
         <BackLink href="/admin" label="Kembali" />
       </div>

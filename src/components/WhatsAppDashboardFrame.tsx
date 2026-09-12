@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -58,10 +59,11 @@ export function WhatsAppDashboardFrame({
     return () => clearTimeout(timer);
   }, []);
 
-  // Kunci scroll latar belakang saat maximize (desktop). Di mobile body scroll
-  // sudah dikunci oleh dashboard sendiri lewat class `__pseudo_fullscreen_lock`.
+  // Kunci scroll latar belakang saat maximize — berlaku di desktop maupun
+  // mobile supaya halaman admin di belakang container tidak ikut scroll
+  // (rubber-band) saat chat sedang satu layar penuh.
   useEffect(() => {
-    if (!isFullscreen || isMobile()) return;
+    if (!isFullscreen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -69,13 +71,16 @@ export function WhatsAppDashboardFrame({
     };
   }, [isFullscreen]);
 
-  // Dengarkan dashboard di dalam iframe: saat pseudo-fullscreen mobile aktif
-  // atau mati, bingkai iframe di sini ikut melebar/menyempit sepenuh layar.
+  // Dengarkan dashboard di dalam iframe: saat pseudo-fullscreen aktif atau
+  // mati, bingkai iframe di sini ikut melebar/menyempit sepenuh layar.
+  // Sengaja TIDAK dibatasi mobile: jendela desktop yang sempit (<768px) juga
+  // memakai layout mobile dashboard, dan fallback "Fullscreen API ditolak"
+  // di desktop sama-sama butuh container yang melebar — tanpa ini container
+  // tetap 700px dan pseudo-fullscreen hanya menutup kotak iframe.
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const data = event.data as { source?: string; type?: string; active?: boolean } | null;
       if (!data || data.source !== "openwa-dashboard" || data.type !== "pseudo-fullscreen") return;
-      if (!isMobile()) return; // desktop: Fullscreen API sudah menangani
       setIsFullscreen(Boolean(data.active));
     };
     window.addEventListener("message", handleMessage);
@@ -94,14 +99,18 @@ export function WhatsAppDashboardFrame({
     if (isMobile()) {
       const next = !isFullscreen;
       setIsFullscreen(next);
-      // Kalau mengecilkan, kabari dashboard agar melepas pseudo-fullscreen-nya.
-      if (!next) {
-        const frame = el.querySelector("iframe");
-        frame?.contentWindow?.postMessage(
-          { source: "openwa-parent", type: "pseudo-fullscreen-exit" },
-          "*"
-        );
-      }
+      // Dashboard di dalam iframe TIDAK tahu tombol ini diklik. Tanpa pesan ini
+      // bingkai iframe memang melebar sepenuh layar, tetapi chrome dashboard di
+      // dalamnya (header mobile + judul halaman + padding) tetap tampil — jadi
+      // "fullscreen" yang terlihat sama saja seperti belum di-maximize.
+      const frame = el.querySelector("iframe");
+      frame?.contentWindow?.postMessage(
+        {
+          source: "openwa-parent",
+          type: next ? "pseudo-fullscreen-enter" : "pseudo-fullscreen-exit",
+        },
+        "*"
+      );
       return;
     }
     try {
@@ -124,7 +133,7 @@ export function WhatsAppDashboardFrame({
   // state ikut dari event fullscreenchange di atas.
   const maximized = isFullscreen;
 
-  return (
+  const frame = (
     <div
       ref={containerRef}
       className={cn(
@@ -132,12 +141,16 @@ export function WhatsAppDashboardFrame({
         // — warna tema mencegah "kedip hitam" sebelum iframe selesai paint.
         "relative overflow-hidden border border-border bg-background shadow-lg motion-safe:transition-all motion-safe:duration-300 motion-safe:ease-in-out",
         maximized
-          ? "fixed inset-0 z-[100] m-0 h-dvh w-screen rounded-none border-0"
-          : "h-[95vh] min-h-[800px] w-full rounded-xl"
+          ? "fixed inset-0 z-[9999] m-0 h-dvh w-screen rounded-none border-0"
+          : "h-[700px] w-full rounded-xl"
       )}
     >
-      {/* Tombol maximize/minimize — selalu di atas iframe */}
-      <div className="absolute right-3 top-3 z-[110]">
+      {/* Tombol maximize/minimize — selalu di atas iframe. Di mobile kendali
+          fullscreen diserahkan ke tombol internal dashboard (menempati slot
+          kanan baris header, sudah dicenter vertikal, dan mengirim postMessage
+          ke induk saat masuk/keluar), sehingga tombol induk hanya tampil dari
+          breakpoint md ke atas agar keduanya tidak bertumpuk di pojok sama. */}
+      <div className="absolute right-3 top-3 z-[99] max-md:hidden">
         <Button
           size="icon"
           variant="outline"
@@ -154,13 +167,12 @@ export function WhatsAppDashboardFrame({
           )}
         </Button>
       </div>
-
       {dashboardUrl ? (
         <iframe
           src={dashboardUrl}
           className="h-full w-full"
           title="OpenWA Dashboard"
-          allow="clipboard-write"
+          allow="clipboard-write; fullscreen"
         />
       ) : (
         <div className="flex h-full items-center justify-center bg-muted text-muted-foreground">
@@ -170,10 +182,17 @@ export function WhatsAppDashboardFrame({
 
       {/* Petunjuk singkat, hilang sendiri setelah 6 detik / setelah diklik */}
       {showHint && !maximized && (
-        <div className="pointer-events-none absolute bottom-4 left-1/2 z-[105] -translate-x-1/2 rounded-full bg-card/90 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
+        <div className="pointer-events-none absolute bottom-4 left-1/2 z-[105] -translate-x-1/2 rounded-full bg-card/90 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm max-md:hidden">
           Ketuk ⛶ di kanan atas untuk chat satu layar penuh
         </div>
       )}
     </div>
   );
+
+  // Saat maximize, container dipindah ke document.body via portal: ancestor
+  // halaman admin yang punya transform/filter/backdrop-filter (dekorasi tema)
+  // membuat `position: fixed` berperilaku seperti absolute terhadap ancestor
+  // tersebut — akibatnya chrome admin (pita warna berbeda) tetap terlihat di
+  // sekeliling bingkai. Portal menjamin fixed inset-0 relatif terhadap viewport.
+  return maximized ? createPortal(frame, document.body) : frame;
 }

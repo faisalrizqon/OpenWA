@@ -19,6 +19,7 @@ export interface CustomerSectionProps {
     status: string;
     startDate: Date;
     endDate: Date;
+    orderDate: Date; // tanggal order dibuat
     noteOrder?: string | null;
     guaranteeType?: string | null;
     guaranteeNumber?: string | null;
@@ -199,6 +200,10 @@ export function CustomerSection({
         <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
           <dt className="text-muted-foreground">Dikembalikan</dt>
           <dd className="min-w-0 font-medium">{order.returnedAt ? dateFmt(order.returnedAt) : "—"}</dd>
+        </div>
+        <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
+          <dt className="text-muted-foreground">Tanggal Order</dt>
+          <dd className="min-w-0 font-medium">{dateFmt(order.orderDate)}</dd>
         </div>
       </dl>
 

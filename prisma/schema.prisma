@@ -126,6 +126,7 @@ model Order {
   handledById String? // relasi ke User (fase 2 role, null = order lama / online checkout)
 
   status          String    @default("booking") // draft | pending | booking | active | late | completed | cancelled
+  orderDate       DateTime  @default(now()) // tanggal order dibuat/difinalisasi oleh customer/admin
   startDate       DateTime
   endDate         DateTime
   noteOrder       String? // sisa catatan bebas dari Notion (Catatan)
