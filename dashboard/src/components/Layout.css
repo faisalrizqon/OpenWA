@@ -401,13 +401,81 @@
     width: 100%;
     padding-top: 56px;
     height: 100vh;
+    height: 100dvh;
+    box-sizing: border-box;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* When an active conversation is open on mobile, hide the app-level mobile-header
+     and remove top padding so the chat header sits at the top (WhatsApp native style),
+     and disable outer scroll so the inner chat messages container is the sole scroller. */
+  .layout:has(.has-active-chat) .mobile-header {
+    display: none !important;
+  }
+
+  .layout:has(.has-active-chat) .main-content.mobile,
+  .main-content.mobile:has(.has-active-chat) {
+    padding-top: 0 !important;
+    height: 100dvh !important;
+    overflow-y: hidden !important;
   }
 
   .collapse-toggle {
     display: none;
   }
+}
+
+/* ==================== Fullscreen / Pseudo-Fullscreen Chrome Hide ==================== */
+body.__pseudo_fullscreen_lock,
+body.__page_fullscreen {
+  overflow: hidden;
+}
+
+body.__pseudo_fullscreen_lock .mobile-header,
+body.__pseudo_fullscreen_lock .sidebar-overlay,
+body.__page_fullscreen .mobile-header,
+body.__page_fullscreen .sidebar-overlay {
+  display: none !important;
+}
+
+body.__page_fullscreen .sidebar {
+  display: none !important;
+}
+
+body.__page_fullscreen .main-content {
+  margin-left: 0 !important;
+  width: 100% !important;
+  padding-top: 0 !important;
+}
+
+@media (max-width: 767px) {
+  body.__page_fullscreen .main-content {
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+}
+
+body.__pseudo_fullscreen_lock,
+body.__pseudo_fullscreen_lock .layout,
+body.__pseudo_fullscreen_lock .main-content,
+body.__page_fullscreen,
+body.__page_fullscreen .layout,
+body.__page_fullscreen .main-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: var(--bg-white);
+}
+
+body.__pseudo_fullscreen_lock .layout,
+body.__pseudo_fullscreen_lock .main-content,
+body.__page_fullscreen .layout,
+body.__page_fullscreen .main-content {
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+  contain: none !important;
 }
 
 /* ==================== RTL support ==================== */

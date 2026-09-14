@@ -150,6 +150,7 @@ export function useChatScrollPosition(
   const pendingRestoreRef = useRef<number | null>(null);
   // Deadline (performance.now()) for the post-restore settle loop; 0 = no settle in flight.
   const settleUntilRef = useRef<number>(0);
+  const lastScrollTopRef = useRef<number>(0);
   // Marks our own writes so the scroll listener can skip them (a genuine user scroll both updates
   // the pin state / position map AND cancels pendingRestore; our writes must do neither).
   const programmaticWriteRef = useRef<boolean>(false);
@@ -173,6 +174,7 @@ export function useChatScrollPosition(
   const pinToBottom = useCallback(
     (el: HTMLDivElement) => {
       writeScrollTop(el, el.scrollHeight);
+      lastScrollTopRef.current = el.scrollHeight;
       pinnedRef.current = true;
     },
     [writeScrollTop],
@@ -190,12 +192,21 @@ export function useChatScrollPosition(
     const onScroll = () => {
       if (programmaticWriteRef.current) {
         programmaticWriteRef.current = false;
+        lastScrollTopRef.current = el.scrollTop;
         return;
       }
       // A genuine user scroll: cancels any pending restore, then updates pin + position map.
       pendingRestoreRef.current = null;
+      // If user is scrolling UP, immediately unpin and stop any settling animation frame
+      if (el.scrollTop < lastScrollTopRef.current) {
+        pinnedRef.current = false;
+        settleUntilRef.current = 0;
+      } else {
+        pinnedRef.current = isNearBottom(el.scrollTop, el.scrollHeight, el.clientHeight);
+      }
+      lastScrollTopRef.current = el.scrollTop;
+
       const atBottom = isNearBottom(el.scrollTop, el.scrollHeight, el.clientHeight);
-      pinnedRef.current = atBottom;
       const visibleChatId = prevChatIdRef.current;
       if (visibleChatId) {
         if (atBottom) {
@@ -206,8 +217,18 @@ export function useChatScrollPosition(
         }
       }
     };
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY < 0) {
+        pinnedRef.current = false;
+        settleUntilRef.current = 0;
+      }
+    };
     el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
+    el.addEventListener('wheel', onWheel, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      el.removeEventListener('wheel', onWheel);
+    };
   });
 
   useLayoutEffect(() => {
@@ -234,16 +255,18 @@ export function useChatScrollPosition(
         pinToBottom(el);
         // The synchronous write above runs BEFORE the browser lays out the freshly-committed
         // message DOM, so it can land short of the true bottom (scrollHeight still reflects the
-        // pre-layout content). Re-pin every frame for a short window while pinned, so the settling
-        // layout — text wrap, linkify pass, font swap — never strands the thread above the latest
-        // message. A genuine user scroll unpins via the scroll listener, which stops the loop on
-        // its next tick; media decoding beyond the window is covered by onMediaLoad.
+        // pre-layout content). Re-pin when the layout expands (text wrap, linkify, font swap).
+        // Only re-pin IF scrollHeight actually grew, so genuine user scroll up is never fought!
+        let lastKnownHeight = el.scrollHeight;
         settleUntilRef.current = performance.now() + BOTTOM_SETTLE_WINDOW_MS;
         const settle = () => {
           const cur = containerRef.current;
           if (!cur || !pinnedRef.current) return;
           if (performance.now() > settleUntilRef.current) return;
-          pinToBottom(cur);
+          if (cur.scrollHeight > lastKnownHeight) {
+            lastKnownHeight = cur.scrollHeight;
+            pinToBottom(cur);
+          }
           requestAnimationFrame(settle);
         };
         requestAnimationFrame(settle);

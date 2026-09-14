@@ -876,22 +876,27 @@ export function Chats() {
     [messages, formatChatTime],
   );
 
+  const hasActiveItem = Boolean(activeChat || activeChannel || activeStatusGroup);
+
   return (
-    <div className={`chats-page ${isPageFullscreen ? '__is_page_fullscreen' : ''} ${anyFullscreen ? '__is_any_fullscreen' : ''}`}>
-      {/* Tombol fullscreen TERLUAR: di atas semua chrome dashboard. Desktop = real
-          fullscreen API; mobile = pseudo-fullscreen tanpa bar sistem browser. */}
-      <button
-        type="button"
-        onClick={handlePageFullscreenToggle}
-        title={anyFullscreen ? t('common.collapse') : t('common.expand')}
-        aria-label={anyFullscreen ? t('common.collapse') : t('common.expand')}
-        aria-pressed={anyFullscreen}
-        className="chats-page-fullscreen-btn"
-      >
-        {anyFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-      </button>
-      {/* Sembunyikan PageHeader & subtitle saat mode fullscreen aktif (chat atau page).
-          Tanpa ini, judul "Chats" + subtitle tetap "nongol" dari celah overlay. */}
+    <div
+      className={`chats-page ${isPageFullscreen ? '__is_page_fullscreen' : ''} ${anyFullscreen ? '__is_any_fullscreen' : ''} ${hasActiveItem ? 'has-active-chat' : ''}`}
+    >
+      {/* Tombol fullscreen TERLUAR: di pojok kanan atas header */}
+      {lightboxIndex === null && (
+        <button
+          type="button"
+          onClick={handlePageFullscreenToggle}
+          title={anyFullscreen ? t('common.collapse') : t('common.expand')}
+          aria-label={anyFullscreen ? t('common.collapse') : t('common.expand')}
+          aria-pressed={anyFullscreen}
+          className="chats-page-fullscreen-btn"
+        >
+          {anyFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+        </button>
+      )}
+
+      {/* Sembunyikan PageHeader & subtitle saat mode fullscreen aktif (chat atau page). */}
       {!anyFullscreen && (
         <PageHeader title={t('nav.chats')} subtitle={t('chats.subtitle')} />
       )}

@@ -128,7 +128,11 @@ function ChatSidebar({
 }: ChatSidebarProps) {
   const { t } = useTranslation();
 
-  const formatLastMessageSnippet = (chat: Chat) => chat.lastMessage || '';
+  const formatLastMessageSnippet = (chat: Chat) => {
+    if (chat.lastMessage && chat.lastMessage.trim()) return chat.lastMessage;
+    if (chat.timestamp && chat.timestamp > 0) return '📎 ' + t('chats.media.omitted', 'Media');
+    return '';
+  };
 
   // Shared row markup for the Chats and Status lists — a plain function (not memoized) since it
   // closes over render-scoped props (chatsTab.activeChatId, chatsTab.pictures) that already

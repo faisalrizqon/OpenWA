@@ -44,6 +44,29 @@ test('a location message shows the label, never its base64 body', () => {
   assert.equal(chats[0].lastMessage, LOCATION);
 });
 
+test('a sticker or media message without body shows a descriptive snippet, never empty', () => {
+  const stickerRes = applyIncomingToChatList(
+    [chat('a@c.us')],
+    { chatId: 'a@c.us', body: '', type: 'sticker', timestamp: 200 },
+    { locationLabel: LOCATION },
+  );
+  assert.equal(stickerRes.chats[0].lastMessage, '🏷️ Sticker');
+
+  const imgRes = applyIncomingToChatList(
+    [chat('a@c.us')],
+    { chatId: 'a@c.us', body: '', type: 'image', timestamp: 200 },
+    { locationLabel: LOCATION },
+  );
+  assert.equal(imgRes.chats[0].lastMessage, '📷 Foto');
+
+  const voiceRes = applyIncomingToChatList(
+    [chat('a@c.us')],
+    { chatId: 'a@c.us', body: '', type: 'ptt', timestamp: 200 },
+    { locationLabel: LOCATION },
+  );
+  assert.equal(voiceRes.chats[0].lastMessage, '🎤 Pesan suara');
+});
+
 test('unread increments only for an incoming message in a chat that is not open', () => {
   const incomingElsewhere = applyIncomingToChatList(
     [chat('a@c.us', { unreadCount: 2 })],

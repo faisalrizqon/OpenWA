@@ -96,7 +96,7 @@
   position: fixed;
   top: 1rem;
   right: 1rem;
-  z-index: 10000; /* di atas overlay pseudo-fullscreen (z-9999) supaya tombol TETAP terlihat & bisa diklik saat fullscreen */
+  z-index: 91; /* sejajar di baris header (z-90) tapi di bawah drawer sidebar (z-100) & modal (z-1000) */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -113,6 +113,30 @@
     background 0.15s ease,
     color 0.15s ease,
     border-color 0.15s ease;
+}
+
+@media (max-width: 767px) {
+  /* Posisi sejajar di baris header mobile (tinggi 56px, center vertikal (56-36)/2 = 10px) */
+  .chats-page .chats-page-fullscreen-btn {
+    top: 10px !important;
+    right: 1rem !important;
+  }
+}
+
+/* Saat fullscreen aktif: naikkan z-index agar tetap bisa diklik untuk perkecil */
+.chats-page.__is_any_fullscreen .chats-page-fullscreen-btn,
+.chats-page.__is_page_fullscreen .chats-page-fullscreen-btn {
+  z-index: 10000 !important;
+}
+
+/* Sembunyikan otomatis saat: drawer sidebar terbuka, modal terbuka, sedang melihat foto (lightbox), atau saat chat aktif di mobile */
+body:has(.sidebar.open) .chats-page-fullscreen-btn,
+body:has(.sidebar-overlay) .chats-page-fullscreen-btn,
+body:has(.modal-overlay) .chats-page-fullscreen-btn,
+body:has(.yarl__root) .chats-page-fullscreen-btn,
+.chats-page.has-active-chat .chats-page-fullscreen-btn,
+.chats-page:has(.has-active-chat) .chats-page-fullscreen-btn {
+  display: none !important;
 }
 
 .chats-page .chats-page-fullscreen-btn:hover {
@@ -132,14 +156,6 @@
    viewport — chrome dashboard disembunyikan via class di body.
    ============================================================================= */
 
-/* Header mobile & overlay disembunyikan di kedua mode supaya chat benar-benar
-   memenuhi layar; tombol minimize di dalam area chat tetap terjangkau. */
-body.__pseudo_fullscreen_lock .mobile-header,
-body.__pseudo_fullscreen_lock .sidebar-overlay,
-body.__page_fullscreen .mobile-header,
-body.__page_fullscreen .sidebar-overlay {
-  display: none !important;
-}
 /* Judul halaman ("Chats" + subtitle) tidak boleh "nongol" saat area chat
    memenuhi layar: tanpa aturan ini judul tetap render di atas baris header
    sidebar (tempat tombol minimize berada) dan memakan tinggi vertikal.
@@ -147,18 +163,6 @@ body.__page_fullscreen .sidebar-overlay {
 body.__pseudo_fullscreen_lock .chats-page .page-header,
 :fullscreen .chats-page .page-header {
   display: none;
-}
-
-/* Mode 'page': sidebar navigasi hilang dan area konten mulai dari puncak
-   viewport (desktop & mobile). */
-body.__page_fullscreen .sidebar {
-  display: none !important;
-}
-
-body.__page_fullscreen .main-content {
-  margin-left: 0 !important;
-  width: 100% !important;
-  padding-top: 0 !important;
 }
 
 /* Halaman Chats memenuhi viewport saat mode 'page'; layout pakai flex supaya
@@ -183,11 +187,6 @@ body.__page_fullscreen .main-content {
      chat & room. */
   .chats-page.__is_page_fullscreen .page-header {
     display: none;
-  }
-
-  body.__page_fullscreen .main-content {
-    height: 100dvh !important;
-    overflow: hidden !important;
   }
 }
 
@@ -242,24 +241,13 @@ body.__page_fullscreen .main-content {
   }
 }
 
-/* Kelas ini dipasang di body oleh store global saat pseudo-fullscreen aktif.
-   Hanya dipakai di desktop — mobile mengandalkan viewport-height & postMessage. */
-body.__pseudo_fullscreen_lock {
-  overflow: hidden;
-}
 /* Samakan warna & hapus offset shell saat fullscreen aktif (SEMUA lebar layar).
    Strip berwarna berbeda yang "nongol" di tepi atas berasal dari padding/margin
    + background shell (body/.layout/.main-content) yang sebelumnya hanya dinolkan
    di mobile: akibatnya overlay fixed tidak mulai persis dari tepi viewport dan
    background shell terlihat sebagai pita warna lain. Dengan aturan ini seluruh
    lapisan memakai permukaan chat (--bg-white) dan overlay menempel ke tepi. */
-body.__pseudo_fullscreen_lock,
-body.__pseudo_fullscreen_lock .layout,
-body.__pseudo_fullscreen_lock .main-content,
 body.__pseudo_fullscreen_lock .chats-page,
-body.__page_fullscreen,
-body.__page_fullscreen .layout,
-body.__page_fullscreen .main-content,
 body.__page_fullscreen .chats-page {
   margin: 0 !important;
   padding: 0 !important;
@@ -286,11 +274,7 @@ body.__page_fullscreen .chats-page .chats-layout {
    overlay pseudo-fullscreen (.chats-layout fixed inset-0) bisa "menggantung"
    pada ancestor tersebut alih-alih viewport — akibatnya overlay kurang full
    ke atas dan menyisakan pita di tepi atas. */
-body.__pseudo_fullscreen_lock .layout,
-body.__pseudo_fullscreen_lock .main-content,
 body.__pseudo_fullscreen_lock .chats-page,
-body.__page_fullscreen .layout,
-body.__page_fullscreen .main-content,
 body.__page_fullscreen .chats-page {
   transform: none !important;
   filter: none !important;
@@ -309,15 +293,9 @@ body.__pseudo_fullscreen_lock .chats-page {
   margin: 0 !important;
 }
 
-/* Hapus padding dari .mobile-header agar tidak ada gap di atas */
 @media (max-width: 768px) {
-  body.__pseudo_fullscreen_lock .mobile-header {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
-  
   /* Pastikan layout mengisi seluruh viewport tanpa celah */
-  .chats-layout.__pseudo_fullscreen {
+  .chats-page .chats-layout.__pseudo_fullscreen {
     inset: 0 !important;
     width: 100vw !important;
     height: 100dvh !important;
@@ -333,20 +311,6 @@ body.__pseudo_fullscreen_lock .chats-page {
 }
 
 /* Sembunyikan chrome dashboard mobile (header + overlay) saat pseudo-fullscreen aktif. */
-body.__pseudo_fullscreen_lock .mobile-header,
-body.__pseudo_fullscreen_lock .sidebar-overlay {
-  display: none !important;
-}
-
-/* Pastikan main-content tidak punya extra padding/top-bar margin saat fullscreen. */
-@media (max-width: 768px) {
-  body.__pseudo_fullscreen_lock .main-content.mobile,
-  body.__page_fullscreen .main-content {
-    padding-top: 0 !important;
-    margin-top: 0 !important;
-  }
-}
-
 /* =============================================================================
    DOUBLE FULLSCREEN BUTTON FIX
    Hide internal dashboard fullscreen button when external iframe maximize is active
@@ -359,12 +323,6 @@ body.__pseudo_fullscreen_lock .sidebar-overlay {
      baris header (lihat rule di bawah) dan mengirim postMessage ke induk agar
      bingkai iframe ikut melebar → tombol induk disembunyikan via `max-md:hidden`
      di WhatsAppDashboardFrame. */
-@media (min-width: 768px) {
-  body.__in_iframe .chats-page-fullscreen-btn {
-    display: none !important;
-  }
-}
-
 /* =============================================================================
    DOUBLE FULLSCREEN BUTTON HIDE LOGIC - TWO DIFFERENT MODES
    ========================================================================== */
@@ -374,32 +332,15 @@ body.__pseudo_fullscreen_lock .sidebar-overlay {
    menjadi "Perkecil" sebagai jalan keluar. Sebaliknya tombol sidebar
    (.icon-btn-full-chat) disembunyikan saat mode apa pun aktif supaya tidak
    ada dua tombol bertumpuk di pojok yang sama. */
-body.__pseudo_fullscreen_lock .icon-btn-full-chat,
-body.__page_fullscreen .icon-btn-full-chat {
+body.__pseudo_fullscreen_lock .chats-page .icon-btn-full-chat,
+body.__page_fullscreen .chats-page .icon-btn-full-chat {
   display: none !important;
 }
 
 @media (max-width: 767px) {
-  /* Posisi tombol fullscreen header disesuaikan baris header mobile (tinggi
-     56px): center vertikal (56-36)/2 = 10px, right 1rem. Box overlay TETAP
-     seragam dengan .icon-btn-full-chat — 36x36, border 1px, radius 6px —
-     supaya kedua tombol fullscreen tampil dengan bahasa visual yang sama. */
-  .chats-page .chats-page-fullscreen-btn {
+  .chats-page.__is_any_fullscreen .chats-page-fullscreen-btn {
     top: 10px !important;
     right: 1rem !important;
-    width: 36px !important;
-    height: 36px !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 6px;
-    background: var(--bg-white) !important;
-    box-shadow: none !important;
-    color: var(--text-secondary);
-  }
-
-  .chats-page .chats-page-fullscreen-btn:hover {
-    background: var(--bg-light) !important;
-    color: var(--text-primary);
-    border-color: var(--primary) !important;
   }
 }
 /* =============================================================================
@@ -911,6 +852,9 @@ body.__in_iframe .chats-page .chats-layout {
 .chats-page .message-bubble-wrapper {
   display: flex;
   width: 100%;
+  margin-bottom: 0.25rem;
+  padding: 0 0.75rem;
+  box-sizing: border-box;
 }
 
 .chats-page .message-bubble-wrapper.incoming {
@@ -922,13 +866,16 @@ body.__in_iframe .chats-page .chats-layout {
 }
 
 .chats-page .message-bubble {
+  width: 100%;
   max-width: 100%;
-  padding: 0.625rem 0.875rem 0.375rem;
-  border-radius: 12px;
+  min-width: 85px;
+  padding: 0.5rem 0.75rem 0.35rem;
+  border-radius: 10px;
   font-size: 0.9375rem;
   line-height: 1.4;
   position: relative;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.12);
+  box-sizing: border-box;
 }
 
 .chats-page .message-bubble.incoming {
@@ -1006,6 +953,37 @@ body.__in_iframe .chats-page .chats-layout {
 }
 
 /* =============================================================================
+   CHAT DATE SEPARATOR (WhatsApp Native Centered Pill)
+   ============================================================================= */
+.chats-page .chat-date-separator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 1.15rem 0 0.8rem;
+  width: 100%;
+}
+
+.chats-page .chat-date-pill {
+  background: var(--bg-white, #ffffff);
+  color: #54656f;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.32rem 0.85rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border, #e2e8f0);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+[data-theme='dark'] .chats-page .chat-date-pill {
+  background: #182229;
+  color: #8696a0;
+  border-color: #222d34;
+}
+
+/* =============================================================================
    INPUT BAR: Bottom Footer
    ============================================================================= */
 .chats-page .room-input-footer {
@@ -1076,6 +1054,17 @@ body.__in_iframe .chats-page .chats-layout {
   opacity: 0.55;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+.chats-page .btn-send-message svg {
+  width: 25px !important;
+  height: 25px !important;
+  margin-left: 2px;
+}
+
+.chats-page .btn-input-accessory svg {
+  width: 23px !important;
+  height: 23px !important;
 }
 
 /* =============================================================================
@@ -1225,6 +1214,111 @@ body.__in_iframe .chats-page .chats-layout {
   color: var(--error-text);
 }
 
+.chats-page .chats-attach-tray {
+  background: var(--bg-white);
+  border-top: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 0.75rem 0.5rem 0.85rem;
+  box-sizing: border-box;
+  animation: slideUpAttach 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+@keyframes slideUpAttach {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chats-page .attach-tray-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 0.75rem;
+}
+
+.chats-page .attach-tray-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.chats-page .attach-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  min-width: 0;
+  width: 100%;
+  border-radius: 8px;
+  transition: transform 0.15s ease;
+}
+
+.chats-page .attach-item:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.chats-page .attach-item:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.chats-page .attach-icon-circle {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  min-height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+}
+
+.chats-page .attach-gallery {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+}
+
+.chats-page .attach-camera {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+}
+
+.chats-page .attach-location {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.chats-page .attach-document {
+  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+}
+
+.chats-page .attach-audio {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+}
+
+.chats-page .attach-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
 .chats-page .chats-emoji-picker {
   background: var(--bg-white);
   border-top: 1px solid var(--border);
@@ -1268,18 +1362,46 @@ body.__in_iframe .chats-page .chats-layout {
 @media (max-width: 768px) {
   .chats-page {
     padding: 1rem;
-    min-height: 100dvh; /* Use dvh to avoid status bar jump while keeping scroll when content > viewport */
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
   }
 
-  /* `flex: none` is load-bearing here: the base rule gives this box `flex: 1` (basis 0%), which
-     overrides `height` for a column flex item. On desktop the parent has a definite height so the
-     stretch is harmless, but here the parent is `height: auto`, so the 0% basis falls back to
-     content sizing and the `calc(100vh - 7rem)` below is ignored — the pane grows to the full
-     thread height and `.room-messages` never scrolls internally. */
+  /* Full-bleed immersive chat view when conversation is active on mobile:
+     hide page-header so conversation gets 100% screen, remove outer beige padding,
+     and anchor top/bottom bars firmly so input bar is never cut off/stuck halfway. */
+  .chats-page:has(.has-active-chat),
+  .chats-page.has-active-chat {
+    padding: 0 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .chats-page:has(.has-active-chat) .page-header,
+  .chats-page.has-active-chat .page-header {
+    display: none !important;
+  }
+
+  /* Single-pane layout takes full available height in mobile container */
   .chats-page .chats-layout {
-    flex: none;
+    flex: 1;
+    min-height: 0;
     flex-direction: column;
-    height: calc(100vh - 7rem);
+    height: auto;
+    margin-top: 0.5rem;
+  }
+
+  .chats-page:has(.has-active-chat) .chats-layout,
+  .chats-page.has-active-chat .chats-layout,
+  .chats-page .chats-layout.has-active-chat {
+    height: 100% !important;
+    max-height: 100% !important;
+    margin-top: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
 
   /* Single-pane on mobile: the list and the open conversation each take the full panel
@@ -1292,6 +1414,8 @@ body.__in_iframe .chats-page .chats-layout {
 
   .chats-page .chats-room {
     height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   /* Opening a chat replaces the list with the thread; the back button returns to the list. */
@@ -1309,6 +1433,13 @@ body.__in_iframe .chats-page .chats-layout {
 
   .chats-page .room-header {
     height: 60px;
+    flex-shrink: 0;
+  }
+
+  /* Input bar must never shrink, and respect mobile bottom safe-area */
+  .chats-page .room-input-footer {
+    flex-shrink: 0 !important;
+    padding: 0.65rem 0.75rem max(0.65rem, env(safe-area-inset-bottom, 0px)) !important;
   }
 
   /* Flex-column chain fix: tanpa min-height: 0, item flex tumbuh setinggi isi
@@ -1403,6 +1534,60 @@ body.__in_iframe .chats-page .chats-layout {
   margin-bottom: 0.25rem;
 }
 
+.chats-page .message-location {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  max-width: 260px;
+}
+
+.chats-page .chat-location-card {
+  width: 100%;
+  height: 90px;
+  background: linear-gradient(135deg, #dcfce7 0%, #e0e7ff 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  margin-bottom: 0.35rem;
+}
+
+[data-theme='dark'] .chats-page .chat-location-card {
+  background: linear-gradient(135deg, #064e3b 0%, #1e1b4b 100%);
+}
+
+.chats-page .chat-location-pin-icon {
+  font-size: 2rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.chats-page .location-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.chats-page .location-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.chats-page .location-address {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.chats-page .location-maps-link {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #16a34a;
+  margin-top: 0.2rem;
+  text-decoration: underline;
+}
+
 .chats-page .chat-video-media {
   max-width: 100%;
   max-height: 250px;
@@ -1459,31 +1644,48 @@ body.__in_iframe .chats-page .chats-layout {
    ============================================================================= */
 .chats-page .message-bubble-container {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  max-width: 70%;
+  display: inline-flex;
+  max-width: 68%;
+  min-width: 85px;
+}
+
+@media (max-width: 768px) {
+  .chats-page .message-bubble-container {
+    max-width: 84%;
+  }
 }
 
 .chats-page .message-bubble-wrapper.outgoing .message-bubble-container {
-  flex-direction: row-reverse;
+  flex-direction: row;
 }
 
 .chats-page .message-bubble-wrapper.incoming .message-bubble-container {
   flex-direction: row;
 }
 
-/* Hover Menu */
+/* Hover Menu: Absolute overlay so it NEVER pushes, shrinks, or alters bubble size/width */
 .chats-page .message-actions-menu {
+  position: absolute;
+  top: -14px;
+  z-index: 10;
   display: none;
   align-items: center;
-  gap: 0.25rem;
-  background: var(--bg-white);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  gap: 0.2rem;
+  background: var(--bg-white, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.14);
   border-radius: 20px;
   padding: 2px 6px;
-  z-index: 5;
+}
+
+.chats-page .message-bubble-wrapper.outgoing .message-actions-menu {
+  left: -18px;
+  right: auto;
+}
+
+.chats-page .message-bubble-wrapper.incoming .message-actions-menu {
+  right: -18px;
+  left: auto;
 }
 
 .chats-page .message-bubble-container:hover .message-actions-menu {

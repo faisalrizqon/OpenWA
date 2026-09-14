@@ -38,6 +38,52 @@ export interface ChatListUpdate<T> {
   needsSidebarRefetch: boolean;
 }
 
+export function formatIncomingSnippet(
+  msg: IncomingMessageLike,
+  locationLabel: string = '📍 Location',
+): string {
+  const type = msg.type?.toLowerCase();
+  const body = msg.body?.trim();
+
+  switch (type) {
+    case 'location':
+      return locationLabel;
+    case 'sticker':
+      return '🏷️ Sticker';
+    case 'image':
+      return body ? `📷 ${body}` : '📷 Foto';
+    case 'video':
+      return body ? `🎥 ${body}` : '🎥 Video';
+    case 'audio':
+      return '🎵 Audio';
+    case 'ptt':
+      return '🎤 Pesan suara';
+    case 'document':
+      return body ? `📄 ${body}` : '📄 Dokumen';
+    case 'vcard':
+    case 'contact':
+    case 'contact_card':
+    case 'multi_vcard': {
+      if (body) {
+        const fnMatch = body.match(/\bFN:(.+)/i);
+        if (fnMatch) return `👤 ${fnMatch[1].trim()}`;
+      }
+      return '👤 Kontak';
+    }
+    case 'poll_creation':
+    case 'poll':
+      return '📊 Polling';
+    default:
+      if (body?.startsWith('BEGIN:VCARD')) {
+        const fnMatch = body.match(/\bFN:(.+)/i);
+        return fnMatch ? `👤 ${fnMatch[1].trim()}` : '👤 Kontak';
+      }
+      if (body) return body;
+      if (type && type !== 'chat' && type !== 'text') return `[${type}]`;
+      return '';
+  }
+}
+
 /**
  * Fold an arriving message into the sidebar: move its chat to the top, refresh the snippet and
  * timestamp, and bump the unread badge when the chat is not the one on screen.
@@ -62,7 +108,8 @@ export function applyIncomingToChatList<T extends ChatListEntry>(
 
   const updated = [...chats];
   const target = { ...updated[index] };
-  target.lastMessage = msg.type === 'location' ? opts.locationLabel : msg.body;
+  const snippet = formatIncomingSnippet(msg, opts.locationLabel);
+  target.lastMessage = snippet || target.lastMessage || '';
   target.timestamp = msg.timestamp;
   if (!msg.fromMe && opts.activeChatId !== target.id) {
     target.unreadCount = (target.unreadCount || 0) + 1;

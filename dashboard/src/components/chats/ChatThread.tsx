@@ -1,10 +1,48 @@
-import { useCallback, useEffect, useState, type RefObject } from 'react';
+import { Fragment, useCallback, useEffect, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, ChevronDown, CornerUpLeft, Loader2, MessageSquare, Smile, Trash2 } from 'lucide-react';
 import { sessionApi, type Chat } from '../../services/api';
 import { getMediaSrc, senderKey, type ChatMessageView } from '../../utils/chatMessages';
 import { shouldFetchOlderMessages } from '../../utils/scrollDecision';
 import MessageBody from './MessageBody';
+import ContactMessageCard from './ContactMessageCard';
+
+function formatDateDivider(timestamp: number): string {
+  const d = new Date(timestamp * 1000);
+  const now = new Date();
+
+  const isToday =
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear();
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday =
+    d.getDate() === yesterday.getDate() &&
+    d.getMonth() === yesterday.getMonth() &&
+    d.getFullYear() === yesterday.getFullYear();
+
+  if (isToday) return 'HARI INI';
+  if (isYesterday) return 'KEMARIN';
+
+  return d.toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).toUpperCase();
+}
+
+function isSameDay(ts1: number, ts2: number): boolean {
+  const d1 = new Date(ts1 * 1000);
+  const d2 = new Date(ts2 * 1000);
+  return (
+    d1.getDate() === d2.getDate() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getFullYear() === d2.getFullYear()
+  );
+}
 
 // Stable per-sender colour for group message labels, like WhatsApp gives each participant a colour.
 // Hashed from the sender's name so the same person keeps the same colour across a session. The palette
@@ -209,12 +247,16 @@ function ChatThread({
       ) : (
         messages.map((msg, index) => {
           const isMe = msg.direction === 'outgoing';
-          const formattedTime = formatTime(msg.timestamp || Math.floor(new Date(msg.createdAt).getTime() / 1000));
+          const msgTimestamp = msg.timestamp || Math.floor(new Date(msg.createdAt).getTime() / 1000);
+          const formattedTime = formatTime(msgTimestamp);
+
+          const prev = messages[index - 1];
+          const prevTimestamp = prev ? (prev.timestamp || Math.floor(new Date(prev.createdAt).getTime() / 1000)) : null;
+          const isFirstMsgOfDay = !prevTimestamp || !isSameDay(msgTimestamp, prevTimestamp);
 
           // Label who posted, WhatsApp-style: only in groups, only on incoming messages,
           // and only on the first of a consecutive run from the same sender (so a burst
           // from one person isn't repeated on every bubble).
-          const prev = messages[index - 1];
           const showSender = Boolean(
             activeChat?.isGroup &&
             !isMe &&
@@ -233,13 +275,28 @@ function ChatThread({
             // mediaInfo gate. The raw body (a base64 thumbnail / empty token) is suppressed below.
             if (msg.type === 'location') {
               // WhatsApp location messages carry a base64 JPEG map-preview thumbnail in `body`.
-              const thumb = msg.body && msg.body.length > 100 ? `data:image/jpeg;base64,${msg.body}` : '';
+              const thumb = msg.body && msg.body.length > 100 && !msg.body.includes(' ') ? `data:image/jpeg;base64,${msg.body}` : '';
+              const loc = msg.metadata?.location;
+              const mapsUrl = loc?.url || (loc?.latitude && loc?.longitude ? `https://www.google.com/maps?q=${loc.latitude},${loc.longitude}` : undefined);
+              const title = loc?.description || (!thumb && msg.body ? msg.body : t('chats.media.location', 'Location'));
               return (
-                <div className="message-location">
-                  {thumb && (
+                <div
+                  className="message-location"
+                  onClick={() => mapsUrl && window.open(mapsUrl, '_blank', 'noopener,noreferrer')}
+                  title={mapsUrl ? 'Buka di Google Maps' : undefined}
+                >
+                  {thumb ? (
                     <img ref={measureMedia} src={thumb} alt="" onLoad={onMediaLoad} className="chat-location-media" />
+                  ) : (
+                    <div className="chat-location-card">
+                      <div className="chat-location-pin-icon">📍</div>
+                    </div>
                   )}
-                  <span className="message-media-omitted">📍 {t('chats.media.location')}</span>
+                  <div className="location-details">
+                    <span className="location-title">{title}</span>
+                    {loc?.address && <span className="location-address">{loc.address}</span>}
+                    {mapsUrl && <span className="location-maps-link">Buka di Google Maps ↗</span>}
+                  </div>
                 </div>
               );
             }
@@ -258,7 +315,26 @@ function ChatThread({
                 </div>
               );
             }
-            if (!mediaInfo) return null;
+            if (!mediaInfo) {
+              if (isMediaMessage && !isContact && msg.type !== 'masked') {
+                const label =
+                  msg.type === 'sticker'
+                    ? '🏷️ Sticker'
+                    : msg.type === 'image'
+                    ? '📷 Foto'
+                    : msg.type === 'video'
+                    ? '🎥 Video'
+                    : msg.type === 'audio' || msg.type === 'voice'
+                    ? '🎵 Audio'
+                    : '📄 Dokumen';
+                return (
+                  <div className="message-media-omitted">
+                    <span>{label}</span>
+                  </div>
+                );
+              }
+              return null;
+            }
             if (mediaInfo.omitted) {
               // Not a plain label: the bytes exist behind the per-message media route, so this is the
               // only handle the viewer has on them.
@@ -331,13 +407,23 @@ function ChatThread({
           const hasReactions = Object.keys(reactions).length > 0;
           const isRevoked = msg.type === 'revoked';
           const isMasked = msg.type === 'masked';
+          const isContact =
+            msg.type === 'contact' ||
+            (msg.type as string) === 'vcard' ||
+            (msg.type as string) === 'multi_vcard' ||
+            (Boolean(msg.body) && msg.body.trim().startsWith('BEGIN:VCARD'));
 
           return (
-            <div
-              key={msg.id}
-              className={`message-bubble-wrapper ${isMe ? 'outgoing' : 'incoming'}`}
-              data-wa-message-id={msg.waMessageId}
-            >
+            <Fragment key={msg.id}>
+              {isFirstMsgOfDay && (
+                <div className="chat-date-separator">
+                  <span className="chat-date-pill">{formatDateDivider(msgTimestamp)}</span>
+                </div>
+              )}
+              <div
+                className={`message-bubble-wrapper ${isMe ? 'outgoing' : 'incoming'}`}
+                data-wa-message-id={msg.waMessageId}
+              >
               <div className="message-bubble-container">
                 <div
                   className={`message-bubble ${isMe ? 'outgoing' : 'incoming'} ${msg.status} ${
@@ -367,6 +453,8 @@ function ChatThread({
                     <div className="message-text">{t('chats.messageDeleted')}</div>
                   ) : isMasked ? (
                     <div className="message-text message-masked">{t('chats.messageMasked')}</div>
+                  ) : isContact ? (
+                    <ContactMessageCard vcardText={msg.body} />
                   ) : (
                     msg.body &&
                     (!mediaInfo || msg.body !== mediaInfo.filename) &&
@@ -451,11 +539,12 @@ function ChatThread({
                 )}
               </div>
             </div>
-          );
-        })
-      )}
-    </div>
-  );
+          </Fragment>
+        );
+      })
+    )}
+  </div>
+);
 }
 
 export default ChatThread;

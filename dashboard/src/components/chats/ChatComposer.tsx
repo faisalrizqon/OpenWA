@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Paperclip, Send, Smile, X } from 'lucide-react';
+import { Loader2, Paperclip, Send, Smile, X, MapPin, Image, Camera, FileText, Headphones, Keyboard } from 'lucide-react';
 import { messageApi, type Chat, type MessageType } from '../../services/api';
 import { type ChatMessageView } from '../../utils/chatMessages';
 import { promoteChatWithSnippet } from '../../utils/chatList';
@@ -10,6 +10,8 @@ import { messagesQueryKey, useChatMessagesActions, upsertCachedMessage } from '.
 import { useRole } from '../../hooks/useRole';
 import { useToast } from '../../hooks/useToast';
 import type { ScrollDirection } from '../../utils/scrollDecision';
+import { LocationShareModal, type LocationData } from './LocationShareModal';
+import { EmojiStickerPicker } from './EmojiStickerPicker';
 
 // Map an attachment MIME type to the neutral MessageType for the optimistic outgoing bubble, so the
 // placeholder matches what the backend will persist (e.g. a PDF is `document`, not `application`).
@@ -73,8 +75,9 @@ function ChatComposer({
   const queryClient = useQueryClient();
 
   const [sending, setSending] = useState<boolean>(false);
-
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
+  const [showAttachMenu, setShowAttachMenu] = useState<boolean>(false);
+  const [showLocationModal, setShowLocationModal] = useState<boolean>(false);
   // Monotonic token invalidating an in-flight attachment FileReader: picking a second file (or
   // removing the attachment) before `onload` fires must win over the late-arriving bytes —
   // otherwise the slower read overwrites the newer pick. Same pattern as composeImageReadSeq.
@@ -91,28 +94,7 @@ function ChatComposer({
 
   // References
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Popular emojis
-  const popularEmojis = [
-    '😀',
-    '😂',
-    '👍',
-    '❤️',
-    '🔥',
-    '👏',
-    '🙏',
-    '🎉',
-    '💡',
-    '🤔',
-    '😅',
-    '😍',
-    '😊',
-    '😭',
-    '😎',
-    '😜',
-    '🚀',
-    '✨',
-  ];
+  const textInputRef = useRef<HTMLInputElement | null>(null);
 
   // 5. Handle file selection & base64 conversion
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,13 +134,97 @@ function ChatComposer({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const triggerFileSelect = () => {
-    fileInputRef.current?.click();
+  const handlePickMediaType = (type: 'gallery' | 'camera' | 'document' | 'audio') => {
+    setShowAttachMenu(false);
+    if (!fileInputRef.current) return;
+    if (type === 'gallery') {
+      fileInputRef.current.accept = 'image/*,video/*';
+      fileInputRef.current.removeAttribute('capture');
+    } else if (type === 'camera') {
+      fileInputRef.current.accept = 'image/*';
+      fileInputRef.current.setAttribute('capture', 'environment');
+    } else if (type === 'document') {
+      fileInputRef.current.accept = '*/*';
+      fileInputRef.current.removeAttribute('capture');
+    } else if (type === 'audio') {
+      fileInputRef.current.accept = 'audio/*';
+      fileInputRef.current.removeAttribute('capture');
+    }
+    fileInputRef.current.click();
+  };
+
+  const toggleAttachMenu = () => {
+    setShowEmojiPicker(false);
+    setShowAttachMenu(prev => !prev);
+  };
+
+  const toggleEmojiPicker = () => {
+    setShowAttachMenu(false);
+    setShowEmojiPicker(prev => {
+      const next = !prev;
+      if (!next) {
+        setTimeout(() => textInputRef.current?.focus(), 50);
+      }
+      return next;
+    });
   };
 
   const handleEmojiClick = (emoji: string) => {
     setMessageInput(prev => prev + emoji);
+  };
+
+  const handleSendSticker = async (base64: string, mimetype: string) => {
+    if (sending || !canWrite) return;
+    setSending(true);
+
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const tempMessage: ChatMessageView = {
+      id: tempId,
+      chatId: activeChat.id,
+      from: 'me',
+      to: activeChat.id,
+      body: '',
+      type: 'sticker',
+      direction: 'outgoing',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        media: {
+          mimetype: mimetype || 'image/webp',
+          data: base64,
+          filename: 'sticker.webp',
+        },
+      },
+    };
+
+    appendMessage(selectedSessionId, activeChat.id, tempMessage);
+    onMessageAppended('outgoing');
     setShowEmojiPicker(false);
+
+    try {
+      const result = await messageApi.sendSticker(selectedSessionId, activeChat.id, {
+        base64,
+        mimetype: mimetype || 'image/webp',
+      });
+
+      const sendKey = messagesQueryKey(selectedSessionId, activeChat.id);
+      const reconciled: ChatMessageView = {
+        ...tempMessage,
+        id: result.messageId,
+        waMessageId: result.messageId,
+        status: 'sent',
+      };
+      upsertCachedMessage(queryClient, sendKey, reconciled, { dropId: tempId });
+
+      const snippet = '🏷️ ' + t('chats.media.sticker', 'Sticker');
+      const sentAt = Math.floor(Date.now() / 1000);
+      setChats(prevChats => promoteChatWithSnippet(prevChats, activeChat.id, snippet, sentAt));
+    } catch (err) {
+      showErrorToast(t('chats.errors.send'), err instanceof Error ? err.message : undefined);
+      updateMessage(selectedSessionId, activeChat.id, tempId, { status: 'failed' });
+    } finally {
+      setSending(false);
+    }
   };
 
   // 7. Handle sending a message / media
@@ -255,6 +321,65 @@ function ChatComposer({
     }
   };
 
+  const handleSendLocation = async (loc: LocationData) => {
+    if (!canWrite || sending) return;
+    setSending(true);
+
+    const tempId = `temp_${Date.now()}`;
+    const tempMessage: ChatMessageView = {
+      id: tempId,
+      chatId: activeChat.id,
+      from: 'me',
+      to: activeChat.id,
+      body: loc.description || loc.address || `${loc.latitude}, ${loc.longitude}`,
+      type: 'location',
+      direction: 'outgoing',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      timestamp: Math.floor(Date.now() / 1000),
+      metadata: {
+        location: {
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          description: loc.description,
+          address: loc.address,
+        },
+      },
+    };
+
+    appendMessage(selectedSessionId, activeChat.id, tempMessage);
+    onMessageAppended('outgoing');
+    setShowLocationModal(false);
+
+    try {
+      const result = await messageApi.sendLocation(selectedSessionId, {
+        chatId: activeChat.id,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        description: loc.description,
+        address: loc.address,
+      });
+
+      const sendKey = messagesQueryKey(selectedSessionId, activeChat.id);
+      const reconciled: ChatMessageView = {
+        ...tempMessage,
+        id: result.messageId,
+        waMessageId: result.messageId,
+        status: 'sent',
+      };
+      upsertCachedMessage(queryClient, sendKey, reconciled, { dropId: tempId });
+
+      const snippet = `📍 ${loc.description || t('chats.media.location', 'Location')}`;
+      const sentAt = Math.floor(Date.now() / 1000);
+      setChats(prevChats => promoteChatWithSnippet(prevChats, activeChat.id, snippet, sentAt));
+    } catch (err) {
+      showErrorToast(t('chats.errors.send'), err instanceof Error ? err.message : undefined);
+      updateMessage(selectedSessionId, activeChat.id, tempId, { status: 'failed' });
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <>
       {/* Attachment preview banner */}
@@ -275,15 +400,73 @@ function ChatComposer({
         </div>
       )}
 
-      {/* Popular emojis panel */}
-      {showEmojiPicker && (
-        <div className="chats-emoji-picker">
-          <div className="emoji-grid">
-            {popularEmojis.map(emoji => (
-              <button key={emoji} type="button" className="emoji-btn" onClick={() => handleEmojiClick(emoji)}>
-                {emoji}
-              </button>
-            ))}
+      {/* Attachment Tray (WhatsApp Native Style) */}
+      {showAttachMenu && (
+        <div className="chats-attach-tray">
+          <div className="attach-tray-handle" />
+          <div className="attach-tray-grid">
+            <button
+              type="button"
+              className="attach-item"
+              onClick={() => handlePickMediaType('gallery')}
+              disabled={!canWrite || sending}
+            >
+              <div className="attach-icon-circle attach-gallery">
+                <Image size={24} />
+              </div>
+              <span className="attach-label">{t('chats.media.gallery', 'Galeri')}</span>
+            </button>
+
+            <button
+              type="button"
+              className="attach-item"
+              onClick={() => handlePickMediaType('camera')}
+              disabled={!canWrite || sending}
+            >
+              <div className="attach-icon-circle attach-camera">
+                <Camera size={24} />
+              </div>
+              <span className="attach-label">{t('chats.media.camera', 'Kamera')}</span>
+            </button>
+
+            <button
+              type="button"
+              className="attach-item"
+              onClick={() => {
+                setShowAttachMenu(false);
+                setShowLocationModal(true);
+              }}
+              disabled={!canWrite || sending}
+            >
+              <div className="attach-icon-circle attach-location">
+                <MapPin size={24} />
+              </div>
+              <span className="attach-label">{t('chats.media.location', 'Lokasi')}</span>
+            </button>
+
+            <button
+              type="button"
+              className="attach-item"
+              onClick={() => handlePickMediaType('document')}
+              disabled={!canWrite || sending}
+            >
+              <div className="attach-icon-circle attach-document">
+                <FileText size={24} />
+              </div>
+              <span className="attach-label">{t('chats.media.document', 'Dokumen')}</span>
+            </button>
+
+            <button
+              type="button"
+              className="attach-item"
+              onClick={() => handlePickMediaType('audio')}
+              disabled={!canWrite || sending}
+            >
+              <div className="attach-icon-circle attach-audio">
+                <Headphones size={24} />
+              </div>
+              <span className="attach-label">{t('chats.media.audio', 'Audio')}</span>
+            </button>
           </div>
         </div>
       )}
@@ -315,25 +498,16 @@ function ChatComposer({
 
           <button
             type="button"
-            onClick={triggerFileSelect}
-            disabled={!canWrite || sending}
-            className="btn-input-accessory"
-            title={t('chats.attachTitle')}
-          >
-            <Paperclip size={20} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            onClick={toggleEmojiPicker}
             disabled={!canWrite || sending}
             className={`btn-input-accessory ${showEmojiPicker ? 'active' : ''}`}
-            title={t('chats.emojiTitle')}
+            title={showEmojiPicker ? 'Tampilkan Keyboard' : t('chats.emojiTitle')}
           >
-            <Smile size={20} />
+            {showEmojiPicker ? <Keyboard size={24} strokeWidth={2.2} /> : <Smile size={24} strokeWidth={2.2} />}
           </button>
 
           <input
+            ref={textInputRef}
             type="text"
             placeholder={
               canWrite
@@ -347,16 +521,44 @@ function ChatComposer({
             disabled={!canWrite || sending}
             className="message-text-input"
           />
+
+          <button
+            type="button"
+            onClick={toggleAttachMenu}
+            disabled={!canWrite || sending}
+            className={`btn-input-accessory ${showAttachMenu ? 'active' : ''}`}
+            title={t('chats.attachTitle')}
+          >
+            <Paperclip size={24} strokeWidth={2.2} />
+          </button>
+
           <button
             type="submit"
             disabled={!canWrite || (!messageInput.trim() && !attachment) || sending}
             className="btn-send-message"
             aria-label={t('chats.send')}
           >
-            {sending ? <Loader2 className="animate-spin" size={24} /> : <Send size={28} strokeWidth={2.5} />}
+            {sending ? <Loader2 className="animate-spin" size={24} /> : <Send size={26} strokeWidth={2.6} style={{ marginLeft: 2 }} />}
           </button>
         </form>
       </footer>
+
+      {/* WhatsApp Native Emoji & Sticker Drawer (docked below the input bar like a soft keyboard) */}
+      {showEmojiPicker && (
+        <EmojiStickerPicker
+          onSelectEmoji={handleEmojiClick}
+          onSendSticker={handleSendSticker}
+          onClose={() => setShowEmojiPicker(false)}
+          disabled={!canWrite || sending}
+        />
+      )}
+
+      <LocationShareModal
+        open={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onSend={handleSendLocation}
+        sending={sending}
+      />
     </>
   );
 }

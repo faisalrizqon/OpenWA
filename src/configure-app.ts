@@ -134,6 +134,7 @@ export function configureApp(app: INestApplication, options: ConfigureAppOptions
           connectSrc: ["'self'"],
           fontSrc: ["'self'", 'https://fonts.gstatic.com'],
           objectSrc: ["'none'"],
+          frameSrc: ["'self'", 'https://www.openstreetmap.org', 'https://*.openstreetmap.org'],
           // Allow framing from localhost:3000 for admin dashboard iframe
           frameAncestors: ["'self'", 'http://localhost:3000', 'https://dagdigdugdigicam.store'],
           // Auto-upgrade HTTP→HTTPS in production, unless CSP_UPGRADE_INSECURE_REQUESTS opts out for an

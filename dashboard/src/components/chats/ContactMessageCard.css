@@ -1,0 +1,164 @@
+/* =============================================================================
+   WHATSAPP NATIVE CONTACT SHARE CARD
+   ============================================================================= */
+
+.wa-contact-card-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 250px;
+  max-width: 320px;
+}
+
+.wa-contact-card {
+  background: var(--bg-white, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme='dark'] .wa-contact-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.wa-contact-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--bg-white, #ffffff);
+}
+
+[data-theme='dark'] .wa-contact-header {
+  background: #1e293b;
+}
+
+.wa-contact-avatar-img {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.wa-contact-avatar-circle {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+[data-theme='dark'] .wa-contact-avatar-circle {
+  background: #334155;
+  color: #94a3b8;
+}
+
+.wa-contact-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.wa-contact-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.15rem;
+}
+
+.wa-contact-phone {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--text-muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wa-contact-phone-icon {
+  flex-shrink: 0;
+  color: #16a34a;
+}
+
+.wa-contact-badge {
+  font-size: 0.68rem;
+  background: #f1f5f9;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  margin-left: 0.2rem;
+  color: #475569;
+}
+
+[data-theme='dark'] .wa-contact-badge {
+  background: #334155;
+  color: #94a3b8;
+}
+
+/* Actions Bar (Chat & Save Contact) */
+.wa-contact-actions {
+  display: flex;
+  border-top: 1px solid var(--border, #f1f5f9);
+  background: #fafafa;
+}
+
+[data-theme='dark'] .wa-contact-actions {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.wa-contact-action-btn {
+  flex: 1;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.4rem;
+  padding: 0.6rem 0.5rem !important;
+  background: transparent !important;
+  border: none !important;
+  font-size: 0.78rem !important;
+  font-weight: 600;
+  cursor: pointer !important;
+  transition: background 0.15s ease, color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.wa-contact-action-btn:hover {
+  background: #f1f5f9 !important;
+}
+
+[data-theme='dark'] .wa-contact-action-btn:hover {
+  background: #1e293b !important;
+}
+
+.wa-btn-chat {
+  color: #16a34a !important;
+  border-right: 1px solid var(--border, #f1f5f9) !important;
+}
+
+[data-theme='dark'] .wa-btn-chat {
+  color: #4ade80 !important;
+  border-color: #334155 !important;
+}
+
+.wa-btn-save {
+  color: var(--text-primary, #334155) !important;
+}
+
+[data-theme='dark'] .wa-btn-save {
+  color: #e2e8f0 !important;
+}

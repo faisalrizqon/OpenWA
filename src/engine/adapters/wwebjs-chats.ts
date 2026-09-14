@@ -12,6 +12,56 @@ import { type WwebjsEngineHost } from './wwebjs-host';
  * never touches lifecycle state directly. Presence (sendChatState) resolves the recipient through
  * the messaging delegate's send-id cache, exactly like a send.
  */
+function formatLastMessagePreview(lastMsg?: { type?: string; body?: string }): string | undefined {
+  if (!lastMsg) return undefined;
+  const type = lastMsg.type?.toLowerCase();
+  const body = lastMsg.body?.trim();
+
+  switch (type) {
+    case MessageTypes.LOCATION:
+    case 'location':
+      return '📍 Lokasi';
+    case MessageTypes.STICKER:
+    case 'sticker':
+      return '🏷️ Sticker';
+    case MessageTypes.IMAGE:
+    case 'image':
+      return body ? `📷 ${body}` : '📷 Foto';
+    case MessageTypes.VIDEO:
+    case 'video':
+      return body ? `🎥 ${body}` : '🎥 Video';
+    case MessageTypes.AUDIO:
+    case 'audio':
+      return '🎵 Audio';
+    case MessageTypes.VOICE:
+    case 'ptt':
+      return '🎤 Pesan suara';
+    case MessageTypes.DOCUMENT:
+    case 'document':
+      return body ? `📄 ${body}` : '📄 Dokumen';
+    case MessageTypes.CONTACT_CARD:
+    case MessageTypes.CONTACT_CARD_MULTI:
+    case 'vcard':
+    case 'multi_vcard':
+    case 'contact': {
+      if (body) {
+        const fnMatch = body.match(/\bFN:(.+)/i);
+        if (fnMatch) return `👤 ${fnMatch[1].trim()}`;
+      }
+      return '👤 Kontak';
+    }
+    case MessageTypes.POLL_CREATION:
+    case 'poll':
+      return '📊 Polling';
+    default:
+      if (body?.startsWith('BEGIN:VCARD')) {
+        const fnMatch = body.match(/\bFN:(.+)/i);
+        return fnMatch ? `👤 ${fnMatch[1].trim()}` : '👤 Kontak';
+      }
+      return body || (type && type !== 'chat' && type !== 'text' ? `[${type}]` : undefined);
+  }
+}
+
 export class WwebjsChats {
   constructor(
     private readonly host: WwebjsEngineHost,
@@ -58,8 +108,8 @@ export class WwebjsChats {
         kind: chatKind(id),
         unreadCount: chat.unreadCount || 0,
         timestamp: chat.timestamp || 0,
-        // A location message's body is the base64 map thumbnail; don't surface it as the chat preview.
-        lastMessage: chat.lastMessage?.type === MessageTypes.LOCATION ? '📍' : chat.lastMessage?.body || undefined,
+        // Format media, sticker, voice, document, or text preview
+        lastMessage: formatLastMessagePreview(chat.lastMessage),
         archived: Boolean(chat.archived),
         pinned: Boolean(chat.pinned),
         // Chat.isMuted is the current verdict; muteExpiration is wwjs epoch SECONDS with -1 = forever.

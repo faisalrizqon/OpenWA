@@ -1,0 +1,390 @@
+/* =============================================================================
+   WHATSAPP NATIVE SEND LOCATION MODAL (SMARTPHONE FULLSCREEN CAPABLE)
+   ============================================================================= */
+
+/* Suppress Modal component's default header so custom WA header takes full control */
+.modal.wa-location-modal .modal-header {
+  display: none !important;
+}
+
+/* Ensure modal overlay centers modal properly on desktop */
+.modal-overlay:has(.wa-location-modal) {
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+/* Standard Smartphone-sized Modal Card */
+.modal.wa-location-modal {
+  position: relative !important;
+  width: 92vw !important;
+  max-width: 430px !important;
+  height: 78vh !important;
+  max-height: 640px !important;
+  padding: 0 !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: var(--bg-white, #ffffff) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35) !important;
+  border: 1px solid var(--border, #e2e8f0) !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Maximized / Fullscreen: True Satu Layar Penuh Handphone */
+.modal.wa-location-modal.is-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: 100vw !important;
+  max-height: 100dvh !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  z-index: 10000 !important;
+}
+
+.modal.wa-location-modal .modal-body {
+  padding: 0 !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  height: 100% !important;
+}
+
+.wa-loc-root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-white, #ffffff);
+  position: relative;
+}
+
+/* Ensure all SVG icons in this modal maintain proper dimensions */
+.wa-location-modal svg {
+  display: block !important;
+  flex-shrink: 0 !important;
+  pointer-events: none;
+}
+
+/* Header bar (Native WhatsApp style) */
+.wa-loc-top-header {
+  width: 100%;
+  height: 56px;
+  background: var(--bg-white, #ffffff);
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.75rem;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  z-index: 50;
+}
+
+/* Round icon button reset (overrides global button padding) */
+.wa-loc-btn-round {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  color: var(--text-primary, #1e293b) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.wa-loc-btn-round:hover:not(:disabled) {
+  background: var(--bg-light, #f1f5f9) !important;
+}
+
+.wa-loc-btn-round:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.wa-loc-header-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  flex: 1;
+  margin-left: 0.75rem;
+  text-align: left;
+}
+
+.wa-loc-header-action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+/* Map Section: Fills the upper screen area */
+.wa-loc-map-wrapper {
+  flex: 1;
+  min-height: 220px;
+  width: 100%;
+  position: relative;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.wa-loc-map-canvas {
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+}
+
+/* Clean map view: Hide Leaflet attribution text */
+.wa-loc-map-canvas .leaflet-control-attribution {
+  display: none !important;
+}
+
+/* Center Pin Marker with Spring Lift */
+.wa-loc-center-pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  z-index: 450;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.wa-loc-center-pin.is-dragging {
+  transform: translate(-50%, -118%);
+}
+
+.wa-pin-svg {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
+}
+
+.wa-pin-shadow {
+  width: 12px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  margin-top: -3px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.wa-loc-center-pin.is-dragging .wa-pin-shadow {
+  transform: scale(0.6);
+  opacity: 0.18;
+}
+
+/* Floating Action Buttons on Map */
+.wa-loc-floating-btn,
+.wa-loc-btn-map-expand,
+.wa-loc-btn-recenter {
+  position: absolute !important;
+  z-index: 400 !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  background: #ffffff !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22) !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  transition: transform 0.15s ease, background 0.15s ease !important;
+}
+
+.wa-loc-floating-btn:hover,
+.wa-loc-btn-map-expand:hover,
+.wa-loc-btn-recenter:hover {
+  transform: scale(1.08) !important;
+  background: #f8fafc !important;
+}
+
+.wa-loc-floating-btn:active,
+.wa-loc-btn-map-expand:active,
+.wa-loc-btn-recenter:active {
+  transform: scale(0.94) !important;
+}
+
+.wa-loc-btn-expand,
+.wa-loc-btn-map-expand {
+  top: 14px;
+  left: 14px;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  color: #1e293b !important;
+}
+
+.wa-loc-btn-gps,
+.wa-loc-btn-recenter {
+  top: 14px;
+  right: 14px;
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  color: #16a34a !important;
+}
+
+/* Bottom Action Card (Holds Custom Pin & GPS options) */
+.wa-loc-bottom-card {
+  width: 100%;
+  background: var(--bg-white, #ffffff);
+  border-top: 1px solid var(--border, #e5e7eb);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  padding: 0.6rem 0.75rem;
+  padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  flex-shrink: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wa-loc-action-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  width: 100% !important;
+  padding: 0.55rem 0.65rem !important;
+  border-radius: 12px !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  transition: background 0.15s ease !important;
+}
+
+.wa-loc-action-row:hover {
+  background: var(--bg-light, #f8fafc) !important;
+}
+
+.wa-loc-row-custom {
+  background: #fffafa;
+  border: 1px solid #fee2e2;
+}
+
+.wa-loc-row-gps {
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+}
+
+.wa-loc-card-divider {
+  height: 1px;
+  background: var(--border, #f1f5f9);
+  margin: 0.1rem 0;
+}
+
+.wa-loc-icon-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.wa-circle-custom {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+}
+
+.wa-circle-gps {
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+}
+
+.wa-loc-action-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.wa-loc-action-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.1rem;
+}
+
+.wa-loc-action-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wa-loc-green-acc {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.wa-loc-send-btn-chip {
+  padding: 0.4rem 0.9rem !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  border-radius: 20px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  flex-shrink: 0 !important;
+  border: none !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
+}
+
+.wa-btn-chip-primary {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.wa-btn-chip-primary:hover {
+  background: #dc2626 !important;
+  transform: scale(1.04) !important;
+}
+
+.wa-btn-chip-secondary {
+  background: #16a34a !important;
+  color: #ffffff !important;
+}
+
+.wa-btn-chip-secondary:hover {
+  background: #15803d !important;
+  transform: scale(1.04) !important;
+}
+
+@keyframes waSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.wa-icon-spin {
+  animation: waSpin 1s linear infinite !important;
+}
