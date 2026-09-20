@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Paperclip, Send, Smile, X, MapPin, Image, Camera, FileText, Headphones, Keyboard } from 'lucide-react';
+import { Loader2, Paperclip, Smile, X, MapPin, Image, Camera, FileText, Headphones, Keyboard } from 'lucide-react';
 import { messageApi, type Chat, type MessageType } from '../../services/api';
 import { type ChatMessageView } from '../../utils/chatMessages';
 import { promoteChatWithSnippet } from '../../utils/chatList';
@@ -28,6 +28,21 @@ const messageTypeFromMime = (mimetype: string): MessageType => {
 const MEDIA_UPLOAD_MAX_BYTES = 18 * 1024 * 1024;
 
 /** A picked-but-unsent file, staged until send, removal, or a move to another chat. */
+
+const WASendIcon = ({ size = 26, className = "", style = {} }) => (
+  <svg
+    viewBox="0 0 24 24"
+    height={size}
+    width={size}
+    className={className}
+    style={style}
+    preserveAspectRatio="xMidYMid meet"
+    fill="currentColor"
+  >
+    <path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"></path>
+  </svg>
+);
+
 export interface StagedAttachment {
   file: File;
   base64: string;
@@ -538,7 +553,7 @@ function ChatComposer({
             className="btn-send-message"
             aria-label={t('chats.send')}
           >
-            {sending ? <Loader2 className="animate-spin" size={24} /> : <Send size={26} strokeWidth={2.6} style={{ marginLeft: 2 }} />}
+            {sending ? <Loader2 className="animate-spin" size={24} /> : <WASendIcon size={24} style={{ marginLeft: 2 }} />}
           </button>
         </form>
       </footer>
