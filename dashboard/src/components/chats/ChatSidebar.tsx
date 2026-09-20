@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertCircle, CircleDashed, Loader2, Maximize2, Megaphone, Minimize2, Plus } from 'lucide-react';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
-import type { Channel, Chat, ContactStatusGroup, SearchHit, Session } from '../../services/api';
+import type { Channel, Chat, ContactStatusGroup, SearchHit } from '../../services/api';
 import ChatAvatar from './ChatAvatar';
 import { UnifiedSearch } from '../UnifiedSearch';
 import { listenForParentExitRequest, pseudoFullscreenStore } from '../../utils/pseudoFullscreenStore';
@@ -10,9 +10,7 @@ import { listenForParentExitRequest, pseudoFullscreenStore } from '../../utils/p
 export type ChatsTab = 'chats' | 'channels' | 'status';
 
 interface ChatSidebarProps {
-  sessions: Session[];
   selectedSessionId: string;
-  onSelectSession: (sessionId: string) => void;
   activeTab: ChatsTab;
   onSwitchTab: (tab: ChatsTab) => void;
   searchQuery: string;
@@ -112,9 +110,7 @@ function FullChatToggle() {
 // LEFT SIDEBAR: session selector, Chats/Channels/Status tab bar, search, and the per-tab lists.
 // The page owns all queries/state; this component renders them and reports interactions up.
 function ChatSidebar({
-  sessions,
   selectedSessionId,
-  onSelectSession,
   activeTab,
   onSwitchTab,
   searchQuery,
@@ -193,27 +189,11 @@ function ChatSidebar({
       <div className="sidebar-header-box">
         {/* Header row: judul sesi + tombol fullscreen di kanan */}
         <div className="sidebar-header-row">
-          <span className="sidebar-header-title">{t('chats.sessionLabel')}</span>
+          <span className="sidebar-header-title">{t('nav.chats')}</span>
           <FullChatToggle />
         </div>
 
-        {/* Session selector — judul sudah dirender di header row di atas, jadi
-            select cukup pakai aria-label (accessible name tanpa teks dobel). */}
-        <div className="session-select-group">
-          <select
-            id="csb-1"
-            value={selectedSessionId}
-            onChange={e => onSelectSession(e.target.value)}
-            className="session-selector"
-            aria-label={t('chats.sessionLabel')}
-          >
-            {sessions.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.phone || t('chats.noPhone')})
-              </option>
-            ))}
-          </select>
-        </div>
+        
 
         {/* Chats / Channels / Status tabs */}
         <div className="chats-tabs" role="tablist">
