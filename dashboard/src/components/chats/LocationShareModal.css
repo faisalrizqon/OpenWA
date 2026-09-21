@@ -78,7 +78,8 @@
 /* Header bar (Native WhatsApp style) */
 .wa-loc-top-header {
   width: 100%;
-  height: 56px;
+  min-height: 56px;
+  height: auto;
   background: var(--bg-white, #ffffff);
   border-bottom: 1px solid var(--border, #e5e7eb);
   display: flex;
@@ -88,6 +89,20 @@
   box-sizing: border-box;
   flex-shrink: 0;
   z-index: 50;
+}
+
+@media (max-width: 768px) {
+  .wa-loc-top-header {
+    min-height: calc(56px + max(34px, env(safe-area-inset-top, 0px))) !important;
+    padding-top: max(34px, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: 0.5rem !important;
+  }
+}
+
+.modal.wa-location-modal.is-fullscreen .wa-loc-top-header {
+  min-height: calc(56px + max(34px, env(safe-area-inset-top, 0px))) !important;
+  padding-top: max(34px, env(safe-area-inset-top, 0px)) !important;
+  padding-bottom: 0.5rem !important;
 }
 
 /* Round icon button reset (overrides global button padding) */

@@ -116,10 +116,10 @@
 }
 
 @media (max-width: 767px) {
-  /* Posisi sejajar di baris header mobile (tinggi 56px, center vertikal (56-36)/2 = 10px) */
+  /* Posisi sejajar di baris header mobile dengan offset safe area kamera */
   .chats-page .chats-page-fullscreen-btn {
-    top: 10px !important;
-    right: 1rem !important;
+    top: calc(11px + max(34px, env(safe-area-inset-top, 0px))) !important;
+    right: max(0.75rem, env(safe-area-inset-right, 0px)) !important;
   }
 }
 
@@ -217,8 +217,8 @@ body.__pseudo_fullscreen_lock .chats-page .page-header,
 
 :fullscreen .chats-page .chats-page-fullscreen-btn {
   position: fixed;
-  top: 1rem;
-  right: 1rem;
+  top: max(1rem, calc(11px + env(safe-area-inset-top, 0px)));
+  right: max(1rem, env(safe-area-inset-right, 0px));
 }
 
 /* Pseudo-fullscreen mode untuk MOBILE browser yang menampilkan bar sistem.
@@ -346,9 +346,48 @@ body.__page_fullscreen .chats-page .icon-btn-full-chat {
 
 @media (max-width: 767px) {
   .chats-page.__is_any_fullscreen .chats-page-fullscreen-btn {
-    top: 10px !important;
-    right: 1rem !important;
+    top: calc(11px + max(34px, env(safe-area-inset-top, 0px))) !important;
+    right: max(0.75rem, env(safe-area-inset-right, 0px)) !important;
   }
+}
+
+.chats-page.__is_any_fullscreen .chats-page-fullscreen-btn,
+.chats-page.__is_page_fullscreen .chats-page-fullscreen-btn,
+body.__pseudo_fullscreen_lock .chats-page .chats-page-fullscreen-btn,
+body.__page_fullscreen .chats-page .chats-page-fullscreen-btn {
+  top: calc(11px + max(34px, env(safe-area-inset-top, 0px))) !important;
+  right: max(0.75rem, env(safe-area-inset-right, 0px)) !important;
+}
+
+/* Safe area kamera untuk top bar saat mode fullscreen aktif (chat / page / pseudo) */
+.chats-page.__is_any_fullscreen .room-header,
+.chats-page.__is_page_fullscreen .room-header,
+.chats-page .chats-layout.__pseudo_fullscreen .room-header,
+body.__pseudo_fullscreen_lock .chats-page .room-header,
+body.__page_fullscreen .chats-page .room-header,
+:fullscreen .chats-page .room-header,
+.chats-page.__is_any_fullscreen .chats-room-header,
+.chats-page.__is_page_fullscreen .chats-room-header,
+.chats-page .chats-layout.__pseudo_fullscreen .chats-room-header,
+body.__pseudo_fullscreen_lock .chats-page .chats-room-header,
+body.__page_fullscreen .chats-page .chats-room-header,
+:fullscreen .chats-page .chats-room-header {
+  height: auto !important;
+  min-height: calc(58px + max(34px, env(safe-area-inset-top, 0px))) !important;
+  padding-top: max(34px, env(safe-area-inset-top, 0px)) !important;
+  padding-bottom: 0.5rem !important;
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px)) !important;
+  padding-right: calc(46px + max(0.75rem, env(safe-area-inset-right, 0px))) !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.chats-page.__is_any_fullscreen .sidebar-header-box,
+.chats-page.__is_page_fullscreen .sidebar-header-box,
+.chats-page .chats-layout.__pseudo_fullscreen .sidebar-header-box,
+body.__pseudo_fullscreen_lock .chats-page .sidebar-header-box,
+body.__page_fullscreen .chats-page .sidebar-header-box {
+  padding-top: max(calc(1.25rem + 16px), calc(1rem + env(safe-area-inset-top, 0px))) !important;
 }
 /* =============================================================================
    IFRAME EMBEDDED MODE — LEPAS CHROME DASHBOARD KE KARTU INDUK
@@ -1445,9 +1484,19 @@ body.__in_iframe .chats-page .chats-layout {
     display: inline-flex;
   }
 
-  .chats-page .room-header {
-    height: 60px;
-    flex-shrink: 0;
+  /* Room header & channel header pada mobile / immersive view:
+     Beri clearance safe area kamera depan (punch-hole / tompel / notch / dynamic island)
+     agar back button, avatar, nama kontak, dan tombol fullscreen tidak tertutup. */
+  .chats-page .room-header,
+  .chats-page .chats-room-header {
+    height: auto !important;
+    min-height: calc(58px + max(34px, env(safe-area-inset-top, 0px))) !important;
+    padding-top: max(34px, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: 0.5rem !important;
+    padding-left: max(0.75rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(46px + max(0.75rem, env(safe-area-inset-right, 0px))) !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
   }
 
   /* Scroll-to-bottom floating button on mobile */
