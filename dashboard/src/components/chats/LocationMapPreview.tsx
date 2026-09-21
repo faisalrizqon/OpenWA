@@ -56,35 +56,7 @@ export function LocationMapPreview({
     return result;
   }, [hasCoords, latitude, longitude]);
 
-  // Case 1: Thumbnail exists and hasn't failed
-  if (thumbnail && !thumbFailed) {
-    return (
-      <div className="chat-location-thumb-wrapper">
-        <img
-          ref={measureMedia}
-          src={thumbnail}
-          alt=""
-          onLoad={onMediaLoad}
-          onError={() => setThumbFailed(true)}
-          className="chat-location-media"
-        />
-        <div className="chat-location-center-pin">
-          <div className="chat-location-pin-shadow" />
-          <svg viewBox="0 0 24 24" width="28" height="28" className="chat-location-pin-svg">
-            <path
-              d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
-              fill="#ea4335"
-              stroke="#ffffff"
-              strokeWidth="1.5"
-            />
-            <circle cx="12" cy="9" r="2.8" fill="#ffffff" />
-          </svg>
-        </div>
-      </div>
-    );
-  }
-
-  // Case 2: Render live static map tiles with red pin
+  // Case 1: Coordinates exist -> ALWAYS render rich map tiles preview with pinpoint & streets!
   if (hasCoords && tiles.length > 0) {
     return (
       <div className="chat-location-map-viewport" ref={measureMedia}>
@@ -117,6 +89,34 @@ export function LocationMapPreview({
           </svg>
         </div>
         <div className="chat-location-map-watermark">Google Maps ↗</div>
+      </div>
+    );
+  }
+
+  // Case 2: Coordinates absent, but thumbnail exists
+  if (thumbnail && !thumbFailed) {
+    return (
+      <div className="chat-location-thumb-wrapper">
+        <img
+          ref={measureMedia}
+          src={thumbnail}
+          alt=""
+          onLoad={onMediaLoad}
+          onError={() => setThumbFailed(true)}
+          className="chat-location-media"
+        />
+        <div className="chat-location-center-pin">
+          <div className="chat-location-pin-shadow" />
+          <svg viewBox="0 0 24 24" width="28" height="28" className="chat-location-pin-svg">
+            <path
+              d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+              fill="#ea4335"
+              stroke="#ffffff"
+              strokeWidth="1.5"
+            />
+            <circle cx="12" cy="9" r="2.8" fill="#ffffff" />
+          </svg>
+        </div>
       </div>
     );
   }

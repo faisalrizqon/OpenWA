@@ -13,6 +13,12 @@ import {
   Coffee,
   Sparkles,
   Loader2,
+  PawPrint,
+  Globe,
+  Car,
+  Lightbulb,
+  Music,
+  Flag,
 } from 'lucide-react';
 import './EmojiStickerPicker.css';
 
@@ -50,16 +56,22 @@ interface EmojiItem {
   keywords: string[];
 }
 
-const EMOJI_CATEGORIES: Array<{ id: EmojiItem['category']; label: string; icon: string }> = [
-  { id: 'recent', label: 'Terbaru', icon: '🕒' },
-  { id: 'smileys', label: 'Wajah & Orang', icon: '😀' },
-  { id: 'animals', label: 'Hewan & Alam', icon: '🐶' },
-  { id: 'food', label: 'Makanan & Minuman', icon: '🍔' },
-  { id: 'activities', label: 'Aktivitas', icon: '⚽' },
-  { id: 'travel', label: 'Perjalanan & Tempat', icon: '🚗' },
-  { id: 'objects', label: 'Objek & Alat', icon: '💡' },
-  { id: 'symbols', label: 'Simbol & Hati', icon: '🔣' },
-  { id: 'flags', label: 'Bendera', icon: '🚩' },
+interface EmojiCategoryTab {
+  id: EmojiItem['category'];
+  label: string;
+  icon: React.ReactNode;
+}
+
+const EMOJI_CATEGORIES: EmojiCategoryTab[] = [
+  { id: 'recent', label: 'Recent', icon: <Clock size={19} strokeWidth={1.8} /> },
+  { id: 'smileys', label: 'Smileys & People', icon: <Smile size={19} strokeWidth={1.8} /> },
+  { id: 'animals', label: 'Animals & Nature', icon: <PawPrint size={19} strokeWidth={1.8} /> },
+  { id: 'food', label: 'Food & Drink', icon: <Coffee size={19} strokeWidth={1.8} /> },
+  { id: 'activities', label: 'Activities', icon: <Globe size={19} strokeWidth={1.8} /> },
+  { id: 'travel', label: 'Travel & Places', icon: <Car size={19} strokeWidth={1.8} /> },
+  { id: 'objects', label: 'Objects', icon: <Lightbulb size={19} strokeWidth={1.8} /> },
+  { id: 'symbols', label: 'Symbols', icon: <Music size={19} strokeWidth={1.8} /> },
+  { id: 'flags', label: 'Flags', icon: <Flag size={19} strokeWidth={1.8} /> },
 ];
 
 const RAW_EMOJIS: Array<{ emoji: string; category: EmojiItem['category']; keywords: string[] }> = [
@@ -738,9 +750,11 @@ export function EmojiStickerPicker({
   triggerRef,
 }: EmojiStickerPickerProps) {
   const popupRef = useRef<HTMLDivElement>(null);
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const scrollBodyRef = useRef<HTMLDivElement | null>(null);
 
-  // Bottom segmented tabs: 'emoji' | 'gif' | 'sticker' (Image #1 defaults to sticker)
-  const [activeTab, setActiveTab] = useState<'emoji' | 'gif' | 'sticker'>('sticker');
+  // Bottom segmented tabs: 'emoji' | 'gif' | 'sticker' (Defaults to emoji matching Image #1)
+  const [activeTab, setActiveTab] = useState<'emoji' | 'gif' | 'sticker'>('emoji');
 
   // Top category tabs
   const [activeStickerCategory, setActiveStickerCategory] = useState<StickerCategory>('recent');
@@ -810,6 +824,31 @@ export function EmojiStickerPicker({
       }
       return updated;
     });
+  };
+  const scrollToEmojiCategory = (catId: EmojiItem['category']) => {
+    setActiveEmojiCategory(catId);
+    setSearchQuery('');
+    const target = sectionRefs.current[catId];
+    if (target && scrollBodyRef.current) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleScroll = () => {
+    if (searchQuery || activeTab !== 'emoji') return;
+    const container = scrollBodyRef.current;
+    if (!container) return;
+    const containerTop = container.getBoundingClientRect().top;
+
+    for (const cat of EMOJI_CATEGORIES) {
+      const el = sectionRefs.current[cat.id];
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.top - containerTop <= 80 && rect.bottom - containerTop > 20) {
+        setActiveEmojiCategory(cat.id);
+        break;
+      }
+    }
   };
 
   // Handle preset sticker pick
@@ -938,12 +977,9 @@ export function EmojiStickerPicker({
                 type="button"
                 className={`wa-cat-btn ${isActive ? 'active' : ''}`}
                 title={cat.label}
-                onClick={() => {
-                  setActiveEmojiCategory(cat.id);
-                  setSearchQuery('');
-                }}
+                onClick={() => scrollToEmojiCategory(cat.id)}
               >
-                <span className="wa-emoji-cat-icon">{cat.icon}</span>
+                {cat.icon}
               </button>
             );
           })
@@ -988,7 +1024,7 @@ export function EmojiStickerPicker({
       </div>
 
       {/* ── 3. MIDDLE SCROLLABLE BODY ────────────────────────────────────────── */}
-      <div className="wa-picker-scroll-body">
+      <div ref={scrollBodyRef} onScroll={handleScroll} className="wa-picker-scroll-body">
         {/* Hidden file input for custom stickers */}
         <input
           type="file"
@@ -1047,23 +1083,81 @@ export function EmojiStickerPicker({
             )}
           </div>
         ) : activeTab === 'emoji' ? (
-          /* ── EMOJI MULTI-COLUMN GRID ── */
           <div className="wa-emoji-scroll-content">
-            <div className="wa-emoji-grid">
-              {displayedEmojis.map((emoji, idx) => (
-                <button
-                  key={`${emoji}_${idx}`}
-                  type="button"
-                  className="wa-emoji-btn"
-                  onClick={() => handleEmojiClick(emoji)}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
+            {searchQuery ? (
+              displayedEmojis.length > 0 ? (
+                <div className="wa-emoji-grid">
+                  {displayedEmojis.map((emoji, idx) => (
+                    <button
+                      key={`search_${emoji}_${idx}`}
+                      type="button"
+                      className="wa-emoji-btn"
+                      onClick={() => handleEmojiClick(emoji)}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="wa-picker-empty-state">No emoji found</div>
+              )
+            ) : (
+              <>
+                {recentEmojis.length > 0 && (
+                  <div
+                    key="recent"
+                    ref={el => {
+                      sectionRefs.current['recent'] = el;
+                    }}
+                    className="wa-emoji-section"
+                  >
+                    <div className="wa-emoji-section-title">Recent</div>
+                    <div className="wa-emoji-grid">
+                      {recentEmojis.map((emoji, idx) => (
+                        <button
+                          key={`recent_${emoji}_${idx}`}
+                          type="button"
+                          className="wa-emoji-btn"
+                          onClick={() => handleEmojiClick(emoji)}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {EMOJI_CATEGORIES.filter(cat => cat.id !== 'recent').map(cat => {
+                  const catEmojis = RAW_EMOJIS.filter(e => e.category === cat.id);
+                  if (catEmojis.length === 0) return null;
+                  return (
+                    <div
+                      key={cat.id}
+                      ref={el => {
+                        sectionRefs.current[cat.id] = el;
+                      }}
+                      className="wa-emoji-section"
+                    >
+                      <div className="wa-emoji-section-title">{cat.label}</div>
+                      <div className="wa-emoji-grid">
+                        {catEmojis.map((item, idx) => (
+                          <button
+                            key={`${cat.id}_${item.emoji}_${idx}`}
+                            type="button"
+                            className="wa-emoji-btn"
+                            onClick={() => handleEmojiClick(item.emoji)}
+                          >
+                            {item.emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
         ) : (
-          /* ── GIF PREVIEW SECTION ── */
           <div className="wa-gif-grid">
             <div className="wa-gif-placeholder-card">
               <Sparkles size={28} className="text-emerald-500 mb-2" />

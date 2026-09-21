@@ -323,20 +323,22 @@ function ChatThread({
               // WhatsApp location messages carry a base64 JPEG map-preview thumbnail in `body`.
               const thumb = msg.body && msg.body.length > 100 && !msg.body.includes(' ') && !msg.body.includes(',') ? `data:image/jpeg;base64,${msg.body}` : '';
               const loc = msg.metadata?.location;
-              let lat = loc?.latitude;
-              let lng = loc?.longitude;
+              let lat = loc?.latitude !== undefined && loc?.latitude !== null ? Number(loc.latitude) : undefined;
+              let lng = loc?.longitude !== undefined && loc?.longitude !== null ? Number(loc.longitude) : undefined;
+              if (typeof lat !== 'number' || isNaN(lat)) lat = undefined;
+              if (typeof lng !== 'number' || isNaN(lng)) lng = undefined;
+
               if (lat === undefined || lng === undefined) {
-                if (loc?.url) {
-                  const m = loc.url.match(/q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-                  if (m) {
-                    lat = parseFloat(m[1]);
-                    lng = parseFloat(m[2]);
-                  }
-                } else if (msg.body) {
-                  const m = msg.body.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
-                  if (m) {
-                    lat = parseFloat(m[1]);
-                    lng = parseFloat(m[2]);
+                const targetText = (loc?.url || '') + ' ' + (msg.body || '');
+                const mQuery = targetText.match(/[?&@=](-?\d+\.\d+),(-?\d+\.\d+)/);
+                if (mQuery) {
+                  lat = parseFloat(mQuery[1]);
+                  lng = parseFloat(mQuery[2]);
+                } else {
+                  const mCoord = targetText.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
+                  if (mCoord) {
+                    lat = parseFloat(mCoord[1]);
+                    lng = parseFloat(mCoord[2]);
                   }
                 }
               }

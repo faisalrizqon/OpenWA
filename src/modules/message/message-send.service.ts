@@ -386,8 +386,15 @@ export class MessageSendService {
       body: `📍 ${finalDto.description || 'Location'}`,
       type: 'location',
       quotedMessageId: finalDto.quotedMessageId,
+      metadata: {
+        location: {
+          latitude: finalDto.latitude,
+          longitude: finalDto.longitude,
+          description: finalDto.description,
+          address: finalDto.address,
+        },
+      },
     });
-
     let result: MessageResult;
     try {
       result = await engine.sendLocationMessage(finalDto.chatId, {

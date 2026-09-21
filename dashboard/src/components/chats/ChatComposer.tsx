@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Paperclip, Smile, X, MapPin, Image, Camera, FileText, Headphones, Keyboard, User } from 'lucide-react';
+import { Paperclip, Smile, X, MapPin, Image, Camera, FileText, Headphones, Keyboard, User } from 'lucide-react';
 import { messageApi, type Chat, type MessageType } from '../../services/api';
 import { type ChatMessageView } from '../../utils/chatMessages';
 import { promoteChatWithSnippet } from '../../utils/chatList';
@@ -92,7 +92,7 @@ function ChatComposer({
   const { appendMessage, updateMessage } = useChatMessagesActions();
   const queryClient = useQueryClient();
 
-  const [sending, setSending] = useState<boolean>(false);
+
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
   const [showAttachMenu, setShowAttachMenu] = useState<boolean>(false);
   const [showLocationModal, setShowLocationModal] = useState<boolean>(false);
@@ -209,7 +209,7 @@ function ChatComposer({
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
-    if (!canWrite || sending) return;
+    if (!canWrite) return;
     const clipboardData = e.clipboardData;
     if (!clipboardData) return;
 
@@ -244,7 +244,7 @@ function ChatComposer({
   // Global paste handler to capture pasted screenshots while the chat room is active
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
-      if (!canWrite || sending) return;
+      if (!canWrite) return;
       const activeEl = document.activeElement;
       if (activeEl && activeEl !== textInputRef.current && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
         return;
@@ -266,7 +266,7 @@ function ChatComposer({
     };
     document.addEventListener('paste', handleGlobalPaste);
     return () => document.removeEventListener('paste', handleGlobalPaste);
-  }, [canWrite, sending]);
+  }, [canWrite]);
 
   const handleRemoveAttachment = () => {
     attachmentReadSeq.current += 1; // an in-flight read must not resurrect the removed attachment
@@ -314,11 +314,10 @@ function ChatComposer({
     setMessageInput(prev => prev + emoji);
   };
 
-  const handleSendSticker = async (base64: string, mimetype: string) => {
-    if (sending || !canWrite) return;
-    setSending(true);
+  const handleSendSticker = (base64: string, mimetype: string) => {
+    if (!canWrite || !selectedSessionId || !activeChat) return;
 
-    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const tempId = `temp_stk_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const tempMessage: ChatMessageView = {
       id: tempId,
       chatId: activeChat.id,
@@ -329,6 +328,7 @@ function ChatComposer({
       direction: 'outgoing',
       status: 'pending',
       createdAt: new Date().toISOString(),
+      timestamp: Math.floor(Date.now() / 1000),
       metadata: {
         media: {
           mimetype: mimetype || 'image/webp',
@@ -342,135 +342,126 @@ function ChatComposer({
     onMessageAppended('outgoing');
     setShowEmojiPicker(false);
 
-    try {
-      const result = await messageApi.sendSticker(selectedSessionId, activeChat.id, {
-        base64,
-        mimetype: mimetype || 'image/webp',
-      });
+    (async () => {
+      try {
+        const result = await messageApi.sendSticker(selectedSessionId, activeChat.id, {
+          base64,
+          mimetype: mimetype || 'image/webp',
+        });
 
-      const sendKey = messagesQueryKey(selectedSessionId, activeChat.id);
-      const reconciled: ChatMessageView = {
-        ...tempMessage,
-        id: result.messageId,
-        waMessageId: result.messageId,
-        status: 'sent',
-      };
-      upsertCachedMessage(queryClient, sendKey, reconciled, { dropId: tempId });
+        const sendKey = messagesQueryKey(selectedSessionId, activeChat.id);
+        const reconciled: ChatMessageView = {
+          ...tempMessage,
+          id: result.messageId,
+          waMessageId: result.messageId,
+          status: 'sent',
+        };
+        upsertCachedMessage(queryClient, sendKey, reconciled, { dropId: tempId });
 
-      const snippet = '🏷️ ' + t('chats.media.sticker', 'Sticker');
-      const sentAt = Math.floor(Date.now() / 1000);
-      setChats(prevChats => promoteChatWithSnippet(prevChats, activeChat.id, snippet, sentAt));
-    } catch (err) {
-      showErrorToast(t('chats.errors.send'), err instanceof Error ? err.message : undefined);
-      updateMessage(selectedSessionId, activeChat.id, tempId, { status: 'failed' });
-    } finally {
-      setSending(false);
-    }
+        const snippet = '🏷️ ' + t('chats.media.sticker', 'Sticker');
+        const sentAt = Math.floor(Date.now() / 1000);
+        setChats(prevChats => promoteChatWithSnippet(prevChats, activeChat.id, snippet, sentAt));
+      } catch (err) {
+        showErrorToast(t('chats.errors.send'), err instanceof Error ? err.message : undefined);
+        updateMessage(selectedSessionId, activeChat.id, tempId, { status: 'failed' });
+      }
+    })();
   };
 
-  // 7. Handle sending a message / media
-  const handleSend = async (e?: React.FormEvent) => {
+  // 7. Handle sending a message / media (Non-blocking: rapid consecutive sends supported)
+  const handleSend = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!selectedSessionId || !activeChat || sending) return;
+    if (!selectedSessionId || !activeChat || !canWrite) return;
 
     const textToSend = messageInput.trim();
     if (!textToSend && !attachment) return;
 
+    // Instantly clear draft & keep input focus so operator can type next message immediately
     setMessageInput('');
-    setSending(true);
+    const currentAttachment = attachment;
+    const currentReplyingTo = replyingTo;
+    handleRemoveAttachment();
+    setReplyingTo(null);
+    textInputRef.current?.focus();
 
-    const tempId = `temp_${Date.now()}`;
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const tempMessage: ChatMessageView = {
       id: tempId,
       chatId: activeChat.id,
       from: 'me',
       to: activeChat.id,
-      body: attachment
-        ? attachment.mimetype.startsWith('image/') ||
-          attachment.mimetype.startsWith('video/') ||
-          attachment.mimetype.startsWith('audio/')
+      body: currentAttachment
+        ? currentAttachment.mimetype.startsWith('image/') ||
+          currentAttachment.mimetype.startsWith('video/') ||
+          currentAttachment.mimetype.startsWith('audio/')
           ? textToSend
-          : attachment.filename
+          : currentAttachment.filename
         : textToSend,
-      type: attachment ? messageTypeFromMime(attachment.mimetype) : 'text',
+      type: currentAttachment ? messageTypeFromMime(currentAttachment.mimetype) : 'text',
       direction: 'outgoing',
       status: 'pending',
       createdAt: new Date().toISOString(),
-      metadata: buildOptimisticMetadata(attachment, replyingTo),
+      timestamp: Math.floor(Date.now() / 1000),
+      metadata: buildOptimisticMetadata(currentAttachment, currentReplyingTo),
     };
 
     appendMessage(selectedSessionId, activeChat.id, tempMessage);
     onMessageAppended('outgoing');
 
-    const currentAttachment = attachment;
-    const currentReplyingTo = replyingTo;
-    handleRemoveAttachment();
-    setReplyingTo(null);
+    const snippet = currentAttachment ? `[${currentAttachment.mimetype.split('/')[0]}]` : textToSend;
+    const sentAt = Math.floor(Date.now() / 1000);
+    setChats(prevChats => promoteChatWithSnippet(prevChats, activeChat.id, snippet, sentAt));
 
-    try {
-      let result;
+    (async () => {
+      try {
+        let result;
 
-      if (currentAttachment) {
-        let mediaType: 'image' | 'video' | 'audio' | 'document' = 'document';
-        const mime = currentAttachment.mimetype;
-        if (mime.startsWith('image/')) mediaType = 'image';
-        else if (mime.startsWith('video/')) mediaType = 'video';
-        else if (mime.startsWith('audio/')) mediaType = 'audio';
+        if (currentAttachment) {
+          let mediaType: 'image' | 'video' | 'audio' | 'document' = 'document';
+          const mime = currentAttachment.mimetype;
+          if (mime.startsWith('image/')) mediaType = 'image';
+          else if (mime.startsWith('video/')) mediaType = 'video';
+          else if (mime.startsWith('audio/')) mediaType = 'audio';
 
-        // A reply that carries an attachment takes this branch, so the quote has to travel with the
-        // media — the `else if` below never sees it.
-        result = await messageApi.sendMedia(
-          selectedSessionId,
-          activeChat.id,
-          mediaType,
-          buildMediaSendPayload(currentAttachment, mediaType !== 'audio' ? textToSend : undefined, currentReplyingTo),
-        );
-      } else if (currentReplyingTo) {
-        result = await messageApi.reply(selectedSessionId, {
-          chatId: activeChat.id,
-          quotedMessageId: quotedIdOf(currentReplyingTo)!,
-          text: textToSend,
-        });
-      } else {
-        result = await messageApi.sendText(selectedSessionId, activeChat.id, textToSend);
+          result = await messageApi.sendMedia(
+            selectedSessionId,
+            activeChat.id,
+            mediaType,
+            buildMediaSendPayload(currentAttachment, mediaType !== 'audio' ? textToSend : undefined, currentReplyingTo),
+          );
+        } else if (currentReplyingTo) {
+          result = await messageApi.reply(selectedSessionId, {
+            chatId: activeChat.id,
+            quotedMessageId: quotedIdOf(currentReplyingTo)!,
+            text: textToSend,
+          });
+        } else {
+          result = await messageApi.sendText(selectedSessionId, activeChat.id, textToSend);
+        }
+
+        const sendKey = messagesQueryKey(selectedSessionId, activeChat.id);
+        const reconciled: ChatMessageView = {
+          ...tempMessage,
+          id: result.messageId,
+          waMessageId: result.messageId,
+          status: 'sent',
+        };
+        upsertCachedMessage(queryClient, sendKey, reconciled, { dropId: tempId });
+      } catch (err) {
+        showErrorToast(t('chats.errors.send'), err instanceof Error ? err.message : undefined);
+        updateMessage(selectedSessionId, activeChat.id, tempId, { status: 'failed' });
       }
-
-      // Race guard: the realtime `message.sent` echo can arrive before this response and already
-      // append the message by its real WA id (the dedup at receive time misses because the
-      // optimistic placeholder still carries the temp id). If so, fold the placeholder INTO the
-      // echo's row via mergeOrAppend instead of just dropping it — the echo may carry no media
-      // payload (a Baileys API send echoes only a marker), so dropping the placeholder would erase
-      // the attachment's base64 and leave a bare "📎 Media" bubble until the next refetch.
-      const sendKey = messagesQueryKey(selectedSessionId, activeChat.id);
-      const reconciled: ChatMessageView = {
-        ...tempMessage,
-        id: result.messageId,
-        waMessageId: result.messageId,
-        status: 'sent',
-      };
-      upsertCachedMessage(queryClient, sendKey, reconciled, { dropId: tempId });
-
-      // Update sidebar chat list (move active chat to the top with the new snippet)
-      const snippet = currentAttachment ? `[${currentAttachment.mimetype.split('/')[0]}]` : textToSend;
-      const sentAt = Math.floor(Date.now() / 1000);
-      setChats(prevChats => promoteChatWithSnippet(prevChats, activeChat.id, snippet, sentAt));
-    } catch (err) {
-      showErrorToast(t('chats.errors.send'), err instanceof Error ? err.message : undefined);
-      updateMessage(selectedSessionId, activeChat.id, tempId, { status: 'failed' });
-    } finally {
-      setSending(false);
-    }
+    })();
   };
 
-  const handleSendLocation = async (loc: LocationData) => {
-    if (!canWrite || sending) return;
-    setSending(true);
+  const handleSendLocation = (loc: LocationData) => {
+    if (!canWrite || !selectedSessionId || !activeChat) return;
 
-    const tempId = `temp_${Date.now()}`;
+    const tempId = `temp_loc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const tempMessage: ChatMessageView = {
       id: tempId,
       chatId: activeChat.id,
-      from: 'me',
+      from: selectedSessionId,
       to: activeChat.id,
       body: loc.description || loc.address || `${loc.latitude}, ${loc.longitude}`,
       type: 'location',
@@ -492,39 +483,39 @@ function ChatComposer({
     onMessageAppended('outgoing');
     setShowLocationModal(false);
 
-    try {
-      const result = await messageApi.sendLocation(selectedSessionId, {
-        chatId: activeChat.id,
-        latitude: loc.latitude,
-        longitude: loc.longitude,
-        description: loc.description,
-        address: loc.address,
-      });
+    const snippet = `📍 ${loc.description || t('chats.media.location', 'Location')}`;
+    const sentAt = Math.floor(Date.now() / 1000);
+    setChats(prevChats => promoteChatWithSnippet(prevChats, activeChat.id, snippet, sentAt));
 
-      const sendKey = messagesQueryKey(selectedSessionId, activeChat.id);
-      const reconciled: ChatMessageView = {
-        ...tempMessage,
-        id: result.messageId,
-        waMessageId: result.messageId,
-        status: 'sent',
-      };
-      upsertCachedMessage(queryClient, sendKey, reconciled, { dropId: tempId });
+    (async () => {
+      try {
+        const result = await messageApi.sendLocation(selectedSessionId, {
+          chatId: activeChat.id,
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          description: loc.description,
+          address: loc.address,
+        });
 
-      const snippet = `📍 ${loc.description || t('chats.media.location', 'Location')}`;
-      const sentAt = Math.floor(Date.now() / 1000);
-      setChats(prevChats => promoteChatWithSnippet(prevChats, activeChat.id, snippet, sentAt));
-    } catch (err) {
-      showErrorToast(t('chats.errors.send'), err instanceof Error ? err.message : undefined);
-      updateMessage(selectedSessionId, activeChat.id, tempId, { status: 'failed' });
-    } finally {
-      setSending(false);
-    }
+        const sendKey = messagesQueryKey(selectedSessionId, activeChat.id);
+        const reconciled: ChatMessageView = {
+          ...tempMessage,
+          id: result.messageId,
+          waMessageId: result.messageId,
+          status: 'sent',
+        };
+        upsertCachedMessage(queryClient, sendKey, reconciled, { dropId: tempId });
+      } catch (err) {
+        showErrorToast(t('chats.errors.send'), err instanceof Error ? err.message : undefined);
+        updateMessage(selectedSessionId, activeChat.id, tempId, { status: 'failed' });
+      }
+    })();
   };
 
-  const handleSendContact = async (contact: ContactShareData) => {
+  const handleSendContact = (contact: ContactShareData) => {
     if (!canWrite || !selectedSessionId || !activeChat) return;
 
-    const tempId = `temp-contact-${Date.now()}`;
+    const tempId = `temp_contact_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const cleanNumber = contact.number.replace(/[^0-9+]/g, '');
     const vcardBody = `BEGIN:VCARD\nVERSION:3.0\nFN:${contact.name}\nTEL;type=CELL;waid=${cleanNumber.replace(/^\+/, '')}:${contact.number}\nEND:VCARD`;
 
@@ -545,30 +536,32 @@ function ChatComposer({
     onMessageAppended('outgoing');
     setShowContactModal(false);
 
-    try {
-      const result = await messageApi.sendContact(selectedSessionId, {
-        chatId: activeChat.id,
-        contactName: contact.name,
-        contactNumber: contact.number,
-        quotedMessageId: replyingTo?.id,
-      });
+    const snippet = `👤 ${contact.name}`;
+    const sentAt = Math.floor(Date.now() / 1000);
+    setChats(prevChats => promoteChatWithSnippet(prevChats, activeChat.id, snippet, sentAt));
 
-      const sendKey = messagesQueryKey(selectedSessionId, activeChat.id);
-      const reconciled: ChatMessageView = {
-        ...tempMessage,
-        id: result.messageId,
-        waMessageId: result.messageId,
-        status: 'sent',
-      };
-      upsertCachedMessage(queryClient, sendKey, reconciled, { dropId: tempId });
+    (async () => {
+      try {
+        const result = await messageApi.sendContact(selectedSessionId, {
+          chatId: activeChat.id,
+          contactName: contact.name,
+          contactNumber: contact.number,
+          quotedMessageId: replyingTo?.id,
+        });
 
-      const snippet = `👤 ${contact.name}`;
-      const sentAt = Math.floor(Date.now() / 1000);
-      setChats(prevChats => promoteChatWithSnippet(prevChats, activeChat.id, snippet, sentAt));
-    } catch (err) {
-      showErrorToast(t('chats.errors.sendFailed', 'Gagal mengirim kontak'), err instanceof Error ? err.message : undefined);
-      updateMessage(selectedSessionId, activeChat.id, tempId, { status: 'failed' });
-    }
+        const sendKey = messagesQueryKey(selectedSessionId, activeChat.id);
+        const reconciled: ChatMessageView = {
+          ...tempMessage,
+          id: result.messageId,
+          waMessageId: result.messageId,
+          status: 'sent',
+        };
+        upsertCachedMessage(queryClient, sendKey, reconciled, { dropId: tempId });
+      } catch (err) {
+        showErrorToast(t('chats.errors.sendFailed', 'Gagal mengirim kontak'), err instanceof Error ? err.message : undefined);
+        updateMessage(selectedSessionId, activeChat.id, tempId, { status: 'failed' });
+      }
+    })();
   };
 
   return (
@@ -600,7 +593,7 @@ function ChatComposer({
               type="button"
               className="attach-item"
               onClick={() => handlePickMediaType('gallery')}
-              disabled={!canWrite || sending}
+              disabled={!canWrite}
             >
               <div className="attach-icon-circle attach-gallery">
                 <Image size={24} />
@@ -612,7 +605,7 @@ function ChatComposer({
               type="button"
               className="attach-item"
               onClick={() => handlePickMediaType('camera')}
-              disabled={!canWrite || sending}
+              disabled={!canWrite}
             >
               <div className="attach-icon-circle attach-camera">
                 <Camera size={24} />
@@ -627,7 +620,7 @@ function ChatComposer({
                 setShowAttachMenu(false);
                 setShowLocationModal(true);
               }}
-              disabled={!canWrite || sending}
+              disabled={!canWrite}
             >
               <div className="attach-icon-circle attach-location">
                 <MapPin size={24} />
@@ -642,7 +635,7 @@ function ChatComposer({
                 setShowAttachMenu(false);
                 setShowContactModal(true);
               }}
-              disabled={!canWrite || sending}
+              disabled={!canWrite}
             >
               <div className="attach-icon-circle attach-contact">
                 <User size={24} />
@@ -653,7 +646,7 @@ function ChatComposer({
               type="button"
               className="attach-item"
               onClick={() => handlePickMediaType('document')}
-              disabled={!canWrite || sending}
+              disabled={!canWrite}
             >
               <div className="attach-icon-circle attach-document">
                 <FileText size={24} />
@@ -665,7 +658,7 @@ function ChatComposer({
               type="button"
               className="attach-item"
               onClick={() => handlePickMediaType('audio')}
-              disabled={!canWrite || sending}
+              disabled={!canWrite}
             >
               <div className="attach-icon-circle attach-audio">
                 <Headphones size={24} />
@@ -705,7 +698,7 @@ function ChatComposer({
             ref={emojiButtonRef}
             type="button"
             onClick={toggleEmojiPicker}
-            disabled={!canWrite || sending}
+            disabled={!canWrite}
             className={`btn-input-accessory ${showEmojiPicker ? 'active' : ''}`}
             title={showEmojiPicker ? 'Tampilkan Keyboard' : t('chats.emojiTitle')}
           >
@@ -724,7 +717,7 @@ function ChatComposer({
             }
             value={messageInput}
             onChange={e => setMessageInput(e.target.value)}
-            disabled={!canWrite || sending}
+            disabled={!canWrite}
             className="message-text-input"
             onPaste={handlePaste}
           />
@@ -733,7 +726,7 @@ function ChatComposer({
             ref={attachButtonRef}
             type="button"
             onClick={toggleAttachMenu}
-            disabled={!canWrite || sending}
+            disabled={!canWrite}
             className={`btn-input-accessory ${showAttachMenu ? 'active' : ''}`}
             title={t('chats.attachTitle')}
           >
@@ -742,11 +735,11 @@ function ChatComposer({
 
           <button
             type="submit"
-            disabled={!canWrite || (!messageInput.trim() && !attachment) || sending}
+            disabled={!canWrite || (!messageInput.trim() && !attachment)}
             className="btn-send-message"
             aria-label={t('chats.send')}
           >
-            {sending ? <Loader2 className="animate-spin" size={24} /> : <WASendIcon size={24} style={{ marginLeft: 2 }} />}
+            <WASendIcon size={24} style={{ marginLeft: 2 }} />
           </button>
         </form>
       </footer>
@@ -757,7 +750,7 @@ function ChatComposer({
           onSelectEmoji={handleEmojiClick}
           onSendSticker={handleSendSticker}
           onClose={() => setShowEmojiPicker(false)}
-          disabled={!canWrite || sending}
+          disabled={!canWrite}
           triggerRef={emojiButtonRef}
         />
       )}
@@ -766,14 +759,14 @@ function ChatComposer({
         open={showLocationModal}
         onClose={() => setShowLocationModal(false)}
         onSend={handleSendLocation}
-        sending={sending}
+        sending={false}
       />
 
       <ContactShareModal
         open={showContactModal}
         onClose={() => setShowContactModal(false)}
         onSend={handleSendContact}
-        sending={sending}
+        sending={false}
         chats={chats}
       />
     </>

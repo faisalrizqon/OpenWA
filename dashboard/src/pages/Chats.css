@@ -706,7 +706,7 @@ body.__in_iframe .chats-page .chats-layout {
 }
 
 .chats-page .chat-item-pin-btn.is-pinned {
-  color: #16a34a;
+  color: var(--text-primary, #111b21);
 }
 
 .chats-page .chat-item-pin-btn.is-pinned svg {
@@ -887,9 +887,9 @@ body.__in_iframe .chats-page .chats-layout {
 }
 
 .chats-page .room-pin-btn.active {
-  background: #f0fdf4;
-  border-color: #86efac;
-  color: #16a34a;
+  background: var(--bg-light, #f0f2f5);
+  border-color: var(--border, #e2e8f0);
+  color: var(--text-primary, #111b21);
 }
 
 .chats-page .room-pin-btn.active svg {
@@ -1431,33 +1431,39 @@ body.__in_iframe .chats-page .chats-layout {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  color: var(--text-primary, #111b21);
+  background: var(--bg-light, #f0f2f5);
+  border: 1px solid var(--border, #e2e8f0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
+  transition: all 0.15s ease;
 }
 
-.chats-page .attach-gallery {
-  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+.chats-page .attach-item:hover:not(:disabled) .attach-icon-circle {
+  background: var(--border, #e2e8f0);
+  color: var(--text-primary, #111b21);
 }
 
-.chats-page .attach-camera {
-  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
-}
-
-.chats-page .attach-location {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-}
-
-.chats-page .attach-document {
-  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-}
-
-.chats-page .attach-audio {
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-}
-
+.chats-page .attach-gallery,
+.chats-page .attach-camera,
+.chats-page .attach-location,
+.chats-page .attach-document,
+.chats-page .attach-audio,
 .chats-page .attach-contact {
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  background: var(--bg-light, #f0f2f5);
+  color: var(--text-primary, #111b21);
+}
+
+[data-theme='dark'] .chats-page .attach-icon-circle,
+html[data-theme='dark'] .chats-page .attach-gallery,
+html[data-theme='dark'] .chats-page .attach-camera,
+html[data-theme='dark'] .chats-page .attach-location,
+html[data-theme='dark'] .chats-page .attach-document,
+html[data-theme='dark'] .chats-page .attach-audio,
+html[data-theme='dark'] .chats-page .attach-contact {
+  background: #202c33;
+  color: #e9edef;
+  border-color: #2a3942;
 }
 .chats-page .attach-label {
   font-size: 0.75rem;
@@ -1765,7 +1771,7 @@ body.__in_iframe .chats-page .chats-layout {
 .chats-page .chat-location-card {
   width: 100%;
   height: 120px;
-  background: linear-gradient(135deg, #dcfce7 0%, #e0e7ff 100%);
+  background: var(--bg-light, #f0f2f5);
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -1775,7 +1781,7 @@ body.__in_iframe .chats-page .chats-layout {
 }
 
 html[data-theme='dark'] .chats-page .chat-location-card {
-  background: linear-gradient(135deg, #064e3b 0%, #1e1b4b 100%);
+  background: #202c33;
 }
 
 .chats-page .chat-location-pin-icon {

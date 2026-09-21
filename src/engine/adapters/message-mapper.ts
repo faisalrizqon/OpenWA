@@ -67,9 +67,22 @@ export interface RawMessageFields {
   author?: string;
   /** WIDs @mentioned in the message; whatsapp-web.js attaches this to every Message. */
   mentionedIds?: string[];
-  /** Raw wwebjs payload; `notifyName` carries the sender's push name without an extra lookup. */
-  _data?: { notifyName?: string; ephemeralDuration?: number };
-  /** Set on `order` messages: the placed order's id, and the single-order token that unlocks its items. */
+  _data?: {
+    notifyName?: string;
+    ephemeralDuration?: number;
+    lat?: number | string;
+    lng?: number | string;
+    loc?: string;
+    clientUrl?: string;
+  };
+  /** Location payload on location-typed messages. */
+  location?: {
+    latitude: number | string;
+    longitude: number | string;
+    description?: string;
+    address?: string;
+    url?: string;
+  };
   orderId?: string;
   token?: string;
   /** Set on `product` messages: the shared catalog product. */
@@ -150,6 +163,28 @@ export function buildIncomingMessageBase(msg: RawMessageFields): IncomingMessage
       ...(msg.description ? { description: msg.description } : {}),
       ...(msg.businessOwnerJid ? { businessOwnerJid: msg.businessOwnerJid } : {}),
     };
+  }
+
+  // Location mapping (static or pin location)
+  if (incoming.type === 'location') {
+    if (msg.location) {
+      incoming.location = {
+        latitude: Number(msg.location.latitude),
+        longitude: Number(msg.location.longitude),
+        description: msg.location.description || undefined,
+        address: msg.location.address || undefined,
+        url: msg.location.url || undefined,
+      };
+    } else if (msg._data && (typeof msg._data.lat === 'number' || typeof msg._data.lat === 'string')) {
+      const locLines = typeof msg._data.loc === 'string' ? msg._data.loc.split('\n') : [];
+      incoming.location = {
+        latitude: Number(msg._data.lat),
+        longitude: Number(msg._data.lng),
+        description: locLines[0] || undefined,
+        address: locLines[1] || undefined,
+        url: msg._data.clientUrl || undefined,
+      };
+    }
   }
 
   return incoming;

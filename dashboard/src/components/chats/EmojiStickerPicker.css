@@ -94,19 +94,19 @@
 }
 
 .wa-cat-btn.active {
-  color: #00a884 !important;
+  color: var(--text-primary, #111b21) !important;
 }
 
-/* Signature WhatsApp green active bar underneath category icon (Image #1) */
+/* Neutral active underline underneath category icon (Image #1) */
 .wa-cat-btn.active::after {
   content: '';
   position: absolute;
   bottom: -0.25rem;
-  left: 20%;
-  right: 20%;
-  height: 3px;
-  background: #00a884;
-  border-radius: 3px 3px 0 0;
+  left: 15%;
+  right: 15%;
+  height: 2.5px;
+  background: var(--text-primary, #111b21);
+  border-radius: 2px 2px 0 0;
 }
 
 .wa-cat-btn-add {
@@ -164,14 +164,19 @@
   align-items: center;
   gap: 0.5rem;
   background: var(--bg-white, #ffffff);
-  border: 1.5px solid #00a884;
+  border: 1px solid var(--border, #e2e8f0);
   border-radius: 9999px;
-  padding: 0.4rem 0.85rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 0.38rem 0.85rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.15s ease;
+}
+
+.wa-picker-search-pill:focus-within {
+  border-color: var(--text-secondary, #54656f);
 }
 
 .wa-picker-search-icon {
-  color: #00a884;
+  color: var(--text-muted, #8696a0);
   flex-shrink: 0;
 }
 
@@ -339,18 +344,36 @@
   width: 100%;
 }
 
+.wa-emoji-section {
+  margin-bottom: 0.75rem;
+}
+
+.wa-emoji-section-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted, #54656f);
+  padding: 0.4rem 0.35rem 0.25rem;
+  user-select: none;
+}
+
 .wa-emoji-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 0.2rem;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 2px;
+}
+
+.wa-picker-empty-state {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--text-muted, #8696a0);
+  font-size: 0.88rem;
 }
 
 @media (max-width: 480px) {
   .wa-emoji-grid {
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(8, 1fr);
   }
 }
-
 .wa-emoji-btn {
   background: transparent !important;
   border: none !important;
@@ -470,7 +493,15 @@
 
 [data-theme='dark'] .wa-picker-search-pill {
   background: #111b21;
-  border-color: #00a884;
+  border-color: #2a3942;
+}
+
+[data-theme='dark'] .wa-picker-search-pill:focus-within {
+  border-color: #8696a0;
+}
+
+[data-theme='dark'] .wa-cat-btn.active::after {
+  background: #e9edef;
 }
 
 [data-theme='dark'] .wa-picker-bottom-pill {
