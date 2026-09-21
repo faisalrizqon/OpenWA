@@ -130,8 +130,21 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
   }, []);
 
   useEffect(() => {
-    if (open) {
-      fetchGpsLocation();
+    if (!open) return;
+    // Only auto-fetch if permission was ALREADY granted previously.
+    // Never trigger the system permission popup automatically on modal mount
+    // to avoid Android OS "FLAG_WINDOW_IS_OBSCURED" / "bubbles or overlays" tapjacking lock.
+    if (typeof navigator !== 'undefined' && 'permissions' in navigator && navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: 'geolocation' })
+        .then(result => {
+          if (result.state === 'granted') {
+            fetchGpsLocation();
+          }
+        })
+        .catch(() => {
+          // Ignore query failure
+        });
     }
   }, [open, fetchGpsLocation]);
 
