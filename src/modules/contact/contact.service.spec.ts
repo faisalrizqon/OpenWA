@@ -212,13 +212,23 @@ describe('ContactService', () => {
     it.each([
       ['upsertContact', (svc: ContactService) => svc.upsertContact('s1', '159442138038327@lid', 'Ada')],
       ['deleteContact', (svc: ContactService) => svc.deleteContact('s1', '159442138038327@lid')],
-    ])('%s refuses an @lid contact id with a 400', (_name, call) => {
+    ])('%s refuses an unresolvable @lid contact id with a 400', async (_name, call) => {
       const upsertContact = jest.fn();
       const deleteContact = jest.fn();
-      const svc = makeService({ upsertContact, deleteContact });
-      expect(() => call(svc)).toThrow(BadRequestException);
+      const resolveContactPhone = jest.fn().mockResolvedValue(null);
+      const svc = makeService({ upsertContact, deleteContact, resolveContactPhone });
+      await expect(call(svc)).rejects.toThrow(BadRequestException);
       expect(upsertContact).not.toHaveBeenCalled();
       expect(deleteContact).not.toHaveBeenCalled();
+    });
+
+    it('resolves an @lid to phone and forwards to engine', async () => {
+      const upsertContact = jest.fn().mockResolvedValue(undefined);
+      const resolveContactPhone = jest.fn().mockResolvedValue('628999888');
+      const svc = makeService({ upsertContact, resolveContactPhone });
+      await svc.upsertContact('s1', '159442138038327@lid', 'Ada');
+      expect(resolveContactPhone).toHaveBeenCalledWith('159442138038327@lid');
+      expect(upsertContact).toHaveBeenCalledWith('628999888@c.us', 'Ada', undefined);
     });
 
     it('still allows a normal phone-based contact id through to the engine', async () => {
@@ -226,15 +236,14 @@ describe('ContactService', () => {
       await makeService({ upsertContact }).upsertContact('s1', '628123@c.us', 'Ada', 'Lovelace');
       expect(upsertContact).toHaveBeenCalledWith('628123@c.us', 'Ada', 'Lovelace');
     });
-
     // Same hazard as the lid, different ids: a group/newsletter/broadcast id also carries digits
     // that would be stored as a phone number for a contact that does not exist.
     it.each(['120363000000000000@g.us', '120363000000000000@newsletter', 'status@broadcast'])(
       'refuses the non-person id %s with a 400',
-      id => {
+      async id => {
         const upsertContact = jest.fn();
         const svc = makeService({ upsertContact });
-        expect(() => svc.upsertContact('s1', id, 'Ada')).toThrow(BadRequestException);
+        await expect(svc.upsertContact('s1', id, 'Ada')).rejects.toThrow(BadRequestException);
         expect(upsertContact).not.toHaveBeenCalled();
       },
     );
@@ -251,17 +260,16 @@ describe('ContactService', () => {
       ['letters', 'abc@c.us'],
       ['an empty user-part', '@c.us'],
       ['the engine dialect with free text', 'abc@s.whatsapp.net'],
-    ])('refuses %s without reaching the engine', (_label, id) => {
+    ])('refuses %s without reaching the engine', async (_label, id) => {
       const upsertContact = jest.fn();
       const deleteContact = jest.fn();
       const svc = makeService({ upsertContact, deleteContact });
 
-      expect(() => svc.upsertContact('s1', id, 'Ada')).toThrow(BadRequestException);
-      expect(() => svc.deleteContact('s1', id)).toThrow(BadRequestException);
+      await expect(svc.upsertContact('s1', id, 'Ada')).rejects.toThrow(BadRequestException);
+      await expect(svc.deleteContact('s1', id)).rejects.toThrow(BadRequestException);
       expect(upsertContact).not.toHaveBeenCalled();
       expect(deleteContact).not.toHaveBeenCalled();
     });
-
     // Negative twin: the ids this route exists to serve must still pass.
     it.each([
       ['a phone jid', '628123456789@c.us'],

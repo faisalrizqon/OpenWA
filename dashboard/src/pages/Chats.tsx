@@ -317,16 +317,22 @@ export function Chats() {
     if (!saveContactTarget || !selectedSessionId || !contactNameInput.trim()) return;
     setSavingContact(true);
     try {
-      await contactApi.upsert(selectedSessionId, saveContactTarget.jid, {
+      // If the user's phone number was resolved from an @lid, prefer saving under the phone JID
+      const cleanPhone = saveContactTarget.phone.replace(/[^\d]/g, '');
+      const targetJid = cleanPhone ? `${cleanPhone}@c.us` : saveContactTarget.jid;
+      await contactApi.upsert(selectedSessionId, targetJid, {
         firstName: contactNameInput.trim(),
       });
       showSuccessToast(t('chats.contactSaved', 'Kontak berhasil disimpan ke WhatsApp!'));
-      setActiveChat(prev => (prev && prev.id === saveContactTarget.jid ? { ...prev, name: contactNameInput.trim() } : prev));
+      setActiveChat(prev => (prev && (prev.id === saveContactTarget.jid || prev.id === targetJid) ? { ...prev, name: contactNameInput.trim() } : prev));
       void queryClient.invalidateQueries({ queryKey: ['chats', selectedSessionId] });
       setSaveContactTarget(null);
     } catch (err) {
       console.error('Failed to save contact:', err);
-      showErrorToast(t('chats.saveContactFailed', 'Gagal menyimpan kontak'));
+      showErrorToast(
+        t('chats.saveContactFailed', 'Gagal menyimpan kontak'),
+        err instanceof Error ? err.message : undefined,
+      );
     } finally {
       setSavingContact(false);
     }

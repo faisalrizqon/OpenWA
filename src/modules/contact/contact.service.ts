@@ -207,15 +207,34 @@ export class ContactService {
     // the neutral dialect, and the Baileys adapter re-encodes to its own dialect on the way out.
     return this.isBareNumber(trimmed) ? `${trimmed}@c.us` : toNeutralJid(trimmed);
   }
-
-  upsertContact(sessionId: string, contactId: string, firstName: string, lastName?: string) {
-    this.assertAddressable(contactId);
-    return this.getEngine(sessionId).upsertContact(this.toAddressableId(contactId), firstName, lastName);
+  async upsertContact(sessionId: string, contactId: string, firstName: string, lastName?: string) {
+    let targetId = contactId;
+    if (parseWaId(contactId).kind === 'lid') {
+      const resolved = await this.resolveContactPhone(sessionId, contactId);
+      if (!resolved) {
+        throw new BadRequestException(
+          `Contact ${contactId} is a privacy id (@lid) with no known phone number; the addressbook is keyed by phone number, so pass a phone-based contact id instead`,
+        );
+      }
+      targetId = `${resolved}@c.us`;
+    }
+    this.assertAddressable(targetId);
+    return this.getEngine(sessionId).upsertContact(this.toAddressableId(targetId), firstName, lastName);
   }
 
-  deleteContact(sessionId: string, contactId: string) {
-    this.assertAddressable(contactId);
-    return this.getEngine(sessionId).deleteContact(this.toAddressableId(contactId));
+  async deleteContact(sessionId: string, contactId: string) {
+    let targetId = contactId;
+    if (parseWaId(contactId).kind === 'lid') {
+      const resolved = await this.resolveContactPhone(sessionId, contactId);
+      if (!resolved) {
+        throw new BadRequestException(
+          `Contact ${contactId} is a privacy id (@lid) with no known phone number; the addressbook is keyed by phone number, so pass a phone-based contact id instead`,
+        );
+      }
+      targetId = `${resolved}@c.us`;
+    }
+    this.assertAddressable(targetId);
+    return this.getEngine(sessionId).deleteContact(this.toAddressableId(targetId));
   }
 
   unblockContact(sessionId: string, contactId: string) {
