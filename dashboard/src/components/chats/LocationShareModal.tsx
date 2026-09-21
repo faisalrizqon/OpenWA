@@ -276,30 +276,16 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
     }
   }, [gpsCoords, fetchGpsLocation]);
 
-  // Send Custom Pinpoint Location
-  const handleSendCustomLocation = () => {
+  // Send Location (Pinpoint center of map)
+  const handleSendLocation = () => {
     if (sending) return;
     onSend({
       latitude: pinCoords.lat,
       longitude: pinCoords.lng,
-      description: currentTitle || 'Lokasi Terpilih (Pin)',
+      description: currentTitle || 'Lokasi Terpilih',
       address: currentAddress || `${pinCoords.lat.toFixed(5)}, ${pinCoords.lng.toFixed(5)}`,
     });
   };
-
-  // Send Current GPS Location
-  const handleSendGpsLocation = () => {
-    if (sending) return;
-    const targetLat = gpsCoords ? gpsCoords.lat : pinCoords.lat;
-    const targetLng = gpsCoords ? gpsCoords.lng : pinCoords.lng;
-    onSend({
-      latitude: targetLat,
-      longitude: targetLng,
-      description: currentTitle || 'Lokasi Saya Saat Ini',
-      address: currentAddress || `${targetLat.toFixed(5)}, ${targetLng.toFixed(5)}`,
-    });
-  };
-
   return (
     <Modal
       open={open}
@@ -391,11 +377,10 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
           </button>
         </div>
 
-        {/* BOTTOM ACTION CARD: Pilihan Lokasi Terpilih (Custom Pin) & Lokasi GPS */}
+        {/* BOTTOM ACTION CARD: Lokasi Terpilih (Clean Single Action Bar) */}
         <div className="wa-loc-bottom-card">
-          {/* Pilihan 1: Lokasi Terpilih di Peta (Custom Pin Point) */}
           <div
-            onClick={handleSendCustomLocation}
+            onClick={handleSendLocation}
             className="wa-loc-action-row wa-loc-row-custom"
           >
             <div className="wa-loc-icon-circle wa-circle-custom">
@@ -416,47 +401,11 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
               disabled={sending}
               onClick={e => {
                 e.stopPropagation();
-                handleSendCustomLocation();
+                handleSendLocation();
               }}
               className="wa-loc-send-btn-chip wa-btn-chip-primary"
             >
-              {sending ? <Icons.Spinner /> : 'Kirim Pin Ini'}
-            </button>
-          </div>
-
-          <div className="wa-loc-card-divider" />
-
-          {/* Pilihan 2: Lokasi Anda Saat Ini (GPS) */}
-          <div
-            onClick={handleSendGpsLocation}
-            className="wa-loc-action-row wa-loc-row-gps"
-          >
-            <div className="wa-loc-icon-circle wa-circle-gps">
-              <Icons.GpsTarget />
-            </div>
-
-            <div className="wa-loc-action-details">
-              <div className="wa-loc-action-title">
-                Kirim lokasi perangkat saat ini
-              </div>
-              <div className="wa-loc-action-sub wa-loc-green-acc">
-                {currentAddress
-                  ? currentAddress
-                  : gpsCoords?.accuracy && gpsCoords.accuracy <= 30
-                    ? `GPS Presisi (±${gpsCoords.accuracy}m)`
-                    : 'Titik GPS terdeteksi'}
-              </div>
-            </div>
-            <button
-              type="button"
-              disabled={sending}
-              onClick={e => {
-                e.stopPropagation();
-                handleSendGpsLocation();
-              }}
-              className="wa-loc-send-btn-chip wa-btn-chip-secondary"
-            >
-              Kirim GPS
+              {sending ? <Icons.Spinner /> : 'Kirim Lokasi'}
             </button>
           </div>
         </div>

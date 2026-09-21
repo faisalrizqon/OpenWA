@@ -355,27 +355,16 @@
   border: none !important;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
 }
-
 .wa-btn-chip-primary {
-  background: #ef4444 !important;
+  background: #00a884 !important;
   color: #ffffff !important;
 }
 
 .wa-btn-chip-primary:hover {
-  background: #dc2626 !important;
-  transform: scale(1.04) !important;
+  background: #008f6f !important;
+  transform: scale(1.03) !important;
+  box-shadow: 0 4px 8px rgba(0, 168, 132, 0.3) !important;
 }
-
-.wa-btn-chip-secondary {
-  background: #16a34a !important;
-  color: #ffffff !important;
-}
-
-.wa-btn-chip-secondary:hover {
-  background: #15803d !important;
-  transform: scale(1.04) !important;
-}
-
 @keyframes waSpin {
   from {
     transform: rotate(0deg);
