@@ -663,6 +663,57 @@ body.__in_iframe .chats-page .chats-layout {
   white-space: nowrap;
 }
 
+.chats-page .chat-item-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.chats-page .chat-pinned-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  transform: rotate(45deg);
+}
+
+.chats-page .chat-pinned-icon svg {
+  fill: currentColor;
+}
+
+.chats-page .chat-item-pin-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.chats-page .chat-item-card:hover .chat-item-pin-btn {
+  display: inline-flex;
+}
+
+.chats-page .chat-item-pin-btn:hover {
+  background: var(--bg-light);
+  color: var(--text-primary);
+}
+
+.chats-page .chat-item-pin-btn.is-pinned {
+  color: #16a34a;
+}
+
+.chats-page .chat-item-pin-btn.is-pinned svg {
+  transform: rotate(45deg);
+  fill: currentColor;
+}
+
 /* =============================================================================
    CHAT ROOM: Right Column
    ============================================================================= */
@@ -806,6 +857,44 @@ body.__in_iframe .chats-page .chats-layout {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.chats-page .room-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chats-page .room-pin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-white, #ffffff);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chats-page .room-pin-btn:hover {
+  background: var(--bg-light);
+  color: var(--text-primary);
+}
+
+.chats-page .room-pin-btn.active {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #16a34a;
+}
+
+.chats-page .room-pin-btn.active svg {
+  transform: rotate(45deg);
+  fill: currentColor;
 }
 
 .chats-page .room-messages {
@@ -1299,7 +1388,8 @@ body.__in_iframe .chats-page .chats-layout {
 
 .chats-page .attach-tray-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
+  max-width: 520px;
   align-items: center;
   gap: 0.25rem;
   width: 100%;
@@ -1366,6 +1456,9 @@ body.__in_iframe .chats-page .chats-layout {
   background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
 }
 
+.chats-page .attach-contact {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+}
 .chats-page .attach-label {
   font-size: 0.75rem;
   font-weight: 500;

@@ -4,7 +4,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { nextReconnectState } from '../utils/reconnectState';
 import { applyIncomingToChatList } from '../utils/chatList';
 import { filterChats, filterChannels, groupStatusesByContact } from '../utils/chatFilters';
-import { ArrowLeft, Loader2, Megaphone, CircleDashed, AlertCircle, MessageSquare, Maximize2, Minimize2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Megaphone, CircleDashed, AlertCircle, MessageSquare, Maximize2, Minimize2, Pin } from 'lucide-react';
 import { useProfilePicture } from '../hooks/useProfilePicture';
 import { useProfilePictures } from '../hooks/useProfilePictures';
 import { useResolvedPhone } from '../hooks/useResolvedPhone';
@@ -369,7 +369,10 @@ export function Chats() {
       try {
         setLoadingChats(true);
         const data = await sessionApi.getChats(sessionId);
-        const sorted = [...data].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        const sorted = [...data].sort((a, b) => {
+          if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
+          return (b.timestamp || 0) - (a.timestamp || 0);
+        });
         setChats(sorted);
       } catch (err) {
         showErrorToast(t('chats.errors.loadChats'), err instanceof Error ? err.message : undefined);
@@ -736,6 +739,47 @@ export function Chats() {
     }
   };
 
+  const handleTogglePin = useCallback(
+    async (chat: Chat) => {
+      if (!selectedSessionId) return;
+      const nextPinned = !chat.pinned;
+      const sortWithPins = (list: Chat[]) =>
+        [...list].sort((a, b) => {
+          if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
+          return (b.timestamp || 0) - (a.timestamp || 0);
+        });
+
+      // Optimistic update
+      setChats(prev => sortWithPins(prev.map(c => (c.id === chat.id ? { ...c, pinned: nextPinned } : c))));
+      if (activeChat?.id === chat.id) {
+        setActiveChat(prev => (prev ? { ...prev, pinned: nextPinned } : null));
+      }
+
+      try {
+        const res = await sessionApi.pinChat(selectedSessionId, chat.id, nextPinned);
+        if (!res.success && nextPinned) {
+          showWarningToast(t('chats.pinLimitWarning', 'Maksimal 3 chat yang dapat disematkan'));
+          // Revert
+          setChats(prev => sortWithPins(prev.map(c => (c.id === chat.id ? { ...c, pinned: false } : c))));
+          if (activeChat?.id === chat.id) {
+            setActiveChat(prev => (prev ? { ...prev, pinned: false } : null));
+          }
+        }
+      } catch (err) {
+        showErrorToast(
+          t('chats.errors.pinFailed', 'Gagal mengubah status semat chat'),
+          err instanceof Error ? err.message : undefined,
+        );
+        // Revert
+        setChats(prev => sortWithPins(prev.map(c => (c.id === chat.id ? { ...c, pinned: chat.pinned } : c))));
+        if (activeChat?.id === chat.id) {
+          setActiveChat(prev => (prev ? { ...prev, pinned: chat.pinned } : null));
+        }
+      }
+    },
+    [selectedSessionId, activeChat, t, showWarningToast, showErrorToast],
+  );
+
   // Side effects when the active chat changes: mark-as-read on the gateway + clear sidebar unread badge.
   // The message-history fetch is driven by useChatMessages; scroll restoration is driven by
   // useChatScrollPosition (both keyed off activeChat?.id). Deliberately keying off `activeChat?.id`
@@ -1032,6 +1076,7 @@ export function Chats() {
               activeChatId: activeChat?.id,
               pictures: listPics.data,
               onSelectChat: setActiveChat,
+              onTogglePin: handleTogglePin,
             }}
             channelsTab={{
               engineLoading: currentEngine.isLoading,
@@ -1088,6 +1133,17 @@ export function Chats() {
                       {activeChat.id}
                     </span>
                   </div>
+                  <div className="room-header-actions">
+                    <button
+                      type="button"
+                      className={`room-pin-btn ${activeChat.pinned ? 'active' : ''}`}
+                      onClick={() => handleTogglePin(activeChat)}
+                      title={activeChat.pinned ? t('chats.unpinChat', 'Lepas Sematan') : t('chats.pinChat', 'Sematkan Chat')}
+                      aria-label={activeChat.pinned ? t('chats.unpinChat', 'Lepas Sematan') : t('chats.pinChat', 'Sematkan Chat')}
+                    >
+                      <Pin size={18} />
+                    </button>
+                  </div>
                 </header>
 
                 {/* Messages body (list, media, reactions, scroll-to-bottom) — components/chats/ChatThread. */}
@@ -1128,6 +1184,7 @@ export function Chats() {
                   setAttachment={setAttachment}
                   previewUrl={previewUrl}
                   setPreviewUrl={setPreviewUrl}
+                  chats={chats}
                 />
               </div>
             ) : activeChannel ? (

@@ -439,6 +439,7 @@ export interface SendContactPayload {
   chatId: string;
   contactName: string;
   contactNumber: string;
+  quotedMessageId?: string;
 }
 
 export interface SendPollPayload {

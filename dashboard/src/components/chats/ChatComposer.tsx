@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Paperclip, Smile, X, MapPin, Image, Camera, FileText, Headphones, Keyboard } from 'lucide-react';
+import { Loader2, Paperclip, Smile, X, MapPin, Image, Camera, FileText, Headphones, Keyboard, User } from 'lucide-react';
 import { messageApi, type Chat, type MessageType } from '../../services/api';
 import { type ChatMessageView } from '../../utils/chatMessages';
 import { promoteChatWithSnippet } from '../../utils/chatList';
@@ -11,6 +11,7 @@ import { useRole } from '../../hooks/useRole';
 import { useToast } from '../../hooks/useToast';
 import type { ScrollDirection } from '../../utils/scrollDecision';
 import { LocationShareModal, type LocationData } from './LocationShareModal';
+import { ContactShareModal, type ContactShareData } from './ContactShareModal';
 import { EmojiStickerPicker } from './EmojiStickerPicker';
 
 // Map an attachment MIME type to the neutral MessageType for the optimistic outgoing bubble, so the
@@ -63,6 +64,7 @@ interface ChatComposerProps {
   setAttachment: Dispatch<SetStateAction<StagedAttachment | null>>;
   previewUrl: string | null;
   setPreviewUrl: Dispatch<SetStateAction<string | null>>;
+  chats?: Chat[];
 }
 
 // The composer half of the chat room: attachment preview, emoji panel, reply banner, and the input
@@ -82,6 +84,7 @@ function ChatComposer({
   setAttachment,
   previewUrl,
   setPreviewUrl,
+  chats,
 }: ChatComposerProps) {
   const { t } = useTranslation();
   const { canWrite } = useRole();
@@ -93,6 +96,7 @@ function ChatComposer({
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
   const [showAttachMenu, setShowAttachMenu] = useState<boolean>(false);
   const [showLocationModal, setShowLocationModal] = useState<boolean>(false);
+  const [showContactModal, setShowContactModal] = useState<boolean>(false);
   // Monotonic token invalidating an in-flight attachment FileReader: picking a second file (or
   // removing the attachment) before `onload` fires must win over the late-arriving bytes —
   // otherwise the slower read overwrites the newer pick. Same pattern as composeImageReadSeq.
@@ -172,14 +176,8 @@ function ChatComposer({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [showAttachMenu]);
-  // 5. Handle file selection & base64 conversion
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // allow re-picking the same file after a rejection or removal
-    if (!file) return;
-
-    // Reject before base64-encoding: an oversized pick would inflate ~1.33x into the backend body
-    // cap, and the 413 only applies after the whole body is uploaded — surface the toast now.
+  // 5. Handle file selection, paste & base64 conversion
+  const processFile = (file: File) => {
     if (file.size > MEDIA_UPLOAD_MAX_BYTES) {
       showErrorToast(t('chats.errors.fileTooLarge'));
       return;
@@ -194,14 +192,81 @@ function ChatComposer({
     const myRead = ++attachmentReadSeq.current;
     const reader = new FileReader();
     reader.onload = event => {
-      // A newer pick, a removal, or an unmount since the read started supersedes these bytes.
       if (attachmentReadSeq.current !== myRead) return;
       const dataUrl = event.target?.result as string;
       const base64Data = dataUrl.split(',')[1];
-      setAttachment({ file, base64: base64Data, mimetype: file.type, filename: file.name });
+      const filename = file.name || `image-${Date.now()}.${file.type.split('/')[1] || 'png'}`;
+      setAttachment({ file, base64: base64Data, mimetype: file.type || 'image/png', filename });
     };
     reader.readAsDataURL(file);
   };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-picking the same file after a rejection or removal
+    if (!file) return;
+    processFile(file);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    if (!canWrite || sending) return;
+    const clipboardData = e.clipboardData;
+    if (!clipboardData) return;
+
+    const items = clipboardData.items;
+    if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            processFile(file);
+            return;
+          }
+        }
+      }
+    }
+
+    const files = clipboardData.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.type.startsWith('image/')) {
+          e.preventDefault();
+          processFile(file);
+          return;
+        }
+      }
+    }
+  };
+
+  // Global paste handler to capture pasted screenshots while the chat room is active
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      if (!canWrite || sending) return;
+      const activeEl = document.activeElement;
+      if (activeEl && activeEl !== textInputRef.current && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        return;
+      }
+      const items = e.clipboardData?.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.startsWith('image/')) {
+            const file = items[i].getAsFile();
+            if (file) {
+              e.preventDefault();
+              processFile(file);
+              textInputRef.current?.focus();
+              return;
+            }
+          }
+        }
+      }
+    };
+    document.addEventListener('paste', handleGlobalPaste);
+    return () => document.removeEventListener('paste', handleGlobalPaste);
+  }, [canWrite, sending]);
 
   const handleRemoveAttachment = () => {
     attachmentReadSeq.current += 1; // an in-flight read must not resurrect the removed attachment
@@ -456,6 +521,56 @@ function ChatComposer({
     }
   };
 
+  const handleSendContact = async (contact: ContactShareData) => {
+    if (!canWrite || !selectedSessionId || !activeChat) return;
+
+    const tempId = `temp-contact-${Date.now()}`;
+    const cleanNumber = contact.number.replace(/[^0-9+]/g, '');
+    const vcardBody = `BEGIN:VCARD\nVERSION:3.0\nFN:${contact.name}\nTEL;type=CELL;waid=${cleanNumber.replace(/^\+/, '')}:${contact.number}\nEND:VCARD`;
+
+    const tempMessage: ChatMessageView = {
+      id: tempId,
+      chatId: activeChat.id,
+      from: selectedSessionId,
+      to: activeChat.id,
+      body: vcardBody,
+      type: 'contact',
+      direction: 'outgoing',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      timestamp: Math.floor(Date.now() / 1000),
+    };
+
+    appendMessage(selectedSessionId, activeChat.id, tempMessage);
+    onMessageAppended('outgoing');
+    setShowContactModal(false);
+
+    try {
+      const result = await messageApi.sendContact(selectedSessionId, {
+        chatId: activeChat.id,
+        contactName: contact.name,
+        contactNumber: contact.number,
+        quotedMessageId: replyingTo?.id,
+      });
+
+      const sendKey = messagesQueryKey(selectedSessionId, activeChat.id);
+      const reconciled: ChatMessageView = {
+        ...tempMessage,
+        id: result.messageId,
+        waMessageId: result.messageId,
+        status: 'sent',
+      };
+      upsertCachedMessage(queryClient, sendKey, reconciled, { dropId: tempId });
+
+      const snippet = `👤 ${contact.name}`;
+      const sentAt = Math.floor(Date.now() / 1000);
+      setChats(prevChats => promoteChatWithSnippet(prevChats, activeChat.id, snippet, sentAt));
+    } catch (err) {
+      showErrorToast(t('chats.errors.sendFailed', 'Gagal mengirim kontak'), err instanceof Error ? err.message : undefined);
+      updateMessage(selectedSessionId, activeChat.id, tempId, { status: 'failed' });
+    }
+  };
+
   return (
     <>
       {/* Attachment preview banner */}
@@ -523,6 +638,20 @@ function ChatComposer({
             <button
               type="button"
               className="attach-item"
+              onClick={() => {
+                setShowAttachMenu(false);
+                setShowContactModal(true);
+              }}
+              disabled={!canWrite || sending}
+            >
+              <div className="attach-icon-circle attach-contact">
+                <User size={24} />
+              </div>
+              <span className="attach-label">{t('chats.media.contact', 'Kontak')}</span>
+            </button>
+            <button
+              type="button"
+              className="attach-item"
               onClick={() => handlePickMediaType('document')}
               disabled={!canWrite || sending}
             >
@@ -569,7 +698,7 @@ function ChatComposer({
 
       {/* Message input bar */}
       <footer className="room-input-footer">
-        <form onSubmit={handleSend} className="input-form">
+        <form onSubmit={handleSend} onPaste={handlePaste} className="input-form">
           <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} />
 
           <button
@@ -597,6 +726,7 @@ function ChatComposer({
             onChange={e => setMessageInput(e.target.value)}
             disabled={!canWrite || sending}
             className="message-text-input"
+            onPaste={handlePaste}
           />
 
           <button
@@ -637,6 +767,14 @@ function ChatComposer({
         onClose={() => setShowLocationModal(false)}
         onSend={handleSendLocation}
         sending={sending}
+      />
+
+      <ContactShareModal
+        open={showContactModal}
+        onClose={() => setShowContactModal(false)}
+        onSend={handleSendContact}
+        sending={sending}
+        chats={chats}
       />
     </>
   );
