@@ -39,7 +39,7 @@ const WASendIcon = ({ size = 26, className = "wa-send-icon", style = {} }: { siz
     preserveAspectRatio="xMidYMid meet"
     fill="currentColor"
   >
-    <path d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"></path>
+    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
   </svg>
 );
 
@@ -553,7 +553,7 @@ function ChatComposer({
             className="btn-send-message"
             aria-label={t('chats.send')}
           >
-            {sending ? <Loader2 className="animate-spin" size={24} /> : <WASendIcon size={26} style={{ marginLeft: 2 }} />}
+            {sending ? <Loader2 className="animate-spin" size={24} /> : <WASendIcon size={24} style={{ marginLeft: 2 }} />}
           </button>
         </form>
       </footer>

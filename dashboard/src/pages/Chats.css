@@ -1045,18 +1045,17 @@ body.__in_iframe .chats-page .chats-layout {
 }
 
 .chats-page .btn-send-message:disabled {
-  /* Keep the brand silhouette readable while clearly inactive — a bare gray-on-gray glyph
-     reads as "no button here" rather than "send, disabled". */
+  /* Keep the brand silhouette readable while clearly inactive */
   background: var(--primary);
   color: #fff;
-  opacity: 0.55;
+  opacity: 0.65;
   cursor: not-allowed;
   box-shadow: none;
 }
 
 .chats-page .btn-send-message svg {
-  width: 26px !important;
-  height: 26px !important;
+  width: 24px !important;
+  height: 24px !important;
 }
 
 .chats-page .btn-send-message svg:not(.animate-spin) {
