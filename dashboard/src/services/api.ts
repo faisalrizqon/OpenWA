@@ -833,6 +833,11 @@ export const sessionApi = {
       method: 'POST',
       body: JSON.stringify({ chatId }),
     }),
+  pinChat: (id: string, chatId: string, pin: boolean) =>
+    request<{ success: boolean }>(`/sessions/${id}/chats/pin`, {
+      method: 'POST',
+      body: JSON.stringify({ chatId, pin }),
+    }),
   // `offset` counts DB rows already fetched for this chat, never rendered rows: the thread merges
   // these with engine history, so paging by the merged length would skip DB rows. `total` is not
   // read to decide whether an older page exists — a page short of `limit` is; a chat with live

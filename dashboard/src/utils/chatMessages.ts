@@ -34,6 +34,7 @@ export function mapEngineHistoryMessage(h: EngineHistoryMessage): ChatMessage {
       }
       if (h.quotedMessage) metadata.quotedMessage = h.quotedMessage;
       if (h.call) metadata.call = h.call;
+      if (h.location) metadata.location = h.location;
       return Object.keys(metadata).length > 0 ? metadata : undefined;
     })(),
   };
@@ -149,6 +150,7 @@ export function liveMessageMetadata(msg: {
   media?: MessageMedia;
   quotedMessage?: { id: string; body: string };
   call?: { video: boolean; missed: boolean };
+  location?: { latitude: number; longitude: number; description?: string; address?: string; url?: string };
   buttons?: Array<{ id: string; text: string }>;
   metadata?: ChatMessageView['metadata'];
 }): ChatMessageView['metadata'] {
@@ -157,6 +159,7 @@ export function liveMessageMetadata(msg: {
   if (msg.media) metadata.media = msg.media;
   if (msg.quotedMessage) metadata.quotedMessage = msg.quotedMessage;
   if (msg.call) metadata.call = msg.call;
+  if (msg.location) metadata.location = msg.location;
   if (msg.buttons?.length) metadata.buttons = msg.buttons;
   return Object.keys(metadata).length > 0 ? metadata : undefined;
 }
@@ -222,10 +225,10 @@ function mergeMessageMetadata(
   if (media) merged.media = media;
   const quotedMessage = incoming.quotedMessage ?? existing.quotedMessage;
   if (quotedMessage) merged.quotedMessage = quotedMessage;
-  const reactions = incoming.reactions ?? existing.reactions;
-  if (reactions) merged.reactions = reactions;
   const call = incoming.call ?? existing.call;
   if (call) merged.call = call;
+  const location = incoming.location ?? existing.location;
+  if (location) merged.location = location;
   const buttons = incoming.buttons ?? existing.buttons;
   if (buttons?.length) merged.buttons = buttons;
   return Object.keys(merged).length > 0 ? merged : undefined;

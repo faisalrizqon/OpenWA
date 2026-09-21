@@ -149,3 +149,39 @@ test('promoteChatWithSnippet leaves an unknown chat alone rather than inventing 
 
   assert.equal(promoteChatWithSnippet(before, 'gone@c.us', 'x', 1), before);
 });
+test('applyIncomingToChatList and promoteChatWithSnippet keep pinned chats above unpinned chats', () => {
+  const p1 = chat('p1@c.us', { pinned: true, timestamp: 300 });
+  const p2 = chat('p2@c.us', { pinned: true, timestamp: 200 });
+  const u1 = chat('u1@c.us', { pinned: false, timestamp: 100 });
+  const u2 = chat('u2@c.us', { pinned: false, timestamp: 50 });
+  const list = [p1, p2, u1, u2];
+
+  // When unpinned u2 receives a message, it moves to the top of unpinned chats (after p1, p2)
+  const { chats: afterIncoming } = applyIncomingToChatList(
+    list,
+    { chatId: 'u2@c.us', body: 'incoming', type: 'text', timestamp: 400 },
+    { locationLabel: LOCATION },
+  );
+  assert.deepEqual(
+    afterIncoming.map(c => c.id),
+    ['p1@c.us', 'p2@c.us', 'u2@c.us', 'u1@c.us'],
+  );
+
+  // When pinned p2 receives a message, it moves to index 0 (top of all chats)
+  const { chats: afterPinnedIncoming } = applyIncomingToChatList(
+    list,
+    { chatId: 'p2@c.us', body: 'pinned incoming', type: 'text', timestamp: 500 },
+    { locationLabel: LOCATION },
+  );
+  assert.deepEqual(
+    afterPinnedIncoming.map(c => c.id),
+    ['p2@c.us', 'p1@c.us', 'u1@c.us', 'u2@c.us'],
+  );
+
+  // When sending into unpinned u1, it moves below pinned chats
+  const afterPromote = promoteChatWithSnippet(list, 'u1@c.us', 'sent', 600);
+  assert.deepEqual(
+    afterPromote.map(c => c.id),
+    ['p1@c.us', 'p2@c.us', 'u1@c.us', 'u2@c.us'],
+  );
+});

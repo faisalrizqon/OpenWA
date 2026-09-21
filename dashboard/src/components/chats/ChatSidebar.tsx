@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, CircleDashed, Loader2, Maximize2, Megaphone, Minimize2, Plus } from 'lucide-react';
+import { AlertCircle, CircleDashed, Loader2, Maximize2, Megaphone, Minimize2, Plus, Pin } from 'lucide-react';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { Channel, Chat, ContactStatusGroup, SearchHit } from '../../services/api';
@@ -25,6 +25,7 @@ interface ChatSidebarProps {
     activeChatId?: string;
     pictures?: Record<string, string | null>;
     onSelectChat: (chat: Chat) => void;
+    onTogglePin?: (chat: Chat) => void;
   };
   channelsTab: {
     engineLoading: boolean;
@@ -169,15 +170,36 @@ function ChatSidebar({
             <span className="chat-item-snippet" title={formatLastMessageSnippet(chat)}>
               {formatLastMessageSnippet(chat) || <span className="no-message">{t('chats.noMessageYet')}</span>}
             </span>
-            {chat.unreadCount > 0 && (
-              <span
-                className="chat-unread-badge"
-                title={t('chats.unreadBadge', { count: chat.unreadCount })}
-                aria-label={t('chats.unreadBadge', { count: chat.unreadCount })}
-              >
-                {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
-              </span>
-            )}
+            <div className="chat-item-meta-right">
+              {chat.pinned && (
+                <span className="chat-pinned-icon" title={t('chats.pinned', 'Disematkan')}>
+                  <Pin size={13} />
+                </span>
+              )}
+              {chat.unreadCount > 0 && (
+                <span
+                  className="chat-unread-badge"
+                  title={t('chats.unreadBadge', { count: chat.unreadCount })}
+                  aria-label={t('chats.unreadBadge', { count: chat.unreadCount })}
+                >
+                  {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                </span>
+              )}
+              {chatsTab.onTogglePin && (
+                <button
+                  type="button"
+                  className={`chat-item-pin-btn ${chat.pinned ? 'is-pinned' : ''}`}
+                  title={chat.pinned ? t('chats.unpinChat', 'Lepas Sematan') : t('chats.pinChat', 'Sematkan Chat')}
+                  aria-label={chat.pinned ? t('chats.unpinChat', 'Lepas Sematan') : t('chats.pinChat', 'Sematkan Chat')}
+                  onClick={e => {
+                    e.stopPropagation();
+                    chatsTab.onTogglePin?.(chat);
+                  }}
+                >
+                  <Pin size={13} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

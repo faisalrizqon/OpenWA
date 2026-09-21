@@ -15,6 +15,7 @@ export interface ChatListEntry {
   lastMessage?: string;
   timestamp?: number;
   unreadCount?: number;
+  pinned?: boolean;
 }
 
 interface IncomingMessageLike {
@@ -115,7 +116,8 @@ export function applyIncomingToChatList<T extends ChatListEntry>(
     target.unreadCount = (target.unreadCount || 0) + 1;
   }
   updated.splice(index, 1);
-  updated.unshift(target);
+  const insertIndex = target.pinned ? 0 : updated.findIndex(c => !c.pinned);
+  updated.splice(insertIndex === -1 ? updated.length : insertIndex, 0, target);
   return { chats: updated, needsSidebarRefetch: false };
 }
 
@@ -134,6 +136,7 @@ export function promoteChatWithSnippet<T extends ChatListEntry>(
   const updated = [...chats];
   const target = { ...updated[index], lastMessage: snippet, timestamp };
   updated.splice(index, 1);
-  updated.unshift(target);
+  const insertIndex = target.pinned ? 0 : updated.findIndex(c => !c.pinned);
+  updated.splice(insertIndex === -1 ? updated.length : insertIndex, 0, target);
   return updated;
 }

@@ -6,7 +6,7 @@ import { getMediaSrc, senderKey, type ChatMessageView } from '../../utils/chatMe
 import { shouldFetchOlderMessages } from '../../utils/scrollDecision';
 import MessageBody from './MessageBody';
 import ContactMessageCard from './ContactMessageCard';
-
+import LocationMapPreview from './LocationMapPreview';
 function formatDateDivider(timestamp: number): string {
   const d = new Date(timestamp * 1000);
   const now = new Date();
@@ -321,23 +321,40 @@ function ChatThread({
             // mediaInfo gate. The raw body (a base64 thumbnail / empty token) is suppressed below.
             if (msg.type === 'location') {
               // WhatsApp location messages carry a base64 JPEG map-preview thumbnail in `body`.
-              const thumb = msg.body && msg.body.length > 100 && !msg.body.includes(' ') ? `data:image/jpeg;base64,${msg.body}` : '';
+              const thumb = msg.body && msg.body.length > 100 && !msg.body.includes(' ') && !msg.body.includes(',') ? `data:image/jpeg;base64,${msg.body}` : '';
               const loc = msg.metadata?.location;
-              const mapsUrl = loc?.url || (loc?.latitude && loc?.longitude ? `https://www.google.com/maps?q=${loc.latitude},${loc.longitude}` : undefined);
-              const title = loc?.description || (!thumb && msg.body ? msg.body : t('chats.media.location', 'Location'));
+              let lat = loc?.latitude;
+              let lng = loc?.longitude;
+              if (lat === undefined || lng === undefined) {
+                if (loc?.url) {
+                  const m = loc.url.match(/q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+                  if (m) {
+                    lat = parseFloat(m[1]);
+                    lng = parseFloat(m[2]);
+                  }
+                } else if (msg.body) {
+                  const m = msg.body.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
+                  if (m) {
+                    lat = parseFloat(m[1]);
+                    lng = parseFloat(m[2]);
+                  }
+                }
+              }
+              const mapsUrl = loc?.url || (typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng) ? `https://www.google.com/maps?q=${lat},${lng}` : undefined);
+              const title = loc?.description || (!thumb && msg.body && !msg.body.match(/^-?\d+\.\d+/) ? msg.body : t('chats.media.location', 'Location'));
               return (
                 <div
                   className="message-location"
                   onClick={() => mapsUrl && window.open(mapsUrl, '_blank', 'noopener,noreferrer')}
                   title={mapsUrl ? 'Buka di Google Maps' : undefined}
                 >
-                  {thumb ? (
-                    <img ref={measureMedia} src={thumb} alt="" onLoad={onMediaLoad} className="chat-location-media" />
-                  ) : (
-                    <div className="chat-location-card">
-                      <div className="chat-location-pin-icon">📍</div>
-                    </div>
-                  )}
+                  <LocationMapPreview
+                    latitude={lat}
+                    longitude={lng}
+                    thumbnail={thumb}
+                    onMediaLoad={onMediaLoad}
+                    measureMedia={measureMedia}
+                  />
                   <div className="location-details">
                     <span className="location-title">{title}</span>
                     {loc?.address && <span className="location-address">{loc.address}</span>}

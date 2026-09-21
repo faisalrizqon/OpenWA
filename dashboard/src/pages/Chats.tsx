@@ -73,6 +73,7 @@ interface IncomingWsMessage {
   // The backend emits `call` as a top-level field on the live `message.received` event (it's only
   // folded into `metadata` on the persisted/history path), so declare it here to carry it through.
   call?: { video: boolean; missed: boolean };
+  location?: { latitude: number; longitude: number; description?: string; address?: string; url?: string };
   /** Business prompt choices (Baileys); top-level on the live event, folded into metadata for the UI. */
   buttons?: Array<{ id: string; text: string }>;
   metadata?: ChatMessageView['metadata'];
