@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '../Modal';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-control-geocoder/dist/Control.Geocoder.css';
 import './LocationShareModal.css';
 
 export interface LocationData {
@@ -151,7 +152,10 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
 
     let destroyed = false;
 
-    import('leaflet').then(L => {
+    Promise.all([
+      import('leaflet'),
+      import('leaflet-control-geocoder'),
+    ]).then(([L, geocoderModule]) => {
       if (destroyed || !mapContainerRef.current) return;
 
       if (mapInstanceRef.current) {
@@ -174,6 +178,40 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
         subdomains: ['0', '1', '2', '3'],
         maxZoom: 20,
       }).addTo(map);
+      // Community Search Control: leaflet-control-geocoder (Magnifying glass search for Minimarket, SPBU, RS, etc.)
+      try {
+        const createGeocoder = geocoderModule.geocoder;
+        const nominatimGeocoder = new geocoderModule.geocoders.Nominatim({
+          geocodingQueryParams: {
+            'accept-language': 'id,en',
+            countrycodes: 'id',
+          },
+        });
+
+        const geocoderControl = createGeocoder({
+          defaultMarkGeocode: false,
+          position: 'topleft',
+          placeholder: 'Cari Indomaret, SPBU, RS...',
+          errorMessage: 'Lokasi tidak ditemukan',
+          geocoder: nominatimGeocoder,
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        geocoderControl.on('markgeocode', (e: any) => {
+          if (e && e.geocode && e.geocode.center) {
+            const center = e.geocode.center;
+            map.flyTo(center, 17, { animate: true, duration: 0.6 });
+            setPinCoords({ lat: center.lat, lng: center.lng });
+            if (e.geocode.name) {
+              setCurrentTitle(e.geocode.name);
+            }
+          }
+        });
+
+        geocoderControl.addTo(map);
+      } catch {
+        // Fallback gracefully if geocoder init encounters issues
+      }
 
       mapInstanceRef.current = map;
 
