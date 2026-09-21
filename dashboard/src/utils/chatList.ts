@@ -13,6 +13,9 @@
 export interface ChatListEntry {
   id: string;
   lastMessage?: string;
+  lastMessageFromMe?: boolean;
+  lastMessageStatus?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  lastMessageType?: string;
   timestamp?: number;
   unreadCount?: number;
   pinned?: boolean;
@@ -47,6 +50,14 @@ export function formatIncomingSnippet(
   const body = msg.body?.trim();
 
   switch (type) {
+    case 'call_log':
+    case 'call':
+    case 'missed_call':
+      if (body) {
+        if (/video/i.test(body)) return `📹 ${body}`;
+        return `📞 ${body}`;
+      }
+      return '📞 Panggilan tak terjawab';
     case 'location':
       return locationLabel;
     case 'sticker':
@@ -111,6 +122,9 @@ export function applyIncomingToChatList<T extends ChatListEntry>(
   const target = { ...updated[index] };
   const snippet = formatIncomingSnippet(msg, opts.locationLabel);
   target.lastMessage = snippet || target.lastMessage || '';
+  target.lastMessageFromMe = Boolean(msg.fromMe);
+  target.lastMessageStatus = msg.fromMe ? 'sent' : undefined;
+  target.lastMessageType = msg.type?.toLowerCase();
   target.timestamp = msg.timestamp;
   if (!msg.fromMe && opts.activeChatId !== target.id) {
     target.unreadCount = (target.unreadCount || 0) + 1;
@@ -130,11 +144,19 @@ export function promoteChatWithSnippet<T extends ChatListEntry>(
   chatId: string,
   snippet: string,
   timestamp: number,
+  meta?: { fromMe?: boolean; status?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed'; type?: string },
 ): T[] {
   const index = chats.findIndex(c => c.id === chatId);
   if (index === -1) return chats;
   const updated = [...chats];
-  const target = { ...updated[index], lastMessage: snippet, timestamp };
+  const target = {
+    ...updated[index],
+    lastMessage: snippet,
+    timestamp,
+    lastMessageFromMe: meta?.fromMe ?? true,
+    lastMessageStatus: meta?.status ?? 'sent',
+    lastMessageType: meta?.type,
+  };
   updated.splice(index, 1);
   const insertIndex = target.pinned ? 0 : updated.findIndex(c => !c.pinned);
   updated.splice(insertIndex === -1 ? updated.length : insertIndex, 0, target);

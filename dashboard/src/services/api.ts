@@ -231,6 +231,9 @@ export interface Chat {
   unreadCount: number;
   timestamp: number;
   lastMessage?: string;
+  lastMessageFromMe?: boolean;
+  lastMessageStatus?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  lastMessageType?: string;
   archived: boolean;
   pinned: boolean;
   muted: boolean;

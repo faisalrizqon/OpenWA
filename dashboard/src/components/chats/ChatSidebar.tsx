@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, CircleDashed, Loader2, Maximize2, Megaphone, Minimize2, Plus, Pin } from 'lucide-react';
+import { AlertCircle, CircleDashed, Loader2, Maximize2, Megaphone, Minimize2, Plus, Pin, Video, Mic, FileText, MapPin, User, PhoneMissed } from 'lucide-react';
+import { WAStatusTick, WAStickerIcon, WAPhotoIcon } from './WAStatusTick';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { Channel, Chat, ContactStatusGroup, SearchHit } from '../../services/api';
@@ -125,10 +126,58 @@ function ChatSidebar({
 }: ChatSidebarProps) {
   const { t } = useTranslation();
 
-  const formatLastMessageSnippet = (chat: Chat) => {
-    if (chat.lastMessage && chat.lastMessage.trim()) return chat.lastMessage;
-    if (chat.timestamp && chat.timestamp > 0) return '📎 ' + t('chats.media.omitted', 'Media');
-    return '';
+  const renderChatSnippet = (chat: Chat) => {
+    const rawText = chat.lastMessage?.trim();
+    if (!rawText && !chat.timestamp) {
+      return <span className="no-message">{t('chats.noMessageYet')}</span>;
+    }
+
+    const fromMe = Boolean(chat.lastMessageFromMe);
+    const status = chat.lastMessageStatus || (fromMe ? 'sent' : undefined);
+    const text = rawText || t('chats.media.omitted', 'Media');
+    const type = chat.lastMessageType?.toLowerCase();
+
+    let mediaIcon: React.ReactNode = null;
+    let displayText = text;
+
+    if (type === 'sticker' || text.startsWith('🏷️') || /^\[?sticker\]?$/i.test(text)) {
+      mediaIcon = <WAStickerIcon size={14} className="wa-snippet-media-icon" />;
+      displayText = t('chats.media.sticker', 'Sticker');
+    } else if (type === 'image' || text.startsWith('📷') || /^\[?image\]?$/i.test(text) || text.toLowerCase() === 'photo' || text.toLowerCase() === 'foto') {
+      mediaIcon = <WAPhotoIcon size={14} className="wa-snippet-media-icon" />;
+      displayText = text.replace(/^📷\s*/, '').replace(/^\[image\]\s*/i, '') || t('chats.media.photo', 'Photo');
+    } else if (type === 'video' || text.startsWith('🎥') || /^\[?video\]?$/i.test(text)) {
+      mediaIcon = <Video size={14} className="wa-snippet-media-icon" />;
+      displayText = text.replace(/^🎥\s*/, '').replace(/^\[video\]\s*/i, '') || t('chats.media.video', 'Video');
+    } else if (type === 'audio' || type === 'ptt' || text.startsWith('🎤') || text.startsWith('🎵') || /^\[?audio\]?$/i.test(text)) {
+      mediaIcon = <Mic size={14} className="wa-snippet-media-icon" />;
+      displayText = text.replace(/^[🎤🎵]\s*/, '').replace(/^\[audio\]\s*/i, '') || (type === 'ptt' ? 'Pesan suara' : 'Audio');
+    } else if (type === 'document' || text.startsWith('📄') || /^\[?document\]?$/i.test(text)) {
+      mediaIcon = <FileText size={14} className="wa-snippet-media-icon" />;
+      displayText = text.replace(/^📄\s*/, '').replace(/^\[document\]\s*/i, '') || t('chats.media.document', 'Dokumen');
+    } else if (type === 'location' || text.startsWith('📍')) {
+      mediaIcon = <MapPin size={14} className="wa-snippet-media-icon" />;
+      displayText = text.replace(/^📍\s*/, '') || t('chats.media.location', 'Lokasi');
+    } else if (type === 'contact' || type === 'vcard' || text.startsWith('👤')) {
+      mediaIcon = <User size={14} className="wa-snippet-media-icon" />;
+      displayText = text.replace(/^👤\s*/, '') || t('chats.media.contact', 'Kontak');
+    } else if (type === 'call_log' || type === 'call' || type === 'missed_call' || text.startsWith('📞') || text.startsWith('📹')) {
+      const isVideo = /video/i.test(text);
+      mediaIcon = isVideo ? (
+        <Video size={14} className="wa-snippet-media-icon" />
+      ) : (
+        <PhoneMissed size={14} className="wa-snippet-media-icon text-rose-500" />
+      );
+      displayText = text.replace(/^[📞📹]\s*/, '') || t('chats.media.missedCall', 'Panggilan tak terjawab');
+    }
+
+    return (
+      <>
+        {fromMe && <WAStatusTick status={status} size={14} className="wa-snippet-status-tick" />}
+        {mediaIcon}
+        <span className="wa-snippet-text">{displayText}</span>
+      </>
+    );
   };
 
   // Shared row markup for the Chats and Status lists — a plain function (not memoized) since it
@@ -167,8 +216,8 @@ function ChatSidebar({
             {chat.timestamp ? <span className="chat-item-time">{formatChatTime(chat.timestamp)}</span> : null}
           </div>
           <div className="chat-item-bottom">
-            <span className="chat-item-snippet" title={formatLastMessageSnippet(chat)}>
-              {formatLastMessageSnippet(chat) || <span className="no-message">{t('chats.noMessageYet')}</span>}
+            <span className="chat-item-snippet" title={chat.lastMessage || ''}>
+              {renderChatSnippet(chat)}
             </span>
             <div className="chat-item-meta-right">
               {chat.pinned && (

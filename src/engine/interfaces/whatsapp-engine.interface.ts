@@ -545,6 +545,9 @@ export interface ChatSummary {
   unreadCount: number;
   timestamp: number;
   lastMessage?: string;
+  lastMessageFromMe?: boolean;
+  lastMessageStatus?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  lastMessageType?: string;
   /** Archived state, as set via `POST /sessions/{sessionId}/chats/archive`. */
   archived: boolean;
   /** Pinned state, as set via `POST /sessions/{sessionId}/chats/pin`. */

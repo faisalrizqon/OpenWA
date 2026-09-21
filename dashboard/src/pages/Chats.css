@@ -624,12 +624,39 @@ body.__in_iframe .chats-page .chats-layout {
 }
 
 .chats-page .chat-item-snippet {
+  display: inline-flex;
+  align-items: center;
   font-size: 0.8125rem;
-  color: var(--text-muted);
+  color: var(--text-muted, #8696a0);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 180px;
+  flex: 1;
+  min-width: 0;
+  max-width: 220px;
+}
+
+.chats-page .wa-snippet-status-tick {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+
+.chats-page .wa-snippet-media-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--text-muted, #8696a0);
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.chats-page .wa-snippet-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chats-page .chat-item-snippet .no-message {
@@ -1078,14 +1105,24 @@ body.__in_iframe .chats-page .chats-layout {
 }
 
 .chats-page .message-status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.75rem;
+  vertical-align: middle;
+  margin-left: 3px;
 }
 
-.chats-page .message-status-icon.read {
-  /* The WhatsApp blue is 2.13:1 on the outgoing bubble, and these checks are TEXT, not an icon.
-     Darkened to clear 4.5:1 there and on white; the status is also spelled out in aria-label/title,
-     since delivered and read otherwise differ only by this colour. */
-  color: #337592;
+.chats-page .message-status-icon.read,
+.chats-page .wa-tick-read {
+  color: #53bdeb !important;
+}
+
+.chats-page .message-status-icon.sent,
+.chats-page .message-status-icon.delivered,
+.chats-page .wa-tick-sent,
+.chats-page .wa-tick-delivered {
+  color: var(--text-muted, #8696a0);
 }
 
 /* =============================================================================

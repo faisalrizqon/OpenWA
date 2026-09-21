@@ -18,6 +18,15 @@ function formatLastMessagePreview(lastMsg?: { type?: string; body?: string }): s
   const body = lastMsg.body?.trim();
 
   switch (type) {
+    case MessageTypes.CALL_LOG:
+    case 'call_log':
+    case 'call':
+    case 'missed_call':
+      if (body) {
+        if (/video/i.test(body)) return `📹 ${body}`;
+        return `📞 ${body}`;
+      }
+      return '📞 Panggilan tak terjawab';
     case MessageTypes.LOCATION:
     case 'location':
       return '📍 Lokasi';
@@ -61,6 +70,15 @@ function formatLastMessagePreview(lastMsg?: { type?: string; body?: string }): s
       return body || (type && type !== 'chat' && type !== 'text' ? `[${type}]` : undefined);
   }
 }
+function ackToStatus(ack?: number): 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | undefined {
+  if (ack === undefined || ack === null) return undefined;
+  if (ack >= 3) return 'read';
+  if (ack === 2) return 'delivered';
+  if (ack === 1) return 'sent';
+  if (ack === 0) return 'pending';
+  if (ack < 0) return 'failed';
+  return undefined;
+}
 
 export class WwebjsChats {
   constructor(
@@ -101,6 +119,10 @@ export class WwebjsChats {
         continue;
       }
 
+      const rawMsg = chat.lastMessage as unknown as { fromMe?: boolean; ack?: number; type?: string; id?: { fromMe?: boolean } } | undefined;
+      const fromMe = Boolean(rawMsg?.fromMe || rawMsg?.id?.fromMe);
+      const ack = rawMsg?.ack;
+
       summaries.push({
         id,
         name: chat.name || id,
@@ -110,6 +132,9 @@ export class WwebjsChats {
         timestamp: chat.timestamp || 0,
         // Format media, sticker, voice, document, or text preview
         lastMessage: formatLastMessagePreview(chat.lastMessage),
+        lastMessageFromMe: fromMe,
+        lastMessageStatus: fromMe ? ackToStatus(ack) : undefined,
+        lastMessageType: rawMsg?.type?.toLowerCase(),
         archived: Boolean(chat.archived),
         pinned: Boolean(chat.pinned),
         // Chat.isMuted is the current verdict; muteExpiration is wwjs epoch SECONDS with -1 = forever.

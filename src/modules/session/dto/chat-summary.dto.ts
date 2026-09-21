@@ -26,6 +26,15 @@ export class ChatSummaryDto {
   @ApiPropertyOptional({ example: 'hi' })
   lastMessage?: string;
 
+  @ApiPropertyOptional({ example: false })
+  lastMessageFromMe?: boolean;
+
+  @ApiPropertyOptional({ example: 'read', enum: ['pending', 'sent', 'delivered', 'read', 'failed'] })
+  lastMessageStatus?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+
+  @ApiPropertyOptional({ example: 'text' })
+  lastMessageType?: string;
+
   @ApiProperty({ description: 'Archived state, as set via POST /sessions/{sessionId}/chats/archive.', example: false })
   archived!: boolean;
 

@@ -7,6 +7,7 @@ import { shouldFetchOlderMessages } from '../../utils/scrollDecision';
 import MessageBody from './MessageBody';
 import ContactMessageCard from './ContactMessageCard';
 import LocationMapPreview from './LocationMapPreview';
+import { WAStatusTick } from './WAStatusTick';
 function formatDateDivider(timestamp: number): string {
   const d = new Date(timestamp * 1000);
   const now = new Date();
@@ -562,11 +563,7 @@ function ChatThread({
                         aria-label={t(`chats.messageStatus.${msg.status}`)}
                         title={t(`chats.messageStatus.${msg.status}`)}
                       >
-                        {msg.status === 'pending' && '🕒'}
-                        {msg.status === 'sent' && '✓'}
-                        {msg.status === 'delivered' && '✓✓'}
-                        {msg.status === 'read' && '✓✓'}
-                        {msg.status === 'failed' && '⚠️'}
+                        <WAStatusTick status={msg.status} size={15} />
                       </span>
                     )}
                   </div>
