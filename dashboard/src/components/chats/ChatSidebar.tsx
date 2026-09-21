@@ -125,6 +125,14 @@ function ChatSidebar({
   statusTab,
 }: ChatSidebarProps) {
   const { t } = useTranslation();
+  // Sanitize text: remove orphan surrogates/replacement chars and strip leading media emoji safely with /u
+  const cleanSnippetText = (str?: string): string => {
+    if (!str) return '';
+    // 1. Remove orphan surrogates and replacement characters (like diamond question mark)
+    const sanitized = str.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]|\uFFFD/g, '').trim();
+    // 2. Strip leading pictographic emoji if any
+    return sanitized.replace(/^\p{Extended_Pictographic}+[\uFE0F\u200D\s]*/u, '').trim();
+  };
 
   const renderChatSnippet = (chat: Chat) => {
     const rawText = chat.lastMessage?.trim();
@@ -138,37 +146,39 @@ function ChatSidebar({
     const type = chat.lastMessageType?.toLowerCase();
 
     let mediaIcon: React.ReactNode = null;
-    let displayText = text;
+    let displayText = cleanSnippetText(text);
 
     if (type === 'sticker' || text.startsWith('🏷️') || /^\[?sticker\]?$/i.test(text)) {
       mediaIcon = <WAStickerIcon size={14} className="wa-snippet-media-icon" />;
       displayText = t('chats.media.sticker', 'Sticker');
     } else if (type === 'image' || text.startsWith('📷') || /^\[?image\]?$/i.test(text) || text.toLowerCase() === 'photo' || text.toLowerCase() === 'foto') {
       mediaIcon = <WAPhotoIcon size={14} className="wa-snippet-media-icon" />;
-      displayText = text.replace(/^📷\s*/, '').replace(/^\[image\]\s*/i, '') || t('chats.media.photo', 'Photo');
+      displayText = cleanSnippetText(text.replace(/^\[image\]\s*/i, '')) || t('chats.media.photo', 'Photo');
     } else if (type === 'video' || text.startsWith('🎥') || /^\[?video\]?$/i.test(text)) {
       mediaIcon = <Video size={14} className="wa-snippet-media-icon" />;
-      displayText = text.replace(/^🎥\s*/, '').replace(/^\[video\]\s*/i, '') || t('chats.media.video', 'Video');
+      displayText = cleanSnippetText(text.replace(/^\[video\]\s*/i, '')) || t('chats.media.video', 'Video');
     } else if (type === 'audio' || type === 'ptt' || text.startsWith('🎤') || text.startsWith('🎵') || /^\[?audio\]?$/i.test(text)) {
       mediaIcon = <Mic size={14} className="wa-snippet-media-icon" />;
-      displayText = text.replace(/^[🎤🎵]\s*/, '').replace(/^\[audio\]\s*/i, '') || (type === 'ptt' ? 'Pesan suara' : 'Audio');
+      displayText = cleanSnippetText(text.replace(/^\[audio\]\s*/i, '')) || (type === 'ptt' ? 'Pesan suara' : 'Audio');
     } else if (type === 'document' || text.startsWith('📄') || /^\[?document\]?$/i.test(text)) {
       mediaIcon = <FileText size={14} className="wa-snippet-media-icon" />;
-      displayText = text.replace(/^📄\s*/, '').replace(/^\[document\]\s*/i, '') || t('chats.media.document', 'Dokumen');
+      displayText = cleanSnippetText(text.replace(/^\[document\]\s*/i, '')) || t('chats.media.document', 'Dokumen');
     } else if (type === 'location' || text.startsWith('📍')) {
       mediaIcon = <MapPin size={14} className="wa-snippet-media-icon" />;
-      displayText = text.replace(/^📍\s*/, '') || t('chats.media.location', 'Lokasi');
+      displayText = cleanSnippetText(text) || t('chats.media.location', 'Lokasi');
     } else if (type === 'contact' || type === 'vcard' || text.startsWith('👤')) {
       mediaIcon = <User size={14} className="wa-snippet-media-icon" />;
-      displayText = text.replace(/^👤\s*/, '') || t('chats.media.contact', 'Kontak');
-    } else if (type === 'call_log' || type === 'call' || type === 'missed_call' || text.startsWith('📞') || text.startsWith('📹')) {
+      displayText = cleanSnippetText(text) || t('chats.media.contact', 'Kontak');
+    } else if (type === 'call_log' || type === 'call' || type === 'missed_call' || text.startsWith('📞') || text.startsWith('📹') || /panggilan/i.test(text) || /missed call/i.test(text)) {
       const isVideo = /video/i.test(text);
       mediaIcon = isVideo ? (
         <Video size={14} className="wa-snippet-media-icon" />
       ) : (
-        <PhoneMissed size={14} className="wa-snippet-media-icon text-rose-500" />
+        <PhoneMissed size={14} className="wa-snippet-media-icon" style={{ color: '#ea0038' }} />
       );
-      displayText = text.replace(/^[📞📹]\s*/, '') || t('chats.media.missedCall', 'Panggilan tak terjawab');
+      displayText = cleanSnippetText(text) || t('chats.media.missedCall', 'Panggilan tak terjawab');
+    } else if (text.startsWith('Reacted ')) {
+      displayText = text;
     }
 
     return (
@@ -179,7 +189,6 @@ function ChatSidebar({
       </>
     );
   };
-
   // Shared row markup for the Chats and Status lists — a plain function (not memoized) since it
   // closes over render-scoped props (chatsTab.activeChatId, chatsTab.pictures) that already
   // change every render.
