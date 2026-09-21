@@ -282,8 +282,8 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
     onSend({
       latitude: targetLat,
       longitude: targetLng,
-      description: 'Lokasi Saya Saat Ini (GPS)',
-      address: gpsCoords?.accuracy ? `Akurat hingga ${gpsCoords.accuracy} meter` : currentAddress || undefined,
+      description: currentTitle || 'Lokasi Saya Saat Ini',
+      address: currentAddress || `${targetLat.toFixed(5)}, ${targetLng.toFixed(5)}`,
     });
   };
 
@@ -424,13 +424,16 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
 
             <div className="wa-loc-action-details">
               <div className="wa-loc-action-title">
-                Kirim lokasi Anda saat ini
+                Kirim lokasi perangkat saat ini
               </div>
               <div className="wa-loc-action-sub wa-loc-green-acc">
-                {gpsCoords?.accuracy ? `Akurat hingga ${gpsCoords.accuracy} meter` : 'Sesuai GPS perangkat'}
+                {currentAddress
+                  ? currentAddress
+                  : gpsCoords?.accuracy && gpsCoords.accuracy <= 30
+                    ? `GPS Presisi (±${gpsCoords.accuracy}m)`
+                    : 'Titik GPS terdeteksi'}
               </div>
             </div>
-
             <button
               type="button"
               disabled={sending}
