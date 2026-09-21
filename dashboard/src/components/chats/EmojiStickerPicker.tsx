@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Search, Plus, Smile, Image as ImageIcon, X, Sparkles, Wand2 } from 'lucide-react';
 import './EmojiStickerPicker.css';
 
@@ -7,6 +7,7 @@ export interface EmojiStickerPickerProps {
   onSendSticker: (fileBase64: string, mimetype: string) => Promise<void> | void;
   onClose: () => void;
   disabled?: boolean;
+  triggerRef?: React.RefObject<HTMLElement | null>;
 }
 
 // ── Complete Unicode Emoji Dataset with Keywords ──────────────────────────────
@@ -434,7 +435,38 @@ export function EmojiStickerPicker({
   onSendSticker,
   onClose,
   disabled = false,
+  triggerRef,
 }: EmojiStickerPickerProps) {
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (popupRef.current && popupRef.current.contains(target)) {
+        return;
+      }
+      if (triggerRef?.current && triggerRef.current.contains(target)) {
+        return;
+      }
+      onClose();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick, { passive: true });
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose, triggerRef]);
   // Mode: 'emoji' or 'sticker'
   const [activeTab, setActiveTab] = useState<'emoji' | 'sticker'>('sticker');
 
@@ -543,7 +575,7 @@ export function EmojiStickerPicker({
   };
 
   return (
-    <div className="wa-picker-popup">
+    <div ref={popupRef} className="wa-picker-popup">
       {/* 1. TOP SUBHEADER (WhatsApp Native Style with Search on left & Segmented Control in center) */}
       <div className="wa-picker-subnav">
         {/* Left: Search Toggle */}

@@ -661,6 +661,7 @@ body.__in_iframe .chats-page .chats-layout {
   display: flex;
   flex-direction: column;
   height: 100%;
+  position: relative;
 }
 
 .chats-page .room-header {

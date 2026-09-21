@@ -5,11 +5,12 @@
 /* Desktop: Floating popover anchored to bottom-left of chat container */
 .wa-picker-popup {
   position: absolute;
-  bottom: 74px;
-  left: 12px;
-  width: 390px;
-  max-width: calc(100vw - 24px);
-  height: 380px;
+  bottom: 86px;
+  left: 24px;
+  width: 400px;
+  max-width: calc(100% - 48px);
+  height: 420px;
+  max-height: calc(100% - 110px);
   background: var(--bg-white, #ffffff);
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 16px;

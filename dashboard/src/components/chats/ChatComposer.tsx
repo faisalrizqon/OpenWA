@@ -102,6 +102,8 @@ function ChatComposer({
   // invalidates an in-flight read, so its late `onload` drops the bytes instead of staging them
   // against whichever chat is open by then. The attachment state itself lives in the page.
   useEffect(() => {
+    setShowEmojiPicker(false);
+    setShowAttachMenu(false);
     return () => {
       attachmentReadSeq.current += 1;
     };
@@ -110,7 +112,41 @@ function ChatComposer({
   // References
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textInputRef = useRef<HTMLInputElement | null>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement | null>(null);
+  const attachButtonRef = useRef<HTMLButtonElement | null>(null);
+  const attachMenuRef = useRef<HTMLDivElement | null>(null);
 
+  // Outside click & escape listener for attachment tray
+  useEffect(() => {
+    if (!showAttachMenu) return;
+
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (attachMenuRef.current && attachMenuRef.current.contains(target)) {
+        return;
+      }
+      if (attachButtonRef.current && attachButtonRef.current.contains(target)) {
+        return;
+      }
+      setShowAttachMenu(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowAttachMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick, { passive: true });
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showAttachMenu]);
   // 5. Handle file selection & base64 conversion
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -417,7 +453,7 @@ function ChatComposer({
 
       {/* Attachment Tray (WhatsApp Native Style) */}
       {showAttachMenu && (
-        <div className="chats-attach-tray">
+        <div ref={attachMenuRef} className="chats-attach-tray">
           <div className="attach-tray-handle" />
           <div className="attach-tray-grid">
             <button
@@ -512,6 +548,7 @@ function ChatComposer({
           <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} />
 
           <button
+            ref={emojiButtonRef}
             type="button"
             onClick={toggleEmojiPicker}
             disabled={!canWrite || sending}
@@ -538,6 +575,7 @@ function ChatComposer({
           />
 
           <button
+            ref={attachButtonRef}
             type="button"
             onClick={toggleAttachMenu}
             disabled={!canWrite || sending}
@@ -565,6 +603,7 @@ function ChatComposer({
           onSendSticker={handleSendSticker}
           onClose={() => setShowEmojiPicker(false)}
           disabled={!canWrite || sending}
+          triggerRef={emojiButtonRef}
         />
       )}
 
