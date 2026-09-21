@@ -4,7 +4,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { nextReconnectState } from '../utils/reconnectState';
 import { applyIncomingToChatList } from '../utils/chatList';
 import { filterChats, filterChannels, groupStatusesByContact } from '../utils/chatFilters';
-import { ArrowLeft, Loader2, Megaphone, CircleDashed, AlertCircle, MessageSquare, Maximize2, Minimize2, Pin } from 'lucide-react';
+import { ArrowLeft, Loader2, Megaphone, CircleDashed, AlertCircle, MessageSquare, Maximize2, Minimize2, Pin, ZoomIn, UserPlus } from 'lucide-react';
 import { useProfilePicture } from '../hooks/useProfilePicture';
 import { useProfilePictures } from '../hooks/useProfilePictures';
 import { useResolvedPhone } from '../hooks/useResolvedPhone';
@@ -12,6 +12,7 @@ import { formatPhoneForDisplay } from '../utils/formatPhone';
 import {
   sessionApi,
   messageApi,
+  contactApi,
   asMessageType,
   type Session,
   type Chat,
@@ -50,6 +51,7 @@ import ChatThread from '../components/chats/ChatThread';
 import ChatComposer, { type StagedAttachment } from '../components/chats/ChatComposer';
 import StatusMedia from '../components/chats/StatusMedia';
 import StatusComposeModal from '../components/chats/StatusComposeModal';
+import { Modal } from '../components/Modal';
 import './Chats.css';
 import { isMobileUA, pseudoFullscreenStore } from '../utils/pseudoFullscreenStore';
 
@@ -192,7 +194,7 @@ export function Chats() {
     return () => document.body.classList.remove('__in_iframe');
   }, []);
   useDocumentTitle(t('nav.chats'));
-  const { error: showErrorToast, warning: showWarningToast } = useToast();
+  const { error: showErrorToast, warning: showWarningToast, success: showSuccessToast } = useToast();
 
   // Sessions list & active session
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -267,6 +269,68 @@ export function Chats() {
   // Lightbox state for media viewer
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  // Lightbox for profile picture or arbitrary photo zoom
+  const [zoomPhotoLightbox, setZoomPhotoLightbox] = useState<LightboxItem | null>(null);
+
+  // Modal for saving contact to WhatsApp directly
+  const [saveContactTarget, setSaveContactTarget] = useState<{ jid: string; initialName: string; phone: string } | null>(null);
+  const [contactNameInput, setContactNameInput] = useState<string>('');
+  const [savingContact, setSavingContact] = useState<boolean>(false);
+
+  const handleZoomPhoto = useCallback((url: string, name: string) => {
+    setZoomPhotoLightbox({
+      id: 'zoom-' + Date.now(),
+      url,
+      alt: name,
+      senderName: name,
+      timestamp: t('chats.profilePicture', 'Foto Profil'),
+    });
+  }, [t]);
+
+  const handleOpenChat = useCallback((contact: { jid: string; name: string; phone?: string }) => {
+    const found = chats.find(c => c.id === contact.jid);
+    if (found) {
+      setActiveTab('chats');
+      setActiveChat(found);
+      setActiveChannel(null);
+      setActiveStatusContactId(null);
+    } else {
+      const fallbackPhone = formatPhoneForDisplay(contact.phone || contact.jid.split('@')[0]);
+      const syntheticChat: Chat = {
+        id: contact.jid,
+        name: contact.name || fallbackPhone || contact.jid.split('@')[0],
+        isGroup: false,
+        unreadCount: 0,
+        timestamp: Math.floor(Date.now() / 1000),
+        kind: 'individual',
+        archived: false,
+        pinned: false,
+        muted: false,
+      };
+      setActiveChat(syntheticChat);
+      setActiveChannel(null);
+      setActiveStatusContactId(null);
+    }
+  }, [chats]);
+
+  const handleSaveContactSubmit = async () => {
+    if (!saveContactTarget || !selectedSessionId || !contactNameInput.trim()) return;
+    setSavingContact(true);
+    try {
+      await contactApi.upsert(selectedSessionId, saveContactTarget.jid, {
+        firstName: contactNameInput.trim(),
+      });
+      showSuccessToast(t('chats.contactSaved', 'Kontak berhasil disimpan ke WhatsApp!'));
+      setActiveChat(prev => (prev && prev.id === saveContactTarget.jid ? { ...prev, name: contactNameInput.trim() } : prev));
+      void queryClient.invalidateQueries({ queryKey: ['chats', selectedSessionId] });
+      setSaveContactTarget(null);
+    } catch (err) {
+      console.error('Failed to save contact:', err);
+      showErrorToast(t('chats.saveContactFailed', 'Gagal menyimpan kontak'));
+    } finally {
+      setSavingContact(false);
+    }
+  };
   const [replyingTo, setReplyingTo] = useState<ChatMessageView | null>(null);
   // Draft text lives here (not in ChatComposer) so it survives closing/switching the room.
   const [messageInput, setMessageInput] = useState<string>('');
@@ -1104,7 +1168,16 @@ export function Chats() {
                   <button className="room-back" onClick={() => { setActiveChat(null); window.scrollTo(0, 0); }} aria-label={t('common.back')}>
                     <ArrowLeft size={20} />
                   </button>
-                  <div className="room-avatar">
+                  <div
+                    className="room-avatar"
+                    style={{ cursor: activePp.data ? 'pointer' : 'default' }}
+                    onClick={() => {
+                      if (activePp.data) {
+                        handleZoomPhoto(activePp.data, activeChat.name || activeChat.id.split('@')[0]);
+                      }
+                    }}
+                    title={activePp.data ? t('chats.zoomProfilePic', 'Klik untuk memperbesar foto profil') : undefined}
+                  >
                     {activePp.data ? (
                       <img
                         src={activePp.data}
@@ -1134,6 +1207,35 @@ export function Chats() {
                     </span>
                   </div>
                   <div className="room-header-actions">
+                    {activePp.data && (
+                      <button
+                        type="button"
+                        className="room-pin-btn"
+                        onClick={() => handleZoomPhoto(activePp.data!, activeChat.name || activeChat.id.split('@')[0])}
+                        title={t('chats.zoomProfilePic', 'Perbesar Foto Profil')}
+                        aria-label={t('chats.zoomProfilePic', 'Perbesar Foto Profil')}
+                      >
+                        <ZoomIn size={18} />
+                      </button>
+                    )}
+                    {!activeChat.isGroup && (
+                      <button
+                        type="button"
+                        className="room-pin-btn"
+                        onClick={() => {
+                          setSaveContactTarget({
+                            jid: activeChat.id,
+                            initialName: activeChat.name || '',
+                            phone: activePhoneText || activeChat.id.split('@')[0],
+                          });
+                          setContactNameInput(activeChat.name || '');
+                        }}
+                        title={t('chats.saveContact', 'Simpan Kontak ke WhatsApp')}
+                        aria-label={t('chats.saveContact', 'Simpan Kontak ke WhatsApp')}
+                      >
+                        <UserPlus size={18} />
+                      </button>
+                    )}
                     <button
                       type="button"
                       className={`room-pin-btn ${activeChat.pinned ? 'active' : ''}`}
@@ -1167,6 +1269,8 @@ export function Chats() {
                   onReact={handleReactMessage}
                   onDelete={handleDeleteMessage}
                   onClickButton={handleClickButton}
+                  onOpenChat={handleOpenChat}
+                  onZoomPhoto={handleZoomPhoto}
                 />
 
                 {/* Composer: attachment preview, emoji panel, reply banner, input bar —
@@ -1289,6 +1393,84 @@ export function Chats() {
         onClose={() => setLightboxIndex(null)}
         onNavigate={setLightboxIndex}
       />
+
+      {zoomPhotoLightbox && (
+        <MediaLightbox
+          items={[zoomPhotoLightbox]}
+          index={0}
+          onClose={() => setZoomPhotoLightbox(null)}
+          onNavigate={() => {}}
+        />
+      )}
+
+      {saveContactTarget && (
+        <Modal
+          open={Boolean(saveContactTarget)}
+          onClose={() => setSaveContactTarget(null)}
+          title={t('chats.saveContactModalTitle', 'Simpan Kontak ke WhatsApp')}
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setSaveContactTarget(null)}
+                disabled={savingContact}
+              >
+                {t('common.cancel', 'Batal')}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleSaveContactSubmit}
+                disabled={savingContact || !contactNameInput.trim()}
+              >
+                {savingContact ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>{t('common.saving', 'Menyimpan...')}</span>
+                  </>
+                ) : (
+                  t('common.save', 'Simpan ke WhatsApp')
+                )}
+              </button>
+            </div>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
+            <div>
+              <label htmlFor="sc-contact-name" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                {t('chats.contactName', 'Nama Kontak')}
+              </label>
+              <input
+                id="sc-contact-name"
+                type="text"
+                className="form-input"
+                value={contactNameInput}
+                onChange={e => setContactNameInput(e.target.value)}
+                placeholder={t('chats.contactNamePlaceholder', 'Masukkan nama kontak')}
+                autoFocus
+                style={{ width: '100%' }}
+              />
+            </div>
+            <div>
+              <label htmlFor="sc-contact-phone" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                {t('chats.phoneNumber', 'Nomor Telepon')}
+              </label>
+              <input
+                id="sc-contact-phone"
+                type="text"
+                className="form-input"
+                value={saveContactTarget.phone}
+                readOnly
+                disabled
+                aria-label={t('chats.phoneNumber', 'Nomor Telepon')}
+                placeholder={t('chats.phoneNumber', 'Nomor Telepon')}
+                style={{ width: '100%', opacity: 0.8 }}
+              />
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {composeOpen && (
         <StatusComposeModal

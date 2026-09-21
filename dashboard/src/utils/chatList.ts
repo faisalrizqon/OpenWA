@@ -85,6 +85,12 @@ export function formatIncomingSnippet(
     case 'poll_creation':
     case 'poll':
       return '📊 Polling';
+    case 'order':
+      return body ? `🛍️ Pesanan: ${body}` : '🛍️ Pesanan';
+    case 'product':
+      return body ? `🏷️ Produk: ${body}` : '🏷️ Produk';
+    case 'interactive':
+      return body ? `📋 ${body}` : '📋 Pesanan / Pesan Interaktif';
     default:
       if (body?.startsWith('BEGIN:VCARD')) {
         const fnMatch = body.match(/\bFN:(.+)/i);

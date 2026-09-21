@@ -980,8 +980,15 @@ export const contactApi = {
         .map(encodeURIComponent)
         .join(',')}`,
     ),
+  upsert: (sessionId: string, contactId: string, data: { firstName: string; lastName?: string }) =>
+    request<{ success: boolean; message: string }>(
+      `/sessions/${sessionId}/contacts/${encodeURIComponent(contactId)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      },
+    ),
 };
-
 // =============================================================================
 // API Key API
 // =============================================================================

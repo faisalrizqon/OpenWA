@@ -39,6 +39,13 @@ export function mapWwebjsMessageType(raw: string): MessageType {
       return 'order';
     case 'product':
       return 'product';
+    case 'interactive':
+    case 'native_flow':
+    case 'buttons_response':
+    case 'list_response':
+    case 'template_button_reply':
+      // WhatsApp Business interactive shapes carry display text; flatten to text like Baileys (#562)
+      return 'text';
     default:
       return 'unknown';
   }
@@ -95,6 +102,56 @@ export interface RawMessageFields {
 }
 
 /**
+ * Extract display text from wwebjs message, recovering text from interactive / order shapes
+ * when msg.body is empty (#562).
+ */
+export function extractWwebjsBody(msg: RawMessageFields): string {
+  if (typeof msg.body === 'string' && msg.body.trim().length > 0) {
+    return msg.body;
+  }
+  const d = msg._data as Record<string, any> | undefined;
+  if (!d) {
+    return (
+      (typeof msg.title === 'string' ? msg.title : '') ||
+      (typeof msg.description === 'string' ? msg.description : '')
+    );
+  }
+
+  // 1. Interactive message body text
+  if (typeof d.interactiveBody?.text === 'string' && d.interactiveBody.text.trim().length > 0) {
+    return d.interactiveBody.text.trim();
+  }
+  // 2. Interactive header title
+  if (typeof d.interactiveHeader?.title === 'string' && d.interactiveHeader.title.trim().length > 0) {
+    return d.interactiveHeader.title.trim();
+  }
+  // 3. Order title or message
+  if (typeof d.orderTitle === 'string' && d.orderTitle.trim().length > 0) {
+    return d.orderTitle.trim();
+  }
+  if (typeof d.message === 'string' && d.message.trim().length > 0) {
+    return d.message.trim();
+  }
+  // 4. Caption / title / description fallbacks
+  if (typeof d.caption === 'string' && d.caption.trim().length > 0) {
+    return d.caption.trim();
+  }
+  if (typeof d.title === 'string' && d.title.trim().length > 0) {
+    return d.title.trim();
+  }
+  if (typeof d.description === 'string' && d.description.trim().length > 0) {
+    return d.description.trim();
+  }
+  if (typeof msg.title === 'string' && msg.title.trim().length > 0) {
+    return msg.title.trim();
+  }
+  if (typeof msg.description === 'string' && msg.description.trim().length > 0) {
+    return msg.description.trim();
+  }
+  return '';
+}
+
+/**
  * Build the synchronous base of an IncomingMessage from a raw wwebjs message.
  * Async enrichment (media, quoted message, saved-contact name) is layered on by
  * the adapter; this covers the fields available without an await.
@@ -103,6 +160,7 @@ export function buildIncomingMessageBase(msg: RawMessageFields): IncomingMessage
   // For an outgoing (fromMe) message `from` is the account's own JID and `to` is the conversation;
   // for an incoming message it's the reverse. So the chat is `to` when fromMe, else `from`.
   const chatId = msg.fromMe ? msg.to : msg.from;
+  const body = extractWwebjsBody(msg);
   const incoming: IncomingMessage = {
     // Read `$1` before giving up, as the send/ack/status paths do (#762/#765/#773). This runs on the
     // LIVE inbound path (`onMessage`/`onMessageCreate`), so on a renamed build without the build-time
@@ -113,7 +171,7 @@ export function buildIncomingMessageBase(msg: RawMessageFields): IncomingMessage
     from: msg.from,
     to: msg.to,
     chatId,
-    body: msg.body,
+    body,
     type: mapWwebjsMessageType(msg.type),
     timestamp: msg.timestamp,
     fromMe: msg.fromMe,

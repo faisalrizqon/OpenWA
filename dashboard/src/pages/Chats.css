@@ -1299,6 +1299,65 @@ body.__in_iframe .chats-page .chats-layout {
 }
 
 /* =============================================================================
+   WHATSAPP BUSINESS ORDER CARD
+   ============================================================================= */
+.chats-page .message-order-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(37, 211, 102, 0.08);
+  border: 1px solid rgba(37, 211, 102, 0.25);
+  border-radius: 10px;
+  padding: 8px 12px;
+  min-width: 210px;
+  margin: 2px 0;
+}
+
+body[data-theme='dark'] .chats-page .message-order-card,
+html[data-theme='dark'] .chats-page .message-order-card {
+  background: rgba(37, 211, 102, 0.12);
+  border-color: rgba(37, 211, 102, 0.35);
+}
+
+.chats-page .order-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px dashed rgba(37, 211, 102, 0.3);
+  padding-bottom: 4px;
+}
+
+.chats-page .order-card-badge {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #15803d;
+}
+
+body[data-theme='dark'] .chats-page .order-card-badge,
+html[data-theme='dark'] .chats-page .order-card-badge {
+  color: #4ade80;
+}
+
+.chats-page .order-card-id {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.chats-page .order-card-body {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.chats-page .order-card-placeholder {
+  font-size: 0.8125rem;
+  font-style: italic;
+  opacity: 0.75;
+}
+
+/* =============================================================================
    ATTACHMENT PREVIEW & EMOJI PICKER
    ============================================================================= */
 .chats-page .btn-input-accessory {

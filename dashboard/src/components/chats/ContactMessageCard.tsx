@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { User, MessageCircle, UserPlus, Phone } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { User, MessageCircle, UserPlus, Phone, Loader2, Check, AlertCircle } from 'lucide-react';
+import { contactApi } from '../../services/api';
 import './ContactMessageCard.css';
 
 export interface ParsedContact {
@@ -83,42 +84,68 @@ export function parseVCardText(vcardText: string): ParsedContact[] {
 
 interface ContactMessageCardProps {
   vcardText: string;
+  sessionId?: string;
+  onOpenChat?: (contact: { jid: string; name: string; phone?: string }) => void;
+  onZoomPhoto?: (photoUrl: string, name: string) => void;
 }
 
-export function ContactMessageCard({ vcardText }: ContactMessageCardProps) {
+export function ContactMessageCard({ vcardText, sessionId, onOpenChat, onZoomPhoto }: ContactMessageCardProps) {
   const contacts = useMemo(() => parseVCardText(vcardText), [vcardText]);
+  const [saveStatus, setSaveStatus] = useState<Record<string, 'idle' | 'saving' | 'saved' | 'error'>>({});
 
   if (contacts.length === 0) {
     return null;
   }
 
-  const handleDownloadVcf = (c: ParsedContact, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const blob = new Blob([c.rawVcard], { type: 'text/vcard;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `${c.name || 'contact'}.vcf`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   const handleChatDirect = (c: ParsedContact, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!c.waid) return;
-    const waUrl = `https://wa.me/${c.waid}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    const cleanNumber = c.waid || c.phone.replace(/[^\d]/g, '');
+    if (!cleanNumber) return;
+    const jid = `${cleanNumber}@c.us`;
+    if (onOpenChat) {
+      onOpenChat({ jid, name: c.name, phone: c.phone });
+    } else {
+      const waUrl = `https://wa.me/${cleanNumber}`;
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
+  const handleSaveContact = async (c: ParsedContact, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const cleanNumber = c.waid || c.phone.replace(/[^\d]/g, '');
+    if (!cleanNumber) return;
+    const key = cleanNumber;
+    const jid = `${cleanNumber}@c.us`;
+    if (!sessionId) return;
+
+    setSaveStatus(prev => ({ ...prev, [key]: 'saving' }));
+    try {
+      await contactApi.upsert(sessionId, jid, { firstName: c.name || 'Kontak' });
+      setSaveStatus(prev => ({ ...prev, [key]: 'saved' }));
+    } catch (err) {
+      console.error('Failed to save contact:', err);
+      setSaveStatus(prev => ({ ...prev, [key]: 'error' }));
+    }
+  };
   return (
     <div className="wa-contact-card-container">
       {contacts.map((c, idx) => (
         <div key={idx} className="wa-contact-card">
           <div className="wa-contact-header">
             {c.photo ? (
-              <img src={c.photo} alt={c.name} className="wa-contact-avatar-img" />
+              <img
+                src={c.photo}
+                alt={c.name}
+                className="wa-contact-avatar-img"
+                style={onZoomPhoto ? { cursor: 'pointer' } : undefined}
+                onClick={e => {
+                  if (onZoomPhoto && c.photo) {
+                    e.stopPropagation();
+                    onZoomPhoto(c.photo, c.name);
+                  }
+                }}
+                title={onZoomPhoto ? 'Klik untuk memperbesar foto profil' : undefined}
+              />
             ) : (
               <div className="wa-contact-avatar-circle">
                 <User size={26} />
@@ -135,26 +162,44 @@ export function ContactMessageCard({ vcardText }: ContactMessageCardProps) {
           </div>
 
           <div className="wa-contact-actions">
-            {c.waid && (
-              <button
-                type="button"
-                className="wa-contact-action-btn wa-btn-chat"
-                onClick={e => handleChatDirect(c, e)}
-                title="Kirim pesan via WhatsApp"
-              >
-                <MessageCircle size={15} />
-                <span>Kirim Pesan</span>
-              </button>
-            )}
+            <button
+              type="button"
+              className="wa-contact-action-btn wa-btn-chat"
+              onClick={e => handleChatDirect(c, e)}
+              title="Buka chat langsung di OpenWA"
+            >
+              <MessageCircle size={15} />
+              <span>Kirim Pesan</span>
+            </button>
 
             <button
               type="button"
-              className="wa-contact-action-btn wa-btn-save"
-              onClick={e => handleDownloadVcf(c, e)}
-              title="Simpan kontak (.vcf)"
+              className={`wa-contact-action-btn wa-btn-save ${saveStatus[c.waid || c.phone] === 'saved' ? 'wa-btn-saved' : ''}`}
+              onClick={e => handleSaveContact(c, e)}
+              disabled={saveStatus[c.waid || c.phone] === 'saving' || saveStatus[c.waid || c.phone] === 'saved'}
+              title={saveStatus[c.waid || c.phone] === 'saved' ? 'Kontak telah tersimpan di WhatsApp' : 'Simpan kontak langsung ke WhatsApp'}
             >
-              <UserPlus size={15} />
-              <span>Simpan Kontak</span>
+              {saveStatus[c.waid || c.phone] === 'saving' ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  <span>Menyimpan...</span>
+                </>
+              ) : saveStatus[c.waid || c.phone] === 'saved' ? (
+                <>
+                  <Check size={15} className="text-emerald-500" />
+                  <span style={{ color: 'var(--color-primary, #10b981)', fontWeight: 600 }}>Tersimpan di WA</span>
+                </>
+              ) : saveStatus[c.waid || c.phone] === 'error' ? (
+                <>
+                  <AlertCircle size={15} />
+                  <span>Coba Lagi</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus size={15} />
+                  <span>Simpan ke WA</span>
+                </>
+              )}
             </button>
           </div>
         </div>
