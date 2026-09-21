@@ -1069,6 +1069,22 @@ export function Chats() {
         <PageHeader
           title={t('nav.chats')}
           subtitle={t('chats.subtitle')}
+          badge={
+            sessions.length > 0 ? (
+              <select
+                value={selectedSessionId}
+                onChange={e => setSelectedSessionId(e.target.value)}
+                aria-label={t('chats.sessionLabel')}
+                className="session-selector header-session-selector"
+              >
+                {sessions.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.phone || t('chats.noPhone')})
+                  </option>
+                ))}
+              </select>
+            ) : null
+          }
         />
       )}
       {/* Real-time connection permanently dropped — let the user re-establish it instead of
