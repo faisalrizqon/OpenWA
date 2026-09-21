@@ -1706,10 +1706,6 @@ html[data-theme='dark'] .chats-page .attach-label {
     overflow: hidden !important;
   }
 
-  .chats-page:has(.has-active-chat) .page-header,
-  .chats-page.has-active-chat .page-header {
-    display: none !important;
-  }
 
   /* Single-pane layout takes full available height in mobile container */
   .chats-page .chats-layout {

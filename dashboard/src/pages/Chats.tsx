@@ -1058,8 +1058,8 @@ export function Chats() {
         </button>
       )}
 
-      {/* Sembunyikan PageHeader saat mode fullscreen atau saat percakapan sedang dibuka */}
-      {!anyFullscreen && !hasActiveItem && (
+      {/* PageHeader tetap tampil di atas secara konsisten baik saat buka list maupun detail chat */}
+      {!anyFullscreen && (
         <PageHeader
           title={t('nav.chats')}
           subtitle={t('chats.subtitle')}
