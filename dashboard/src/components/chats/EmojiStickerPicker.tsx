@@ -1,5 +1,19 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Search, Plus, Smile, Image as ImageIcon, X, Sparkles, Wand2 } from 'lucide-react';
+import {
+  Search,
+  Plus,
+  Smile,
+  X,
+  Clock,
+  Star,
+  Heart,
+  ThumbsUp,
+  Frown,
+  Flame,
+  Coffee,
+  Sparkles,
+  Loader2,
+} from 'lucide-react';
 import './EmojiStickerPicker.css';
 
 export interface EmojiStickerPickerProps {
@@ -9,6 +23,25 @@ export interface EmojiStickerPickerProps {
   disabled?: boolean;
   triggerRef?: React.RefObject<HTMLElement | null>;
 }
+
+// ── WhatsApp Folded Sticker Icon ──────────────────────────────────────────────
+const WAStickerFoldedIcon = ({ size = 20, className = '' }: { size?: number; className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    style={{ display: 'block', flexShrink: 0 }}
+  >
+    <path d="M5 3h14a2 2 0 0 1 2 2v10l-5 5H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+    <path d="M16 15h5l-5 5v-5z" fill="currentColor" stroke="none" />
+  </svg>
+);
 
 // ── Complete Unicode Emoji Dataset with Keywords ──────────────────────────────
 interface EmojiItem {
@@ -121,44 +154,43 @@ const RAW_EMOJIS: Array<{ emoji: string; category: EmojiItem['category']; keywor
   { emoji: '👻', category: 'smileys', keywords: ['ghost', 'hantu'] },
   { emoji: '👽', category: 'smileys', keywords: ['alien', 'luar angkasa'] },
   { emoji: '🤖', category: 'smileys', keywords: ['robot', 'bot'] },
-  { emoji: '😺', category: 'smileys', keywords: ['cat smile', 'kucing senyum'] },
-  { emoji: '😸', category: 'smileys', keywords: ['cat grin', 'kucing'] },
-  { emoji: '😹', category: 'smileys', keywords: ['cat joy', 'kucing ngakak'] },
-  { emoji: '😻', category: 'smileys', keywords: ['cat heart', 'kucing cinta'] },
-  { emoji: '😼', category: 'smileys', keywords: ['cat smirk', 'kucing'] },
-  { emoji: '😽', category: 'smileys', keywords: ['cat kiss', 'kucing cium'] },
-  { emoji: '🙀', category: 'smileys', keywords: ['cat scream', 'kucing kaget'] },
-  { emoji: '😿', category: 'smileys', keywords: ['cat cry', 'kucing nangis'] },
-  { emoji: '😾', category: 'smileys', keywords: ['cat pout', 'kucing ngambek'] },
-  { emoji: '👋', category: 'smileys', keywords: ['wave', 'hai', 'halo', 'dadah'] },
-  { emoji: '✋', category: 'smileys', keywords: ['hand', 'stop', 'tangan'] },
-  { emoji: '👌', category: 'smileys', keywords: ['ok hand', 'oke', 'sip', 'mantap'] },
-  { emoji: '🤌', category: 'smileys', keywords: ['pinched', 'kenapa', 'maksud'] },
+  { emoji: '👋', category: 'smileys', keywords: ['wave', 'halo', 'dadah', 'hi'] },
+  { emoji: '🤚', category: 'smileys', keywords: ['raised back of hand', 'stop'] },
+  { emoji: '🖐️', category: 'smileys', keywords: ['hand', 'lima', 'tos'] },
+  { emoji: '✋', category: 'smileys', keywords: ['high five', 'tangan', 'angkat'] },
+  { emoji: '🖖', category: 'smileys', keywords: ['vulcan', 'spock'] },
+  { emoji: '👌', category: 'smileys', keywords: ['ok', 'oke', 'mantap', 'siap'] },
+  { emoji: '🤌', category: 'smileys', keywords: ['pinched', 'italia', 'apa'] },
+  { emoji: '🤏', category: 'smileys', keywords: ['pinching', 'sedikit', 'dikit'] },
   { emoji: '✌️', category: 'smileys', keywords: ['peace', 'damai', 'dua'] },
-  { emoji: '🤞', category: 'smileys', keywords: ['crossed fingers', 'berharap'] },
-  { emoji: '🤟', category: 'smileys', keywords: ['ily', 'love you', 'metal'] },
+  { emoji: '🤞', category: 'smileys', keywords: ['crossed fingers', 'berharap', 'semoga'] },
+  { emoji: '🤟', category: 'smileys', keywords: ['love you', 'metal', 'ily'] },
   { emoji: '🤘', category: 'smileys', keywords: ['rock on', 'metal'] },
-  { emoji: '🤙', category: 'smileys', keywords: ['call me', 'telepon', 'santai'] },
-  { emoji: '👈', category: 'smileys', keywords: ['point left', 'kiri'] },
-  { emoji: '👉', category: 'smileys', keywords: ['point right', 'kanan'] },
-  { emoji: '👆', category: 'smileys', keywords: ['point up', 'atas'] },
-  { emoji: '👇', category: 'smileys', keywords: ['point down', 'bawah'] },
-  { emoji: '👍', category: 'smileys', keywords: ['thumbs up', 'jempol', 'bagus', 'setuju', 'oke', 'sip'] },
-  { emoji: '👎', category: 'smileys', keywords: ['thumbs down', 'jempol bawah', 'kurang'] },
-  { emoji: '✊', category: 'smileys', keywords: ['fist', 'semangat'] },
-  { emoji: '👊', category: 'smileys', keywords: ['punch', 'tos', 'fist bump'] },
-  { emoji: '👏', category: 'smileys', keywords: ['clap', 'tepuk tangan', 'hebat', 'mantap'] },
-  { emoji: '🙌', category: 'smileys', keywords: ['raised hands', 'hore', 'alhamdulillah'] },
-  { emoji: '👐', category: 'smileys', keywords: ['open hands', 'terbuka'] },
+  { emoji: '🤙', category: 'smileys', keywords: ['call me', 'santuy', 'shaka'] },
+  { emoji: '👈', category: 'smileys', keywords: ['left', 'kiri', 'tunjuk'] },
+  { emoji: '👉', category: 'smileys', keywords: ['right', 'kanan', 'tunjuk'] },
+  { emoji: '👆', category: 'smileys', keywords: ['up', 'atas'] },
+  { emoji: '👇', category: 'smileys', keywords: ['down', 'bawah'] },
+  { emoji: '☝️', category: 'smileys', keywords: ['index up', 'satu'] },
+  { emoji: '👍', category: 'smileys', keywords: ['thumbs up', 'jempol', 'bagus', 'setuju', 'top'] },
+  { emoji: '👎', category: 'smileys', keywords: ['thumbs down', 'jelek', 'kurang'] },
+  { emoji: '✊', category: 'smileys', keywords: ['fist', 'semangat', 'tinju'] },
+  { emoji: '👊', category: 'smileys', keywords: ['punch', 'tinju', 'tos'] },
+  { emoji: '🤛', category: 'smileys', keywords: ['left fist'] },
+  { emoji: '🤜', category: 'smileys', keywords: ['right fist'] },
+  { emoji: '👏', category: 'smileys', keywords: ['clap', 'tepuk tangan', 'applause', 'selamat'] },
+  { emoji: '🙌', category: 'smileys', keywords: ['raising hands', 'hore', 'syukur'] },
+  { emoji: '👐', category: 'smileys', keywords: ['open hands'] },
   { emoji: '🤲', category: 'smileys', keywords: ['palms up', 'doa', 'berdoa'] },
-  { emoji: '🤝', category: 'smileys', keywords: ['handshake', 'jabat tangan', 'sepakat', 'deal'] },
-  { emoji: '🙏', category: 'smileys', keywords: ['pray', 'tolong', 'terima kasih', 'makasih', 'maaf', 'sungkem'] },
-  { emoji: '💪', category: 'smileys', keywords: ['muscle', 'otot', 'kuat', 'semangat'] },
+  { emoji: '🤝', category: 'smileys', keywords: ['handshake', 'salaman', 'deal', 'sepakat'] },
+  { emoji: '🙏', category: 'smileys', keywords: ['pray', 'tolong', 'terima kasih', 'mohon', 'makasih', 'maaf'] },
+  { emoji: '💪', category: 'smileys', keywords: ['muscle', 'kuat', 'semangat', 'otot'] },
 
   // Animals & Nature
   { emoji: '🐶', category: 'animals', keywords: ['dog', 'anjing', 'puppy'] },
-  { emoji: '🐱', category: 'animals', keywords: ['cat', 'kucing', 'kitten'] },
+  { emoji: '🐱', category: 'animals', keywords: ['cat', 'kucing', 'meow'] },
   { emoji: '🐭', category: 'animals', keywords: ['mouse', 'tikus'] },
+  { emoji: '🐹', category: 'animals', keywords: ['hamster'] },
   { emoji: '🐰', category: 'animals', keywords: ['rabbit', 'kelinci'] },
   { emoji: '🦊', category: 'animals', keywords: ['fox', 'rubah'] },
   { emoji: '🐻', category: 'animals', keywords: ['bear', 'beruang'] },
@@ -176,146 +208,381 @@ const RAW_EMOJIS: Array<{ emoji: string; category: EmojiItem['category']; keywor
   { emoji: '🦆', category: 'animals', keywords: ['duck', 'bebek'] },
   { emoji: '🦅', category: 'animals', keywords: ['eagle', 'elang'] },
   { emoji: '🦉', category: 'animals', keywords: ['owl', 'burung hantu'] },
+  { emoji: '🦇', category: 'animals', keywords: ['bat', 'kelelawar'] },
   { emoji: '🐺', category: 'animals', keywords: ['wolf', 'serigala'] },
+  { emoji: '🐗', category: 'animals', keywords: ['boar', 'babi hutan'] },
   { emoji: '🐴', category: 'animals', keywords: ['horse', 'kuda'] },
   { emoji: '🦄', category: 'animals', keywords: ['unicorn'] },
   { emoji: '🐝', category: 'animals', keywords: ['bee', 'lebah'] },
+  { emoji: '🐛', category: 'animals', keywords: ['bug', 'ulat'] },
   { emoji: '🦋', category: 'animals', keywords: ['butterfly', 'kupu-kupu'] },
-  { emoji: '🐢', category: 'animals', keywords: ['turtle', 'kura-kura'] },
-  { emoji: '🐍', category: 'animals', keywords: ['snake', 'ular'] },
-  { emoji: '🐬', category: 'animals', keywords: ['dolphin', 'lumba-lumba'] },
-  { emoji: '🐳', category: 'animals', keywords: ['whale', 'paus'] },
-  { emoji: '🦈', category: 'animals', keywords: ['shark', 'hiu'] },
-  { emoji: '🐊', category: 'animals', keywords: ['crocodile', 'buaya'] },
-  { emoji: '🌲', category: 'animals', keywords: ['tree', 'pohon', 'pinus'] },
-  { emoji: '🌴', category: 'animals', keywords: ['palm tree', 'pohon kelapa', 'pantai'] },
+  { emoji: '🐌', category: 'animals', keywords: ['snail', 'siput'] },
   { emoji: '🌸', category: 'animals', keywords: ['flower', 'bunga', 'sakura'] },
-  { emoji: '🌹', category: 'animals', keywords: ['rose', 'mawar', 'romantis'] },
+  { emoji: '🌹', category: 'animals', keywords: ['rose', 'mawar'] },
   { emoji: '🌻', category: 'animals', keywords: ['sunflower', 'matahari'] },
-  { emoji: '🍀', category: 'animals', keywords: ['clover', 'hoki', 'keberuntungan'] },
-  { emoji: '🍁', category: 'animals', keywords: ['maple', 'daun gugur'] },
+  { emoji: '🌲', category: 'animals', keywords: ['tree', 'pohon', 'pinus'] },
+  { emoji: '🌴', category: 'animals', keywords: ['palm tree', 'kelapa'] },
+  { emoji: '🌈', category: 'animals', keywords: ['rainbow', 'pelangi'] },
+  { emoji: '☀️', category: 'animals', keywords: ['sun', 'cerah', 'panas'] },
+  { emoji: '⭐', category: 'animals', keywords: ['star', 'bintang'] },
+  { emoji: '🌟', category: 'animals', keywords: ['glowing star', 'gemerlap'] },
+  { emoji: '⚡', category: 'animals', keywords: ['lightning', 'petir', 'kilat'] },
+  { emoji: '🔥', category: 'animals', keywords: ['fire', 'api', 'semangat', 'hot'] },
+  { emoji: '💧', category: 'animals', keywords: ['droplet', 'air', 'tetes'] },
+  { emoji: '🌊', category: 'animals', keywords: ['wave', 'ombak', 'laut'] },
 
   // Food & Drink
-  { emoji: '🍏', category: 'food', keywords: ['apple', 'apel hijau'] },
-  { emoji: '🍎', category: 'food', keywords: ['red apple', 'apel merah'] },
+  { emoji: '🍎', category: 'food', keywords: ['apple', 'apel'] },
   { emoji: '🍌', category: 'food', keywords: ['banana', 'pisang'] },
   { emoji: '🍉', category: 'food', keywords: ['watermelon', 'semangka'] },
   { emoji: '🍇', category: 'food', keywords: ['grapes', 'anggur'] },
   { emoji: '🍓', category: 'food', keywords: ['strawberry', 'stroberi'] },
-  { emoji: '🍒', category: 'food', keywords: ['cherry', 'ceri'] },
-  { emoji: '🥭', category: 'food', keywords: ['mango', 'mangga'] },
-  { emoji: '🍍', category: 'food', keywords: ['pineapple', 'nanas'] },
-  { emoji: '🥥', category: 'food', keywords: ['coconut', 'kelapa'] },
   { emoji: '🥑', category: 'food', keywords: ['avocado', 'alpukat'] },
+  { emoji: '🥕', category: 'food', keywords: ['carrot', 'wortel'] },
   { emoji: '🌽', category: 'food', keywords: ['corn', 'jagung'] },
-  { emoji: '🌶️', category: 'food', keywords: ['chili', 'cabai', 'pedas'] },
-  { emoji: '🍞', category: 'food', keywords: ['bread', 'roti'] },
-  { emoji: '🧀', category: 'food', keywords: ['cheese', 'keju'] },
-  { emoji: '🍗', category: 'food', keywords: ['chicken', 'ayam goreng'] },
-  { emoji: '🥩', category: 'food', keywords: ['meat', 'daging', 'steak'] },
+  { emoji: '🍕', category: 'food', keywords: ['pizza'] },
   { emoji: '🍔', category: 'food', keywords: ['burger', 'hamburger'] },
   { emoji: '🍟', category: 'food', keywords: ['fries', 'kentang goreng'] },
-  { emoji: '🍕', category: 'food', keywords: ['pizza'] },
   { emoji: '🌭', category: 'food', keywords: ['hotdog'] },
+  { emoji: '🍿', category: 'food', keywords: ['popcorn'] },
   { emoji: '🥪', category: 'food', keywords: ['sandwich'] },
-  { emoji: '🍜', category: 'food', keywords: ['ramen', 'mie', 'bakso', 'soup'] },
-  { emoji: '🍝', category: 'food', keywords: ['spaghetti', 'pasta'] },
+  { emoji: '🌮', category: 'food', keywords: ['taco'] },
+  { emoji: '🍜', category: 'food', keywords: ['ramen', 'mie', 'noodle'] },
+  { emoji: '🍲', category: 'food', keywords: ['soup', 'sup', 'bakso'] },
   { emoji: '🍣', category: 'food', keywords: ['sushi'] },
   { emoji: '🍱', category: 'food', keywords: ['bento'] },
-  { emoji: '🍛', category: 'food', keywords: ['curry', 'kari', 'nasi'] },
-  { emoji: '🍚', category: 'food', keywords: ['rice', 'nasi'] },
-  { emoji: '🥟', category: 'food', keywords: ['dumpling', 'dimsum'] },
   { emoji: '🍦', category: 'food', keywords: ['ice cream', 'es krim'] },
-  { emoji: '🍰', category: 'food', keywords: ['cake', 'kue', 'bolu'] },
-  { emoji: '🎂', category: 'food', keywords: ['birthday cake', 'ulang tahun', 'kue'] },
-  { emoji: '🍩', category: 'food', keywords: ['donut', 'donat'] },
-  { emoji: '🍪', category: 'food', keywords: ['cookie', 'kukis'] },
-  { emoji: '🍫', category: 'food', keywords: ['chocolate', 'cokelat'] },
-  { emoji: '🍿', category: 'food', keywords: ['popcorn'] },
-  { emoji: '☕', category: 'food', keywords: ['coffee', 'kopi', 'ngopi', 'santai', 'cafe'] },
+  { emoji: '🎂', category: 'food', keywords: ['cake', 'kue', 'ultah'] },
+  { emoji: '☕', category: 'food', keywords: ['coffee', 'kopi', 'ngopi', 'santai'] },
   { emoji: '🍵', category: 'food', keywords: ['tea', 'teh'] },
-  { emoji: '🧃', category: 'food', keywords: ['juice', 'jus'] },
-  { emoji: '🥤', category: 'food', keywords: ['soda', 'minuman'] },
   { emoji: '🧋', category: 'food', keywords: ['boba', 'bubble tea'] },
+  { emoji: '🥤', category: 'food', keywords: ['soda', 'minuman'] },
   { emoji: '🍺', category: 'food', keywords: ['beer', 'bir'] },
 
-  // Activities & Objects
-  { emoji: '⚽', category: 'activities', keywords: ['soccer', 'sepak bola', 'bola'] },
+  // Activities
+  { emoji: '⚽', category: 'activities', keywords: ['soccer', 'bola', 'sepak bola'] },
   { emoji: '🏀', category: 'activities', keywords: ['basketball', 'basket'] },
+  { emoji: '🏈', category: 'activities', keywords: ['football'] },
+  { emoji: '⚾', category: 'activities', keywords: ['baseball'] },
+  { emoji: '🎾', category: 'activities', keywords: ['tennis'] },
+  { emoji: '🏐', category: 'activities', keywords: ['volleyball', 'voli'] },
   { emoji: '🏸', category: 'activities', keywords: ['badminton', 'bulutangkis'] },
-  { emoji: '🎮', category: 'activities', keywords: ['game', 'gaming', 'playstation', 'gamepad'] },
-  { emoji: '🏆', category: 'activities', keywords: ['trophy', 'piala', 'juara', 'menang'] },
-  { emoji: '🥇', category: 'activities', keywords: ['first medal', 'emas', 'juara 1'] },
-  { emoji: '🎬', category: 'activities', keywords: ['movie', 'film', 'bioskop', 'kamera'] },
-  { emoji: '🎧', category: 'activities', keywords: ['headphones', 'musik', 'lagu'] },
-  { emoji: '🚗', category: 'travel', keywords: ['car', 'mobil', 'otw', 'jalan'] },
-  { emoji: '🛵', category: 'travel', keywords: ['scooter', 'motor matic'] },
-  { emoji: '✈️', category: 'travel', keywords: ['airplane', 'pesawat', 'terbang', 'liburan'] },
-  { emoji: '🚀', category: 'travel', keywords: ['rocket', 'roket', 'cepat', 'gass'] },
-  { emoji: '📷', category: 'objects', keywords: ['camera', 'kamera', 'foto', 'digicam', 'sewa', 'lens'] },
-  { emoji: '📸', category: 'objects', keywords: ['camera flash', 'jepret', 'foto', 'kamera'] },
-  { emoji: '📹', category: 'objects', keywords: ['video camera', 'rekam', 'video'] },
-  { emoji: '💻', category: 'objects', keywords: ['laptop', 'komputer', 'kerja'] },
-  { emoji: '📱', category: 'objects', keywords: ['phone', 'hp', 'handphone', 'wa'] },
-  { emoji: '💡', category: 'objects', keywords: ['lightbulb', 'lampu', 'ide', 'solusi'] },
-  { emoji: '🔥', category: 'objects', keywords: ['fire', 'api', 'hot', 'panas', 'mantap', 'gass'] },
-  { emoji: '✨', category: 'objects', keywords: ['sparkles', 'keren', 'cantik', 'bintang'] },
-  { emoji: '🎉', category: 'objects', keywords: ['party popper', 'selamat', 'hore', 'sukses'] },
-  { emoji: '💰', category: 'objects', keywords: ['money bag', 'uang', 'cuan', 'rupiah', 'bayar'] },
-  { emoji: '💳', category: 'objects', keywords: ['credit card', 'kartu kredit', 'transfer', 'atm'] },
-  { emoji: '📦', category: 'objects', keywords: ['package', 'paket', 'kiriman', 'cod'] },
-  { emoji: '📍', category: 'objects', keywords: ['pin', 'lokasi', 'tempat', 'maps'] },
-  { emoji: '❤️', category: 'symbols', keywords: ['red heart', 'hati', 'cinta', 'love', 'merah'] },
-  { emoji: '💚', category: 'symbols', keywords: ['green heart', 'wa', 'hijau'] },
-  { emoji: '💯', category: 'symbols', keywords: ['100', 'seratus', 'sempurna', 'mantap'] },
-  { emoji: '✅', category: 'symbols', keywords: ['check', 'centang', 'selesai', 'lunas', 'berhasil'] },
-  { emoji: '⭐', category: 'symbols', keywords: ['star', 'bintang', 'favorit'] },
-  { emoji: '🇮🇩', category: 'flags', keywords: ['indonesia', 'merah putih'] },
+  { emoji: '🏓', category: 'activities', keywords: ['pingpong', 'tenis meja'] },
+  { emoji: '🥊', category: 'activities', keywords: ['boxing', 'tinju'] },
+  { emoji: '🎮', category: 'activities', keywords: ['game', 'gaming', 'ps', 'stick'] },
+  { emoji: '🎯', category: 'activities', keywords: ['target', 'dart', 'fokus'] },
+  { emoji: '🎨', category: 'activities', keywords: ['art', 'seni', 'gambar', 'lukis'] },
+  { emoji: '🎬', category: 'activities', keywords: ['movie', 'film', 'bioskop'] },
+  { emoji: '🎤', category: 'activities', keywords: ['mic', 'karaoke', 'nyanyi'] },
+  { emoji: '🎧', category: 'activities', keywords: ['headphones', 'musik', 'dengar'] },
+
+  // Travel & Places
+  { emoji: '🚗', category: 'travel', keywords: ['car', 'mobil'] },
+  { emoji: '🚕', category: 'travel', keywords: ['taxi', 'taksi'] },
+  { emoji: '🚙', category: 'travel', keywords: ['suv'] },
+  { emoji: '🚌', category: 'travel', keywords: ['bus', 'bis'] },
+  { emoji: '🚎', category: 'travel', keywords: ['trolleybus'] },
+  { emoji: '🏎️', category: 'travel', keywords: ['racecar', 'f1'] },
+  { emoji: '🚓', category: 'travel', keywords: ['police', 'polisi'] },
+  { emoji: '🚑', category: 'travel', keywords: ['ambulance', 'ambulans'] },
+  { emoji: '🚒', category: 'travel', keywords: ['firetruck', 'damkar'] },
+  { emoji: '🚐', category: 'travel', keywords: ['van'] },
+  { emoji: '🚚', category: 'travel', keywords: ['truck', 'truk'] },
+  { emoji: '🛵', category: 'travel', keywords: ['scooter', 'motor', 'ojol', 'vespa', 'otw'] },
+  { emoji: '🏍️', category: 'travel', keywords: ['motorcycle', 'moge'] },
+  { emoji: '🚲', category: 'travel', keywords: ['bike', 'sepeda'] },
+  { emoji: '✈️', category: 'travel', keywords: ['airplane', 'pesawat', 'terbang'] },
+  { emoji: '🚀', category: 'travel', keywords: ['rocket', 'roket', 'cepat', 'meluncur'] },
+  { emoji: '🛸', category: 'travel', keywords: ['ufo'] },
+  { emoji: '🚁', category: 'travel', keywords: ['helicopter', 'helikopter'] },
+  { emoji: '🚂', category: 'travel', keywords: ['train', 'kereta'] },
+  { emoji: '🏠', category: 'travel', keywords: ['house', 'rumah', 'home'] },
+  { emoji: '🏢', category: 'travel', keywords: ['office', 'kantor', 'gedung'] },
+
+  // Objects
+  { emoji: '💡', category: 'objects', keywords: ['lightbulb', 'lampu', 'ide'] },
+  { emoji: '🔦', category: 'objects', keywords: ['flashlight', 'senter'] },
+  { emoji: '📱', category: 'objects', keywords: ['phone', 'hp', 'smartphone'] },
+  { emoji: '💻', category: 'objects', keywords: ['laptop', 'komputer'] },
+  { emoji: '🖥️', category: 'objects', keywords: ['desktop', 'pc'] },
+  { emoji: '📷', category: 'objects', keywords: ['camera', 'kamera', 'foto', 'digicam'] },
+  { emoji: '📸', category: 'objects', keywords: ['camera flash', 'foto', 'digicam'] },
+  { emoji: '📹', category: 'objects', keywords: ['video camera', 'video'] },
+  { emoji: '📦', category: 'objects', keywords: ['package', 'paket', 'box', 'kirim'] },
+  { emoji: '🔑', category: 'objects', keywords: ['key', 'kunci'] },
+  { emoji: '🎁', category: 'objects', keywords: ['gift', 'kado', 'hadiah'] },
+  { emoji: '💰', category: 'objects', keywords: ['money bag', 'uang', 'cuan'] },
+  { emoji: '💵', category: 'objects', keywords: ['dollar', 'rupiah', 'duit'] },
+  { emoji: '💳', category: 'objects', keywords: ['credit card', 'kartu', 'transfer', 'bayar'] },
+  { emoji: '📄', category: 'objects', keywords: ['document', 'surat', 'dokumen', 'ktp'] },
+  { emoji: '📌', category: 'objects', keywords: ['pushpin', 'pin', 'sematkan'] },
+  { emoji: '📍', category: 'objects', keywords: ['pin', 'lokasi', 'alamat', 'map'] },
+
+  // Symbols
+  { emoji: '❤️', category: 'symbols', keywords: ['red heart', 'hati', 'cinta', 'love'] },
+  { emoji: '🧡', category: 'symbols', keywords: ['orange heart'] },
+  { emoji: '💛', category: 'symbols', keywords: ['yellow heart'] },
+  { emoji: '💚', category: 'symbols', keywords: ['green heart'] },
+  { emoji: '💙', category: 'symbols', keywords: ['blue heart'] },
+  { emoji: '💜', category: 'symbols', keywords: ['purple heart'] },
+  { emoji: '🖤', category: 'symbols', keywords: ['black heart'] },
+  { emoji: '🤍', category: 'symbols', keywords: ['white heart'] },
+  { emoji: '🤎', category: 'symbols', keywords: ['brown heart'] },
+  { emoji: '💔', category: 'symbols', keywords: ['broken heart', 'patah hati'] },
+  { emoji: '💖', category: 'symbols', keywords: ['sparkling heart', 'cinta'] },
+  { emoji: '💗', category: 'symbols', keywords: ['growing heart'] },
+  { emoji: '💓', category: 'symbols', keywords: ['beating heart'] },
+  { emoji: '💞', category: 'symbols', keywords: ['revolving hearts'] },
+  { emoji: '💕', category: 'symbols', keywords: ['two hearts'] },
+  { emoji: '✨', category: 'symbols', keywords: ['sparkles', 'kilau', 'bintang'] },
+  { emoji: '💯', category: 'symbols', keywords: ['100', 'sempurna', 'pas'] },
+  { emoji: '✅', category: 'symbols', keywords: ['check', 'centang', 'benar', 'lunas', 'selesai', 'ok'] },
+  { emoji: '❌', category: 'symbols', keywords: ['cross', 'salah', 'batal'] },
+  { emoji: '⚠️', category: 'symbols', keywords: ['warning', 'peringatan', 'hati-hati'] },
+  { emoji: '❓', category: 'symbols', keywords: ['question', 'tanya', 'bingung'] },
+  { emoji: '❗', category: 'symbols', keywords: ['exclamation', 'seru', 'penting'] },
+
+  // Flags
+  { emoji: '🇮🇩', category: 'flags', keywords: ['indonesia', 'merah putih', 'id'] },
+  { emoji: '🇲🇾', category: 'flags', keywords: ['malaysia'] },
+  { emoji: '🇸🇬', category: 'flags', keywords: ['singapore'] },
+  { emoji: '🇯🇵', category: 'flags', keywords: ['japan', 'jepang'] },
+  { emoji: '🇰🇷', category: 'flags', keywords: ['korea'] },
+  { emoji: '🇺🇸', category: 'flags', keywords: ['usa', 'amerika'] },
+  { emoji: '🇬🇧', category: 'flags', keywords: ['uk', 'inggris'] },
 ];
 
-// ── Native WhatsApp Stickers (Transparent, Clean Vector Graphic Stickers) ──────
+// ── WhatsApp Sticker Categories (Matching Image #1) ───────────────────────────
+export type StickerCategory =
+  | 'recent'
+  | 'favorites'
+  | 'love'
+  | 'reactions'
+  | 'smileys'
+  | 'sad'
+  | 'angry'
+  | 'objects';
+
+interface StickerCategoryTab {
+  id: StickerCategory;
+  title: string;
+  icon: React.ReactNode;
+}
+
+const STICKER_CATEGORIES: StickerCategoryTab[] = [
+  { id: 'recent', title: 'Terakhir digunakan', icon: <Clock size={19} /> },
+  { id: 'favorites', title: 'Favorit', icon: <Star size={19} /> },
+  { id: 'love', title: 'Cinta & Sayang', icon: <Heart size={19} /> },
+  { id: 'reactions', title: 'Reaksi & Jempol', icon: <ThumbsUp size={19} /> },
+  { id: 'smileys', title: 'Lucu & Tertawa', icon: <Smile size={19} /> },
+  { id: 'sad', title: 'Sedih & Bingung', icon: <Frown size={19} /> },
+  { id: 'angry', title: 'Marah & Semangat', icon: <Flame size={19} /> },
+  { id: 'objects', title: 'Santai & Ngopi', icon: <Coffee size={19} /> },
+];
+
+// ── WhatsApp Native Stickers (Matching Image #1 Meme & Business Set) ─────────
 export interface PresetSticker {
   id: string;
   title: string;
-  category: 'rental' | 'reactions' | 'animals';
-  badgeColor: string;
-  icon: string;
-  label: string;
-  sublabel?: string;
+  category: StickerCategory;
+  caption: string;
+  subtext?: string;
+  bgGradient: [string, string];
+  emoji: string;
+  badgeTag?: string;
 }
 
 const PRESET_STICKERS: PresetSticker[] = [
-  // Rental & Bisnis Chat
-  { id: 'stk_siapp', title: 'Siappp Kak!', category: 'rental', badgeColor: '#128c7e', icon: '🙏', label: 'SIAPPP KAK!', sublabel: 'Terima kasih' },
-  { id: 'stk_otw', title: 'OTW Kak!', category: 'rental', badgeColor: '#25d366', icon: '🛵', label: 'OTW KAK 🚀', sublabel: 'Meluncur ke lokasi' },
-  { id: 'stk_mantap', title: 'Mantap!', category: 'rental', badgeColor: '#0284c7', icon: '👍', label: 'MANTAPP!', sublabel: 'Keren abis' },
-  { id: 'stk_makasih', title: 'Terima Kasih!', category: 'rental', badgeColor: '#ea580c', icon: '🥕', label: 'MAKASIH BANYAK 🐰', sublabel: 'Sehat selalu ya kak' },
-  { id: 'stk_cek_foto', title: 'Cek Foto!', category: 'rental', badgeColor: '#7c3aed', icon: '📸', label: 'CEK FOTO KAK', sublabel: 'Link gdrive siap' },
-  { id: 'stk_lunas', title: 'Sudah Lunas', category: 'rental', badgeColor: '#16a34a', icon: '✅', label: 'LUNAS YA KAK', sublabel: 'Terverifikasi' },
-  { id: 'stk_oke', title: 'Oke Siap', category: 'rental', badgeColor: '#059669', icon: '👌', label: 'OKE SIAP', sublabel: 'Diproses segera' },
-  { id: 'stk_gas', title: 'Gasss!', category: 'rental', badgeColor: '#dc2626', icon: '🔥', label: 'GASS KUMENDAN', sublabel: 'Siap selalu' },
+  // Reactions & Memes from Image #1
+  {
+    id: 'stk_patrick',
+    title: 'Patrick Ngambek',
+    category: 'reactions',
+    caption: 'HMPH! 😤',
+    subtext: 'Gak mau tau',
+    bgGradient: ['#f43f5e', '#fb7185'],
+    emoji: '⭐',
+    badgeTag: 'PATRICK',
+  },
+  {
+    id: 'stk_boloku',
+    title: 'Boloku Ngakak',
+    category: 'smileys',
+    caption: 'BOLOKU 🤣',
+    subtext: 'Wkwkwk mantap',
+    bgGradient: ['#f59e0b', '#d97706'],
+    emoji: '🧔',
+    badgeTag: 'BOLOKU',
+  },
+  {
+    id: 'stk_jempol',
+    title: 'Jempol Mantap',
+    category: 'reactions',
+    caption: 'MANTAPP! 👍',
+    subtext: 'Bagus banget',
+    bgGradient: ['#0284c7', '#0369a1'],
+    emoji: '👍',
+    badgeTag: 'TOP',
+  },
+  {
+    id: 'stk_siapp',
+    title: 'Siappp Shouting',
+    category: 'reactions',
+    caption: 'SIAPPP! 📢',
+    subtext: 'Meluncur segera',
+    bgGradient: ['#e11d48', '#be123c'],
+    emoji: '🗣️',
+    badgeTag: 'SIAPP',
+  },
+  {
+    id: 'stk_kumendan',
+    title: 'Siap Kumendan',
+    category: 'reactions',
+    caption: 'SIAP KUMENDAN',
+    subtext: 'Laksanakan tugas',
+    bgGradient: ['#16a34a', '#15803d'],
+    emoji: '🪖',
+    badgeTag: 'KUMENDAN',
+  },
+  {
+    id: 'stk_love_hand',
+    title: 'Heart Hand Gesture',
+    category: 'love',
+    caption: 'SARANGHAE 💖',
+    subtext: 'Buat kamu kak',
+    bgGradient: ['#0ea5e9', '#0284c7'],
+    emoji: '🫶',
+    badgeTag: 'LOVE',
+  },
+  {
+    id: 'stk_cium',
+    title: 'Cium Sayang',
+    category: 'love',
+    caption: 'MUACHHH 😘',
+    subtext: 'Makasih banyak',
+    bgGradient: ['#ec4899', '#db2777'],
+    emoji: '💋',
+    badgeTag: 'KISS',
+  },
+  {
+    id: 'stk_senyum_adem',
+    title: 'Senyum Bahagia',
+    category: 'smileys',
+    caption: 'SENYUM DULU 😊',
+    subtext: 'Damai sentosa',
+    bgGradient: ['#38bdf8', '#0284c7'],
+    emoji: '😇',
+    badgeTag: 'ADEM',
+  },
+  {
+    id: 'stk_walowee',
+    title: 'Kucing Walowee',
+    category: 'smileys',
+    caption: 'WALAWEE 😸',
+    subtext: 'Aseeek banget',
+    bgGradient: ['#fb923c', '#ea580c'],
+    emoji: '🐱',
+    badgeTag: 'WALAWEE',
+  },
+  {
+    id: 'stk_gass',
+    title: 'Gasss Kumendan',
+    category: 'angry',
+    caption: 'GASSS! 🔥',
+    subtext: 'Tanpa rem kak',
+    bgGradient: ['#dc2626', '#b91c1c'],
+    emoji: '🚀',
+    badgeTag: 'GASS',
+  },
+  {
+    id: 'stk_lelah',
+    title: 'Lelah Banget',
+    category: 'sad',
+    caption: 'LELAH 😭',
+    subtext: 'Rehat bentar kak',
+    bgGradient: ['#475569', '#334155'],
+    emoji: '🛌',
+    badgeTag: 'LELAH',
+  },
+  {
+    id: 'stk_baby_gemoy',
+    title: 'Bayi Gemoy',
+    category: 'love',
+    caption: 'GEMOY BANGET 🥰',
+    subtext: 'Lucu pol',
+    bgGradient: ['#f472b6', '#ec4899'],
+    emoji: '👶',
+    badgeTag: 'GEMOY',
+  },
 
-  // Meme & Reaksi
-  { id: 'stk_timmy', title: 'Timmy Derp', category: 'reactions', badgeColor: '#334155', icon: '🐑', label: 'HAHH?? 😳', sublabel: 'Beneran kak?!' },
-  { id: 'stk_wkwk', title: 'Wkwkwk', category: 'reactions', badgeColor: '#f59e0b', icon: '🤣', label: 'WKWKWK', sublabel: 'Bisa aja nih' },
-  { id: 'stk_walawee', title: 'Walawee', category: 'reactions', badgeColor: '#fb923c', icon: '🐱', label: 'WALAWEE 😸', sublabel: 'Aseekk' },
-  { id: 'stk_santuy', title: 'Santuy', category: 'reactions', badgeColor: '#0ea5e9', icon: '☕', label: 'SANTUY DULU', sublabel: 'Aman terkendali' },
-  { id: 'stk_syok', title: 'Kaget', category: 'reactions', badgeColor: '#ef4444', icon: '😱', label: 'WADUHHH!', sublabel: 'Kaget banget' },
-  { id: 'stk_menangis', title: 'Terharu', category: 'reactions', badgeColor: '#6366f1', icon: '😭', label: 'TERHARU 🥺', sublabel: 'Makasih kak' },
-  { id: 'stk_lope', title: 'Lope Lope', category: 'reactions', badgeColor: '#e11d48', icon: '🥰', label: 'BUAT KAMU 💖', sublabel: 'Bintang 5 pokoknya' },
-
-  // Hewan Lucu
-  { id: 'stk_cat_gemoy', title: 'Kucing Meow', category: 'animals', badgeColor: '#f97316', icon: '🐾', label: 'MEOWWW', sublabel: 'Halo kakk' },
-  { id: 'stk_doge', title: 'Doge Much', category: 'animals', badgeColor: '#eab308', icon: '🐶', label: 'SO WOW MUCH', sublabel: 'Best digicam' },
-  { id: 'stk_panda', title: 'Panda Rehat', category: 'animals', badgeColor: '#475569', icon: '🐼', label: 'REHAT DULU', sublabel: 'Ngopi santai' },
-  { id: 'stk_kelinci', title: 'Kelinci Imut', category: 'animals', badgeColor: '#ec4899', icon: '🐰', label: 'LUV U KAK', sublabel: 'Sehat selalu' },
+  // Rental & Business Greetings
+  {
+    id: 'stk_siap_kak',
+    title: 'Siappp Kak',
+    category: 'reactions',
+    caption: 'SIAPPP KAK 🙏',
+    subtext: 'Segera diproses ya',
+    bgGradient: ['#059669', '#047857'],
+    emoji: '🙏',
+    badgeTag: 'SEGERA',
+  },
+  {
+    id: 'stk_otw_kak',
+    title: 'OTW Kak',
+    category: 'objects',
+    caption: 'OTW KAK 🛵',
+    subtext: 'Sedang perjalanan',
+    bgGradient: ['#22c55e', '#16a34a'],
+    emoji: '🛵',
+    badgeTag: 'OTW',
+  },
+  {
+    id: 'stk_cek_foto',
+    title: 'Cek Foto Gdrive',
+    category: 'objects',
+    caption: 'CEK FOTO KAK 📸',
+    subtext: 'Link gdrive sudah siap',
+    bgGradient: ['#8b5cf6', '#7c3aed'],
+    emoji: '📸',
+    badgeTag: 'GDRIVE',
+  },
+  {
+    id: 'stk_lunas',
+    title: 'Sudah Lunas',
+    category: 'reactions',
+    caption: 'LUNAS YA KAK ✅',
+    subtext: 'Terima kasih banyak',
+    bgGradient: ['#10b981', '#059669'],
+    emoji: '✅',
+    badgeTag: 'LUNAS',
+  },
+  {
+    id: 'stk_santuy',
+    title: 'Santuy Dulu',
+    category: 'objects',
+    caption: 'SANTUY DULU ☕',
+    subtext: 'Aman terkendali',
+    bgGradient: ['#0ea5e9', '#0284c7'],
+    emoji: '☕',
+    badgeTag: 'SANTUY',
+  },
+  {
+    id: 'stk_terharu',
+    title: 'Terharu Makasih',
+    category: 'love',
+    caption: 'MAKASIH BANYAK 🐰',
+    subtext: 'Bintang 5 buat kakak',
+    bgGradient: ['#f43f5e', '#e11d48'],
+    emoji: '💖',
+    badgeTag: 'MAKASIH',
+  },
 ];
 
 /**
- * Generate native WhatsApp WebP sticker Canvas (Transparent background, white sticker outline)
+ * Generate 512x512 crisp WebP WhatsApp sticker with die-cut white outline
  */
 async function generateStickerBase64(sticker: PresetSticker): Promise<{ base64: string; mimetype: string }> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 512;
@@ -326,64 +593,97 @@ async function generateStickerBase64(sticker: PresetSticker): Promise<{ base64: 
     }
 
     ctx.clearRect(0, 0, 512, 512);
+    // Die-cut rounded card with WhatsApp sticker proportions
+    const r = 52;
+    const x0 = 36;
+    const y0 = 36;
+    const w = 440;
+    const h = 440;
 
-    // Rounded die-cut sticker badge
-    const radius = 56;
+    ctx.save();
     ctx.beginPath();
-    ctx.moveTo(36 + radius, 36);
-    ctx.lineTo(476 - radius, 36);
-    ctx.quadraticCurveTo(476, 36, 476, 36 + radius);
-    ctx.lineTo(476, 476 - radius);
-    ctx.quadraticCurveTo(476, 476, 476 - radius, 476);
-    ctx.lineTo(36 + radius, 476);
-    ctx.quadraticCurveTo(36, 476, 36, 476 - radius);
-    ctx.lineTo(36, 36 + radius);
-    ctx.quadraticCurveTo(36, 36, 36 + radius, 36);
+    ctx.moveTo(x0 + r, y0);
+    ctx.lineTo(x0 + w - r, y0);
+    ctx.quadraticCurveTo(x0 + w, y0, x0 + w, y0 + r);
+    ctx.lineTo(x0 + w, y0 + h - r);
+    ctx.quadraticCurveTo(x0 + w, y0 + h, x0 + w - r, y0 + h);
+    ctx.lineTo(x0 + r, y0 + h);
+    ctx.quadraticCurveTo(x0, y0 + h, x0, y0 + h - r);
+    ctx.lineTo(x0, y0 + r);
+    ctx.quadraticCurveTo(x0, y0, x0 + r, y0);
     ctx.closePath();
 
-    // Solid fill
-    ctx.fillStyle = sticker.badgeColor;
+    // Vibrant background gradient
+    const grad = ctx.createLinearGradient(x0, y0, x0 + w, y0 + h);
+    grad.addColorStop(0, sticker.bgGradient[0]);
+    grad.addColorStop(1, sticker.bgGradient[1]);
+    ctx.fillStyle = grad;
     ctx.shadowColor = 'rgba(0, 0, 0, 0.28)';
-    ctx.shadowBlur = 20;
-    ctx.shadowOffsetY = 10;
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 8;
     ctx.fill();
 
-    // Reset shadow & draw thick white die-cut sticker stroke
+    // Die-cut white stroke
     ctx.shadowColor = 'transparent';
-    ctx.lineWidth = 16;
+    ctx.lineWidth = 14;
     ctx.strokeStyle = '#ffffff';
     ctx.stroke();
+    ctx.restore();
 
-    // Draw main icon
-    if (sticker.icon) {
-      ctx.font = '144px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+    // Decorative top badge tag
+    if (sticker.badgeTag) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+      ctx.beginPath();
+      ctx.roundRect(180, 58, 152, 34, 17);
+      ctx.fill();
+      ctx.font = 'bold 20px "Segoe UI", -apple-system, sans-serif';
+      ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(sticker.icon, 256, 185);
+      ctx.fillText(sticker.badgeTag, 256, 75);
+      ctx.restore();
     }
 
-    // Draw sticker primary text
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 42px system-ui, -apple-system, sans-serif';
+    // Main big emoji / icon
+    ctx.save();
+    ctx.font = '148px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(sticker.label, 256, 325);
+    ctx.fillText(sticker.emoji, 256, 210);
+    ctx.restore();
 
-    // Draw sublabel
-    if (sticker.sublabel) {
+    // Main bold sticker caption
+    ctx.save();
+    ctx.font = '900 38px "Segoe UI", -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 3;
+    ctx.fillText(sticker.caption, 256, 350);
+    ctx.restore();
+
+    // Subtext
+    if (sticker.subtext) {
+      ctx.save();
+      ctx.font = '600 24px "Segoe UI", -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-      ctx.font = '500 25px system-ui, -apple-system, sans-serif';
-      ctx.fillText(sticker.sublabel, 256, 385);
+      ctx.fillText(sticker.subtext, 256, 400);
+      ctx.restore();
     }
 
-    const dataUrl = canvas.toDataURL('image/webp', 0.9);
+    const dataUrl = canvas.toDataURL('image/webp', 0.92);
     const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
     resolve({ base64, mimetype: 'image/webp' });
   });
 }
 
 /**
- * Convert user uploaded image (PNG/JPG/GIF) to 512x512 square WebP sticker
+ * Convert user uploaded image to 512x512 WebP WhatsApp sticker
  */
 async function convertFileToStickerBase64(file: File): Promise<{ base64: string; mimetype: string }> {
   return new Promise((resolve, reject) => {
@@ -399,10 +699,9 @@ async function convertFileToStickerBase64(file: File): Promise<{ base64: string;
           reject(new Error('Canvas context failed'));
           return;
         }
-
         ctx.clearRect(0, 0, 512, 512);
 
-        const maxDim = 490;
+        const maxDim = 488;
         let w = img.width;
         let h = img.height;
         if (w > h) {
@@ -420,16 +719,17 @@ async function convertFileToStickerBase64(file: File): Promise<{ base64: string;
 
         const dataUrl = canvas.toDataURL('image/webp', 0.92);
         const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
-        resolve({ base64, mimetype: 'image/webp' });
-      };
-      img.onerror = () => reject(new Error('Gagal memuat gambar'));
-      img.src = reader.result as string;
+      resolve({ base64, mimetype: 'image/webp' });
     };
-    reader.onerror = () => reject(new Error('Gagal membaca file'));
+    img.onerror = () => reject(new Error('Gagal memuat gambar'));
+    img.src = reader.result as string;
+  };
+  reader.onerror = () => reject(new Error('Gagal membaca file'));
     reader.readAsDataURL(file);
   });
 }
 
+// ── Main EmojiStickerPicker Component ─────────────────────────────────────────
 export function EmojiStickerPicker({
   onSelectEmoji,
   onSendSticker,
@@ -439,52 +739,20 @@ export function EmojiStickerPicker({
 }: EmojiStickerPickerProps) {
   const popupRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
-      const target = event.target as Node;
-      if (popupRef.current && popupRef.current.contains(target)) {
-        return;
-      }
-      if (triggerRef?.current && triggerRef.current.contains(target)) {
-        return;
-      }
-      onClose();
-    };
+  // Bottom segmented tabs: 'emoji' | 'gif' | 'sticker' (Image #1 defaults to sticker)
+  const [activeTab, setActiveTab] = useState<'emoji' | 'gif' | 'sticker'>('sticker');
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (document.querySelector('[role="dialog"], [role="menu"]')) return;
-        onClose();
-      }
-    };
+  // Top category tabs
+  const [activeStickerCategory, setActiveStickerCategory] = useState<StickerCategory>('recent');
+  const [activeEmojiCategory, setActiveEmojiCategory] = useState<EmojiItem['category']>('recent');
 
-    document.addEventListener('mousedown', handleOutsideClick);
-    document.addEventListener('touchstart', handleOutsideClick, { passive: true });
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-      document.removeEventListener('touchstart', handleOutsideClick);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [onClose, triggerRef]);
-  // Mode: 'emoji' or 'sticker'
-  const [activeTab, setActiveTab] = useState<'emoji' | 'sticker'>('sticker');
-
-  // Emoji category
-  const [activeEmojiCategory, setActiveEmojiCategory] = useState<EmojiItem['category']>('smileys');
-
-  // Sticker category
-  const [activeStickerCategory, setActiveStickerCategory] = useState<'all' | 'rental' | 'reactions' | 'animals'>('all');
-
-  // Search state
-  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+  // Search query
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Sending state
   const [isSendingSticker, setIsSendingSticker] = useState<boolean>(false);
 
-  // Recent emojis from localStorage
+  // Recent emojis
   const [recentEmojis, setRecentEmojis] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem('openwa_recent_emojis');
@@ -494,8 +762,43 @@ export function EmojiStickerPicker({
     }
   });
 
-  const customStickerInputRef = useRef<HTMLInputElement | null>(null);
+  // Recent stickers
+  const [recentStickerIds, setRecentStickerIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('openwa_recent_stickers');
+      return stored
+        ? JSON.parse(stored)
+        : ['stk_patrick', 'stk_boloku', 'stk_jempol', 'stk_siapp', 'stk_kumendan', 'stk_love_hand', 'stk_walowee', 'stk_siap_kak'];
+    } catch {
+      return ['stk_patrick', 'stk_boloku', 'stk_jempol', 'stk_siapp'];
+    }
+  });
 
+  const customFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Outside click & escape listener
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (
+        popupRef.current &&
+        !popupRef.current.contains(target) &&
+        (!triggerRef?.current || !triggerRef.current.contains(target))
+      ) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [onClose, triggerRef]);
+
+  // Handle emoji pick
   const handleEmojiClick = (emoji: string) => {
     onSelectEmoji(emoji);
     setRecentEmojis(prev => {
@@ -509,41 +812,7 @@ export function EmojiStickerPicker({
     });
   };
 
-  const displayedEmojis = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      return RAW_EMOJIS.filter(
-        item =>
-          item.emoji.includes(q) ||
-          item.keywords.some(k => k.toLowerCase().includes(q))
-      ).map(item => item.emoji);
-    }
-
-    if (activeEmojiCategory === 'recent') {
-      return recentEmojis;
-    }
-
-    return RAW_EMOJIS.filter(item => item.category === activeEmojiCategory).map(item => item.emoji);
-  }, [searchQuery, activeEmojiCategory, recentEmojis]);
-
-  const displayedStickers = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      return PRESET_STICKERS.filter(
-        s =>
-          s.title.toLowerCase().includes(q) ||
-          s.label.toLowerCase().includes(q) ||
-          (s.sublabel && s.sublabel.toLowerCase().includes(q))
-      );
-    }
-
-    if (activeStickerCategory === 'all') {
-      return PRESET_STICKERS;
-    }
-
-    return PRESET_STICKERS.filter(s => s.category === activeStickerCategory);
-  }, [searchQuery, activeStickerCategory]);
-
+  // Handle preset sticker pick
   const handlePresetStickerClick = async (sticker: PresetSticker) => {
     if (disabled || isSendingSticker) return;
     try {
@@ -551,12 +820,22 @@ export function EmojiStickerPicker({
       const { base64, mimetype } = await generateStickerBase64(sticker);
       if (base64) {
         await onSendSticker(base64, mimetype);
+        setRecentStickerIds(prev => {
+          const updated = [sticker.id, ...prev.filter(id => id !== sticker.id)].slice(0, 24);
+          try {
+            localStorage.setItem('openwa_recent_stickers', JSON.stringify(updated));
+          } catch {
+            /* ignore */
+          }
+          return updated;
+        });
       }
     } finally {
       setIsSendingSticker(false);
     }
   };
 
+  // Handle custom sticker file upload
   const handleCustomStickerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -575,67 +854,122 @@ export function EmojiStickerPicker({
     }
   };
 
+  // Filtered Emojis
+  const displayedEmojis = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      return RAW_EMOJIS.filter(
+        item => item.emoji.includes(q) || item.keywords.some(k => k.toLowerCase().includes(q))
+      ).map(item => item.emoji);
+    }
+
+    if (activeEmojiCategory === 'recent') {
+      return recentEmojis;
+    }
+
+    return RAW_EMOJIS.filter(item => item.category === activeEmojiCategory).map(item => item.emoji);
+  }, [searchQuery, activeEmojiCategory, recentEmojis]);
+
+  // Filtered Stickers
+  const displayedStickers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      return PRESET_STICKERS.filter(
+        s =>
+          s.title.toLowerCase().includes(q) ||
+          s.caption.toLowerCase().includes(q) ||
+          (s.subtext && s.subtext.toLowerCase().includes(q)) ||
+          (s.badgeTag && s.badgeTag.toLowerCase().includes(q))
+      );
+    }
+
+    if (activeStickerCategory === 'recent') {
+      const recentList = recentStickerIds
+        .map(id => PRESET_STICKERS.find(s => s.id === id))
+        .filter((s): s is PresetSticker => Boolean(s));
+      return recentList.length > 0 ? recentList : PRESET_STICKERS;
+    }
+
+    if (activeStickerCategory === 'favorites') {
+      return PRESET_STICKERS.slice(0, 8);
+    }
+
+    return PRESET_STICKERS.filter(s => s.category === activeStickerCategory);
+  }, [searchQuery, activeStickerCategory, recentStickerIds]);
+
   return (
     <div ref={popupRef} className="wa-picker-popup chats-emoji-picker">
-      {/* 1. TOP SUBHEADER (WhatsApp Native Style with Search on left & Segmented Control in center) */}
-      <div className="wa-picker-subnav">
-        {/* Left: Search Toggle */}
-        <button
-          type="button"
-          onClick={() => {
-            setIsSearchOpen(prev => !prev);
-            if (isSearchOpen) setSearchQuery('');
-          }}
-          className={`wa-subnav-icon-btn ${isSearchOpen ? 'active' : ''}`}
-          title="Cari"
-        >
-          <Search size={22} strokeWidth={2.2} />
-        </button>
-
-        {/* Center: Segmented Tabs (Emoji / Sticker) */}
-        <div className="wa-subnav-segmented-pill">
-          <button
-            type="button"
-            className={`wa-seg-tab ${activeTab === 'emoji' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab('emoji');
-              setSearchQuery('');
-            }}
-            title="Emoji"
-          >
-            <Smile size={23} strokeWidth={2.4} />
-          </button>
-          <button
-            type="button"
-            className={`wa-seg-tab ${activeTab === 'sticker' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab('sticker');
-              setSearchQuery('');
-            }}
-            title="Stiker"
-          >
-            <ImageIcon size={23} strokeWidth={2.4} />
-          </button>
-        </div>
-
-        {/* Right: Close button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="wa-subnav-icon-btn"
-          title="Tutup Keyboard"
-        >
-          <X size={22} strokeWidth={2.2} />
-        </button>
+      {/* ── 1. TOP CATEGORY ROW (Clock, Star, Heart, etc. with active underline) ── */}
+      <div className="wa-picker-categories-row">
+        {activeTab === 'sticker' ? (
+          <>
+            {STICKER_CATEGORIES.map(cat => {
+              const isActive = activeStickerCategory === cat.id && !searchQuery;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className={`wa-cat-btn ${isActive ? 'active' : ''}`}
+                  title={cat.title}
+                  onClick={() => {
+                    setActiveStickerCategory(cat.id);
+                    setSearchQuery('');
+                  }}
+                >
+                  {cat.icon}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              className="wa-cat-btn wa-cat-btn-add"
+              title="Tambah / Upload Stiker Baru"
+              onClick={() => customFileInputRef.current?.click()}
+            >
+              <Plus size={20} strokeWidth={2.4} />
+            </button>
+          </>
+        ) : activeTab === 'emoji' ? (
+          EMOJI_CATEGORIES.map(cat => {
+            const isActive = activeEmojiCategory === cat.id && !searchQuery;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                className={`wa-cat-btn ${isActive ? 'active' : ''}`}
+                title={cat.label}
+                onClick={() => {
+                  setActiveEmojiCategory(cat.id);
+                  setSearchQuery('');
+                }}
+              >
+                <span className="wa-emoji-cat-icon">{cat.icon}</span>
+              </button>
+            );
+          })
+        ) : (
+          <div className="wa-gif-categories-bar">
+            <span className="wa-gif-chip-active">🔥 Trending GIFs</span>
+            <span className="wa-gif-chip">🤣 Reaksi</span>
+            <span className="wa-gif-chip">👏 Tepuk Tangan</span>
+            <span className="wa-gif-chip">💖 Cinta</span>
+          </div>
+        )}
       </div>
 
-      {/* 2. SEARCH INPUT (Appears when search is clicked) */}
-      {isSearchOpen && (
-        <div className="wa-picker-search-bar">
+      {/* ── 2. SEARCH BAR (WhatsApp Pill with Green Border - Image #1) ───────── */}
+      <div className="wa-picker-search-container">
+        <div className="wa-picker-search-pill">
+          <Search size={17} className="wa-picker-search-icon" />
           <input
             type="text"
-            autoFocus
-            placeholder={activeTab === 'emoji' ? 'Cari emoji…' : 'Cari stiker WhatsApp…'}
+            placeholder={
+              activeTab === 'sticker'
+                ? 'Search via WhatsApp sticker store'
+                : activeTab === 'emoji'
+                ? 'Search emoji'
+                : 'Search via Tenor / GIPHY'
+            }
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="wa-picker-search-input"
@@ -644,25 +978,83 @@ export function EmojiStickerPicker({
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="wa-picker-search-clear"
+              className="wa-picker-search-clear-btn"
+              title="Hapus pencarian"
             >
-              <X size={14} />
+              <X size={15} />
             </button>
           )}
         </div>
-      )}
+      </div>
 
-      {/* 3. MAIN GRID VIEW */}
+      {/* ── 3. MIDDLE SCROLLABLE BODY ────────────────────────────────────────── */}
       <div className="wa-picker-scroll-body">
-        {activeTab === 'emoji' ? (
-          /* EMOJI VIEW */
-          <div className="wa-emoji-section">
+        {/* Hidden file input for custom stickers */}
+        <input
+          type="file"
+          ref={customFileInputRef}
+          accept="image/*,.webp"
+          style={{ display: 'none' }}
+          onChange={handleCustomStickerUpload}
+        />
+
+        {activeTab === 'sticker' ? (
+          /* ── STICKER 4-COLUMN GRID (Matching Image #1) ── */
+          <div className="wa-sticker-grid">
+            {/* Tile 1: "+ Create" Card */}
+            {!searchQuery && (
+              <button
+                type="button"
+                className="wa-sticker-create-tile"
+                onClick={() => customFileInputRef.current?.click()}
+                disabled={disabled || isSendingSticker}
+                title="Buat stiker dari foto Anda"
+              >
+                <div className="wa-create-circle-icon">
+                  <Plus size={20} strokeWidth={2.4} />
+                </div>
+                <span className="wa-create-tile-text">Create</span>
+              </button>
+            )}
+
+            {/* Sticker Items */}
+            {displayedStickers.map(stk => (
+              <button
+                key={stk.id}
+                type="button"
+                className="wa-sticker-item-btn"
+                onClick={() => handlePresetStickerClick(stk)}
+                disabled={disabled || isSendingSticker}
+                title={`Kirim: ${stk.title}`}
+              >
+                <div
+                  className="wa-sticker-visual-card"
+                  style={{
+                    background: `linear-gradient(135deg, ${stk.bgGradient[0]} 0%, ${stk.bgGradient[1]} 100%)`,
+                  }}
+                >
+                  <span className="wa-stk-emoji-art">{stk.emoji}</span>
+                  <span className="wa-stk-caption-art">{stk.caption}</span>
+                </div>
+              </button>
+            ))}
+
+            {isSendingSticker && (
+              <div className="wa-sticker-sending-toast">
+                <Loader2 size={16} className="animate-spin" />
+                <span>Mengirim stiker WhatsApp…</span>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'emoji' ? (
+          /* ── EMOJI MULTI-COLUMN GRID ── */
+          <div className="wa-emoji-scroll-content">
             <div className="wa-emoji-grid">
               {displayedEmojis.map((emoji, idx) => (
                 <button
                   key={`${emoji}_${idx}`}
                   type="button"
-                  className="wa-emoji-cell-btn"
+                  className="wa-emoji-btn"
                   onClick={() => handleEmojiClick(emoji)}
                 >
                   {emoji}
@@ -671,136 +1063,61 @@ export function EmojiStickerPicker({
             </div>
           </div>
         ) : (
-          /* STICKER VIEW (4-column native transparent stickers) */
-          <div className="wa-sticker-section">
-            <input
-              type="file"
-              ref={customStickerInputRef}
-              accept="image/*,.webp"
-              style={{ display: 'none' }}
-              onChange={handleCustomStickerUpload}
-            />
-
-            <div className="wa-sticker-native-grid">
-              {/* Tile 1: Create Sticker */}
-              {!searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => customStickerInputRef.current?.click()}
-                  className="wa-sticker-create-card"
-                  title="Buat stiker dari foto/gambar Anda"
-                  disabled={disabled || isSendingSticker}
-                >
-                  <div className="wa-create-wand-icon">
-                    <Wand2 size={22} />
-                  </div>
-                  <span className="wa-create-wand-text">Buat stiker</span>
-                </button>
-              )}
-
-              {/* Native WhatsApp Sticker Items */}
-              {displayedStickers.map(stk => (
-                <button
-                  key={stk.id}
-                  type="button"
-                  onClick={() => handlePresetStickerClick(stk)}
-                  className="wa-sticker-native-item"
-                  title={`Kirim: ${stk.title}`}
-                  disabled={disabled || isSendingSticker}
-                >
-                  <div className="wa-sticker-graphic-badge" style={{ backgroundColor: stk.badgeColor }}>
-                    <span className="wa-stk-badge-icon">{stk.icon}</span>
-                    <span className="wa-stk-badge-text">{stk.label}</span>
-                  </div>
-                </button>
-              ))}
+          /* ── GIF PREVIEW SECTION ── */
+          <div className="wa-gif-grid">
+            <div className="wa-gif-placeholder-card">
+              <Sparkles size={28} className="text-emerald-500 mb-2" />
+              <span className="font-semibold text-sm">GIPHY & Tenor Integration</span>
+              <span className="text-xs text-muted-foreground text-center mt-1 px-4">
+                Pilih stiker WhatsApp di tab kanan untuk stiker langsung!
+              </span>
             </div>
-
-            {isSendingSticker && (
-              <div className="wa-sticker-loading-overlay">
-                <span>Mengirim stiker…</span>
-              </div>
-            )}
           </div>
         )}
       </div>
 
-      {/* 4. BOTTOM PACK NAVIGATION BAR (Clock, Star, Pack Icons, +) */}
-      <div className="wa-picker-pack-bar">
-        {activeTab === 'emoji' ? (
-          <div className="wa-pack-icons-row">
-            {EMOJI_CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                type="button"
-                className={`wa-pack-btn ${activeEmojiCategory === cat.id && !searchQuery ? 'active' : ''}`}
-                title={cat.label}
-                onClick={() => {
-                  setActiveEmojiCategory(cat.id);
-                  setSearchQuery('');
-                }}
-              >
-                <span>{cat.icon}</span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="wa-pack-icons-row">
-            <button
-              type="button"
-              className={`wa-pack-btn ${activeStickerCategory === 'all' && !searchQuery ? 'active' : ''}`}
-              title="Semua Stiker"
-              onClick={() => {
-                setActiveStickerCategory('all');
-                setSearchQuery('');
-              }}
-            >
-              <Sparkles size={22} strokeWidth={2.2} />
-            </button>
-            <button
-              type="button"
-              className={`wa-pack-btn ${activeStickerCategory === 'rental' && !searchQuery ? 'active' : ''}`}
-              title="Bisnis & Chat"
-              onClick={() => {
-                setActiveStickerCategory('rental');
-                setSearchQuery('');
-              }}
-            >
-              <span>💼</span>
-            </button>
-            <button
-              type="button"
-              className={`wa-pack-btn ${activeStickerCategory === 'reactions' && !searchQuery ? 'active' : ''}`}
-              title="Meme & Reaksi"
-              onClick={() => {
-                setActiveStickerCategory('reactions');
-                setSearchQuery('');
-              }}
-            >
-              <span>🤣</span>
-            </button>
-            <button
-              type="button"
-              className={`wa-pack-btn ${activeStickerCategory === 'animals' && !searchQuery ? 'active' : ''}`}
-              title="Hewan Lucu"
-              onClick={() => {
-                setActiveStickerCategory('animals');
-                setSearchQuery('');
-              }}
-            >
-              <span>🐾</span>
-            </button>
+      {/* ── 4. BOTTOM FLOATING PILL SWITCHER ([😊] [GIF] [🏷️] - Image #1) ────── */}
+      <div className="wa-picker-bottom-bar">
+        <div className="wa-picker-bottom-pill">
+          {/* 1. Emoji Tab */}
+          <button
+            type="button"
+            className={`wa-bottom-tab-btn ${activeTab === 'emoji' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('emoji');
+              setSearchQuery('');
+            }}
+            title="Emoji"
+          >
+            <Smile size={21} strokeWidth={2.2} />
+          </button>
 
-            <button
-              type="button"
-              onClick={() => customStickerInputRef.current?.click()}
-              className="wa-pack-btn wa-pack-plus-btn"
-              title="Tambah stiker baru"
-            >
-              <Plus size={22} strokeWidth={2.4} />
-            </button>
-          </div>
-        )}
+          {/* 2. GIF Tab */}
+          <button
+            type="button"
+            className={`wa-bottom-tab-btn ${activeTab === 'gif' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('gif');
+              setSearchQuery('');
+            }}
+            title="GIF"
+          >
+            <span className="wa-gif-text">GIF</span>
+          </button>
+
+          {/* 3. Sticker Tab (WhatsApp Folded Corner Sticker) */}
+          <button
+            type="button"
+            className={`wa-bottom-tab-btn ${activeTab === 'sticker' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('sticker');
+              setSearchQuery('');
+            }}
+            title="Stiker"
+          >
+            <WAStickerFoldedIcon size={20} />
+          </button>
+        </div>
       </div>
     </div>
   );
