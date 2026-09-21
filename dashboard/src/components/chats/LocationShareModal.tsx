@@ -16,6 +16,7 @@ interface LocationShareModalProps {
   onClose: () => void;
   onSend: (data: LocationData) => Promise<void> | void;
   sending?: boolean;
+  initialCoords?: { lat: number; lng: number; accuracy?: number } | null;
 }
 
 const DEFAULT_LAT = -6.936178;
@@ -71,18 +72,25 @@ const Icons = {
   ),
 };
 
-export function LocationShareModal({ open, onClose, onSend, sending = false }: LocationShareModalProps) {
+export function LocationShareModal({
+  open,
+  onClose,
+  onSend,
+  sending = false,
+  initialCoords = null,
+}: LocationShareModalProps) {
   const { t } = useTranslation();
 
   // Custom Pinpoint Coordinates (Center of the Map / Clicked point)
-  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number }>({
-    lat: DEFAULT_LAT,
-    lng: DEFAULT_LNG,
-  });
+  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number }>(() => ({
+    lat: initialCoords ? initialCoords.lat : DEFAULT_LAT,
+    lng: initialCoords ? initialCoords.lng : DEFAULT_LNG,
+  }));
 
   // User's actual GPS location
-  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number; accuracy?: number } | null>(() => initialCoords || null);
   const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [isHidingModalForPermission, setIsHidingModalForPermission] = useState<boolean>(false);
 
   // Address details of the custom pin
   const [currentAddress, setCurrentAddress] = useState<string>('');
@@ -107,46 +115,60 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
     el.addEventListener('touchstart', stopMapDrag, { passive: true });
   }, []);
 
-  // Fetch real GPS
-  const fetchGpsLocation = useCallback(() => {
+  // Fetch real GPS — hide modal if permission needs to be prompted so screen has no overlay
+  const fetchGpsLocation = useCallback((shouldHideModalIfPrompt = false) => {
     if (!navigator.geolocation) return;
     setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const { latitude, longitude, accuracy } = pos.coords;
-        setGpsCoords({ lat: latitude, lng: longitude, accuracy: Math.round(accuracy) });
-        setPinCoords({ lat: latitude, lng: longitude });
-        setIsLocating(false);
 
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.flyTo([latitude, longitude], 16, { animate: true, duration: 0.8 });
-        }
-      },
-      () => {
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    );
-  }, []);
+    const executeGetPosition = () => {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const { latitude, longitude, accuracy } = pos.coords;
+          setGpsCoords({ lat: latitude, lng: longitude, accuracy: Math.round(accuracy) });
+          setPinCoords({ lat: latitude, lng: longitude });
+          setIsLocating(false);
+          setIsHidingModalForPermission(false); // Setelah izin diberikan: buka lagi!
 
-  useEffect(() => {
-    if (!open) return;
-    // Only auto-fetch if permission was ALREADY granted previously.
-    // Never trigger the system permission popup automatically on modal mount
-    // to avoid Android OS "FLAG_WINDOW_IS_OBSCURED" / "bubbles or overlays" tapjacking lock.
-    if (typeof navigator !== 'undefined' && 'permissions' in navigator && navigator.permissions?.query) {
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.flyTo([latitude, longitude], 16, { animate: true, duration: 0.8 });
+          }
+        },
+        () => {
+          setIsLocating(false);
+          setIsHidingModalForPermission(false); // Batal / error: buka lagi!
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      );
+    };
+
+    if (shouldHideModalIfPrompt && typeof navigator !== 'undefined' && 'permissions' in navigator && navigator.permissions?.query) {
       navigator.permissions
         .query({ name: 'geolocation' })
         .then(result => {
-          if (result.state === 'granted') {
-            fetchGpsLocation();
+          if (result.state !== 'granted') {
+            // Sembunyikan modal sementara saat dialog izin Android muncul
+            setIsHidingModalForPermission(true);
           }
+          executeGetPosition();
         })
         .catch(() => {
-          // Ignore query failure
+          executeGetPosition();
         });
+    } else {
+      executeGetPosition();
     }
-  }, [open, fetchGpsLocation]);
+  }, []);
+
+  // Sync initialCoords whenever provided on open
+  useEffect(() => {
+    if (open && initialCoords) {
+      setGpsCoords(initialCoords);
+      setPinCoords({ lat: initialCoords.lat, lng: initialCoords.lng });
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.flyTo([initialCoords.lat, initialCoords.lng], 16, { animate: true, duration: 0.5 });
+      }
+    }
+  }, [open, initialCoords]);
 
   // Initialize Leaflet map
   useEffect(() => {
@@ -272,7 +294,7 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
       mapInstanceRef.current.flyTo([gpsCoords.lat, gpsCoords.lng], 16, { animate: true, duration: 0.6 });
       setPinCoords({ lat: gpsCoords.lat, lng: gpsCoords.lng });
     } else {
-      fetchGpsLocation();
+      fetchGpsLocation(true);
     }
   }, [gpsCoords, fetchGpsLocation]);
 
@@ -302,7 +324,7 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
 
   return (
     <Modal
-      open={open}
+      open={open && !isHidingModalForPermission}
       onClose={onClose}
       hideCloseButton
       title={null}
@@ -338,7 +360,7 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
 
             <button
               type="button"
-              onClick={fetchGpsLocation}
+              onClick={() => fetchGpsLocation(true)}
               className="wa-loc-btn-round"
               title="Refresh GPS"
               disabled={isLocating}
