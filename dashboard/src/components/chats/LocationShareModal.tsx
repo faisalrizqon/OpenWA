@@ -360,21 +360,6 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
             <div className="wa-pin-shadow" />
           </div>
 
-          {/* Floating Control: Maximize / Fullscreen Phone Size */}
-          <button
-            type="button"
-            ref={attachButtonEvents}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsFullScreen(prev => !prev);
-            }}
-            className="wa-loc-floating-btn wa-loc-btn-expand wa-loc-btn-map-expand"
-            title={isFullScreen ? 'Perkecil' : 'Satu Layar Handphone'}
-          >
-            {isFullScreen ? <Icons.Collapse /> : <Icons.Expand />}
-          </button>
-
           {/* Floating Control: Recenter GPS */}
           <button
             type="button"

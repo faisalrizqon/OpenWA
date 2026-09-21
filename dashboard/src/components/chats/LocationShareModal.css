@@ -194,7 +194,6 @@
 
 /* Floating Action Buttons on Map */
 .wa-loc-floating-btn,
-.wa-loc-btn-map-expand,
 .wa-loc-btn-recenter {
   position: absolute !important;
   z-index: 400 !important;
@@ -214,29 +213,15 @@
 }
 
 .wa-loc-floating-btn:hover,
-.wa-loc-btn-map-expand:hover,
 .wa-loc-btn-recenter:hover {
   transform: scale(1.08) !important;
   background: #f8fafc !important;
 }
 
 .wa-loc-floating-btn:active,
-.wa-loc-btn-map-expand:active,
 .wa-loc-btn-recenter:active {
   transform: scale(0.94) !important;
 }
-
-.wa-loc-btn-expand,
-.wa-loc-btn-map-expand {
-  top: 14px;
-  left: 14px;
-  width: 42px !important;
-  height: 42px !important;
-  min-width: 42px !important;
-  min-height: 42px !important;
-  color: #1e293b !important;
-}
-
 .wa-loc-btn-gps,
 .wa-loc-btn-recenter {
   top: 14px;
