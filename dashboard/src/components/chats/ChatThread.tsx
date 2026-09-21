@@ -76,8 +76,9 @@ interface ChatThreadProps {
   onDelete: (message: ChatMessageView) => void;
   /** Tap a choice on an inbound business button/list prompt (Baileys click-button). */
   onClickButton: (message: ChatMessageView, button: { id: string; text: string }) => Promise<void>;
+  onOpenChat?: (contact: { jid: string; name: string; phone?: string }) => void;
+  onZoomPhoto?: (photoUrl: string, name: string) => void;
 }
-
 // The messages area of the active chat room: the bubble list (media, quotes, reactions, hover
 // actions) plus the floating scroll-to-bottom button. The page owns the message query and the
 // scroll-position hook (its containerRef is handed down); reply/react/delete/lightbox intents go
@@ -99,6 +100,8 @@ function ChatThread({
   onReact,
   onDelete,
   onClickButton,
+  onOpenChat,
+  onZoomPhoto,
 }: ChatThreadProps) {
   const { t } = useTranslation();
 
@@ -312,12 +315,11 @@ function ChatThread({
             // name — two participants who share a pushName must still start a new run.
             (!prev || prev.direction === 'outgoing' || senderKey(prev) !== senderKey(msg)),
           );
-
-          const isMediaMessage = msg.type !== 'text';
+          const NON_MEDIA_TYPES = new Set(['text', 'order', 'product', 'poll', 'revoked', 'masked', 'call', 'location', 'contact', 'vcard', 'multi_vcard']);
+          const isMediaMessage = !NON_MEDIA_TYPES.has(msg.type);
           const mediaInfo = msg.metadata?.media;
 
           const renderMedia = () => {
-            if (msg.type === 'revoked') return null;
             // location/call have no downloadable media payload — render them before the
             // mediaInfo gate. The raw body (a base64 thumbnail / empty token) is suppressed below.
             if (msg.type === 'location') {
@@ -520,14 +522,32 @@ function ChatThread({
                   ) : isMasked ? (
                     <div className="message-text message-masked">{t('chats.messageMasked')}</div>
                   ) : isContact ? (
-                    <ContactMessageCard vcardText={msg.body} />
+                    <ContactMessageCard
+                      vcardText={msg.body}
+                      sessionId={sessionId ?? undefined}
+                      onOpenChat={onOpenChat}
+                      onZoomPhoto={onZoomPhoto}
+                    />
+                  ) : msg.type === 'order' ? (
+                    <div className="message-order-card">
+                      <div className="order-card-header">
+                        <span className="order-card-badge">🛍️ Pesanan WhatsApp</span>
+                        {(msg.metadata as any)?.order && typeof (msg.metadata as any).order?.orderId === 'string' && (
+                          <span className="order-card-id">#{(msg.metadata as any).order.orderId}</span>
+                        )}
+                      </div>
+                      {msg.body ? (
+                        <MessageBody text={msg.body} className="message-text order-card-body" />
+                      ) : (
+                        <div className="order-card-placeholder">Detail pesanan WhatsApp Business</div>
+                      )}
+                    </div>
                   ) : (
                     msg.body &&
                     (!mediaInfo || msg.body !== mediaInfo.filename) &&
                     msg.type !== 'location' &&
                     msg.type !== 'call' && <MessageBody text={msg.body} className="message-text" />
                   )}
-
                   {/* Inbound business prompt choices; a tap calls POST .../messages/click-button. */}
                   {!isMe && !isRevoked && !isMasked && (msg.metadata?.buttons?.length ?? 0) > 0 && (
                     <div className="message-prompt-buttons" role="group" aria-label={t('chats.promptButtons')}>

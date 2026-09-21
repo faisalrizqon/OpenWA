@@ -48,8 +48,8 @@ export function LocationMapPreview({
           key: `${tx}_${ty}`,
           left: Math.round(tx * 256 - minX),
           top: Math.round(ty * 256 - minY),
-          url: `https://a.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${tx}/${ty}.png`,
-          fallbackUrl: `https://tile.openstreetmap.org/${zoom}/${tx}/${ty}.png`,
+          url: `https://mt1.google.com/vt/lyrs=m&x=${tx}&y=${ty}&z=${zoom}&hl=id`,
+          fallbackUrl: `https://a.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${tx}/${ty}.png`,
         });
       }
     }

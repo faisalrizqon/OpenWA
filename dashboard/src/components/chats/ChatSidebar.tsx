@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, CircleDashed, Loader2, Maximize2, Megaphone, Minimize2, Plus, Pin, Video, Mic, FileText, MapPin, User, PhoneMissed } from 'lucide-react';
+import { AlertCircle, CircleDashed, Loader2, Maximize2, Megaphone, Minimize2, Plus, Pin, Video, Mic, FileText, MapPin, User, PhoneMissed, ShoppingBag } from 'lucide-react';
 import { WAStatusTick, WAStickerIcon, WAPhotoIcon } from './WAStatusTick';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -177,10 +177,15 @@ function ChatSidebar({
         <PhoneMissed size={14} className="wa-snippet-media-icon" style={{ color: '#ea0038' }} />
       );
       displayText = cleanSnippetText(text) || t('chats.media.missedCall', 'Panggilan tak terjawab');
+    } else if (type === 'order' || text.startsWith('🛍️') || /^\[?order\]?$/i.test(text)) {
+      mediaIcon = <ShoppingBag size={14} className="wa-snippet-media-icon" style={{ color: '#22c55e' }} />;
+      displayText = cleanSnippetText(text.replace(/^\[order\]\s*/i, '').replace(/^🛍️\s*/i, '')) || 'Pesanan';
+    } else if (type === 'interactive' || /^\[?interactive\]?$/i.test(text)) {
+      mediaIcon = <ShoppingBag size={14} className="wa-snippet-media-icon" style={{ color: '#0ea5e9' }} />;
+      displayText = cleanSnippetText(text.replace(/^\[interactive\]\s*/i, '').replace(/^📋\s*/i, '')) || 'Pesanan / Interaktif';
     } else if (text.startsWith('Reacted ')) {
       displayText = text;
     }
-
     return (
       <>
         {fromMe && <WAStatusTick status={status} size={14} className="wa-snippet-status-tick" />}
