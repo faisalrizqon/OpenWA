@@ -16,7 +16,6 @@ interface LocationShareModalProps {
   onClose: () => void;
   onSend: (data: LocationData) => Promise<void> | void;
   sending?: boolean;
-  initialCoords?: { lat: number; lng: number; accuracy?: number } | null;
 }
 
 const DEFAULT_LAT = -6.936178;
@@ -72,25 +71,18 @@ const Icons = {
   ),
 };
 
-export function LocationShareModal({
-  open,
-  onClose,
-  onSend,
-  sending = false,
-  initialCoords = null,
-}: LocationShareModalProps) {
+export function LocationShareModal({ open, onClose, onSend, sending = false }: LocationShareModalProps) {
   const { t } = useTranslation();
 
   // Custom Pinpoint Coordinates (Center of the Map / Clicked point)
-  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number }>(() => ({
-    lat: initialCoords ? initialCoords.lat : DEFAULT_LAT,
-    lng: initialCoords ? initialCoords.lng : DEFAULT_LNG,
-  }));
+  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number }>({
+    lat: DEFAULT_LAT,
+    lng: DEFAULT_LNG,
+  });
 
   // User's actual GPS location
-  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number; accuracy?: number } | null>(() => initialCoords || null);
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
   const [isLocating, setIsLocating] = useState<boolean>(false);
-  const [isHidingModalForPermission, setIsHidingModalForPermission] = useState<boolean>(false);
 
   // Address details of the custom pin
   const [currentAddress, setCurrentAddress] = useState<string>('');
@@ -115,60 +107,46 @@ export function LocationShareModal({
     el.addEventListener('touchstart', stopMapDrag, { passive: true });
   }, []);
 
-  // Fetch real GPS — hide modal if permission needs to be prompted so screen has no overlay
-  const fetchGpsLocation = useCallback((shouldHideModalIfPrompt = false) => {
+  // Fetch real GPS
+  const fetchGpsLocation = useCallback(() => {
     if (!navigator.geolocation) return;
     setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        setGpsCoords({ lat: latitude, lng: longitude, accuracy: Math.round(accuracy) });
+        setPinCoords({ lat: latitude, lng: longitude });
+        setIsLocating(false);
 
-    const executeGetPosition = () => {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const { latitude, longitude, accuracy } = pos.coords;
-          setGpsCoords({ lat: latitude, lng: longitude, accuracy: Math.round(accuracy) });
-          setPinCoords({ lat: latitude, lng: longitude });
-          setIsLocating(false);
-          setIsHidingModalForPermission(false); // Setelah izin diberikan: buka lagi!
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.flyTo([latitude, longitude], 16, { animate: true, duration: 0.8 });
+        }
+      },
+      () => {
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  }, []);
 
-          if (mapInstanceRef.current) {
-            mapInstanceRef.current.flyTo([latitude, longitude], 16, { animate: true, duration: 0.8 });
-          }
-        },
-        () => {
-          setIsLocating(false);
-          setIsHidingModalForPermission(false); // Batal / error: buka lagi!
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-      );
-    };
-
-    if (shouldHideModalIfPrompt && typeof navigator !== 'undefined' && 'permissions' in navigator && navigator.permissions?.query) {
+  useEffect(() => {
+    if (!open) return;
+    // Only auto-fetch if permission was ALREADY granted previously.
+    // Never trigger the system permission popup automatically on modal mount
+    // to avoid Android OS "FLAG_WINDOW_IS_OBSCURED" / "bubbles or overlays" tapjacking lock.
+    if (typeof navigator !== 'undefined' && 'permissions' in navigator && navigator.permissions?.query) {
       navigator.permissions
         .query({ name: 'geolocation' })
         .then(result => {
-          if (result.state !== 'granted') {
-            // Sembunyikan modal sementara saat dialog izin Android muncul
-            setIsHidingModalForPermission(true);
+          if (result.state === 'granted') {
+            fetchGpsLocation();
           }
-          executeGetPosition();
         })
         .catch(() => {
-          executeGetPosition();
+          // Ignore query failure
         });
-    } else {
-      executeGetPosition();
     }
-  }, []);
-
-  // Sync initialCoords whenever provided on open
-  useEffect(() => {
-    if (open && initialCoords) {
-      setGpsCoords(initialCoords);
-      setPinCoords({ lat: initialCoords.lat, lng: initialCoords.lng });
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.flyTo([initialCoords.lat, initialCoords.lng], 16, { animate: true, duration: 0.5 });
-      }
-    }
-  }, [open, initialCoords]);
+  }, [open, fetchGpsLocation]);
 
   // Initialize Leaflet map
   useEffect(() => {
@@ -294,7 +272,7 @@ export function LocationShareModal({
       mapInstanceRef.current.flyTo([gpsCoords.lat, gpsCoords.lng], 16, { animate: true, duration: 0.6 });
       setPinCoords({ lat: gpsCoords.lat, lng: gpsCoords.lng });
     } else {
-      fetchGpsLocation(true);
+      fetchGpsLocation();
     }
   }, [gpsCoords, fetchGpsLocation]);
 
@@ -324,7 +302,7 @@ export function LocationShareModal({
 
   return (
     <Modal
-      open={open && !isHidingModalForPermission}
+      open={open}
       onClose={onClose}
       hideCloseButton
       title={null}
@@ -360,7 +338,7 @@ export function LocationShareModal({
 
             <button
               type="button"
-              onClick={() => fetchGpsLocation(true)}
+              onClick={fetchGpsLocation}
               className="wa-loc-btn-round"
               title="Refresh GPS"
               disabled={isLocating}

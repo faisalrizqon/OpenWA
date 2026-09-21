@@ -93,7 +93,7 @@ function ChatComposer({
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
   const [showAttachMenu, setShowAttachMenu] = useState<boolean>(false);
   const [showLocationModal, setShowLocationModal] = useState<boolean>(false);
-  const [initialGpsCoords, setInitialGpsCoords] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
+  // Monotonic token invalidating an in-flight attachment FileReader: picking a second file (or
   // removing the attachment) before `onload` fires must win over the late-arriving bytes —
   // otherwise the slower read overwrites the newer pick. Same pattern as composeImageReadSeq.
   const attachmentReadSeq = useRef(0);
@@ -485,43 +485,7 @@ function ChatComposer({
               className="attach-item"
               onClick={() => {
                 setShowAttachMenu(false);
-                if (!navigator.geolocation) {
-                  setShowLocationModal(true);
-                  return;
-                }
-                const promptAndOpen = () => {
-                  navigator.geolocation.getCurrentPosition(
-                    pos => {
-                      setInitialGpsCoords({
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude,
-                        accuracy: Math.round(pos.coords.accuracy),
-                      });
-                      setShowLocationModal(true);
-                    },
-                    () => {
-                      setShowLocationModal(true);
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-                  );
-                };
-                if (typeof navigator !== 'undefined' && 'permissions' in navigator && navigator.permissions?.query) {
-                  navigator.permissions
-                    .query({ name: 'geolocation' })
-                    .then(res => {
-                      if (res.state === 'granted') {
-                        setShowLocationModal(true);
-                      } else {
-                        // Layar bersih tanpa modal/overlay saat dialog izin Android muncul
-                        promptAndOpen();
-                      }
-                    })
-                    .catch(() => {
-                      promptAndOpen();
-                    });
-                } else {
-                  promptAndOpen();
-                }
+                setShowLocationModal(true);
               }}
               disabled={!canWrite || sending}
             >
@@ -648,7 +612,6 @@ function ChatComposer({
         onClose={() => setShowLocationModal(false)}
         onSend={handleSendLocation}
         sending={sending}
-        initialCoords={initialGpsCoords}
       />
     </>
   );
