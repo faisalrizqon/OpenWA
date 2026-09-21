@@ -1062,35 +1062,7 @@ export function Chats() {
       {!anyFullscreen && !hasActiveItem && (
         <PageHeader
           title={t('nav.chats')}
-          subtitle={t('chats.subtitle')} 
-          badge={
-            sessions.length > 0 ? (
-              <select
-                value={selectedSessionId}
-                onChange={e => setSelectedSessionId(e.target.value)}
-                aria-label={t('chats.sessionLabel')}
-                style={{
-                  height: '38px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border)',
-                  backgroundColor: 'var(--bg-white)',
-                  color: 'var(--text-primary)',
-                  padding: '0 12px',
-                  fontSize: '0.875rem',
-                  outline: 'none',
-                  boxShadow: 'var(--shadow-sm)',
-                  cursor: 'pointer',
-                  minWidth: '220px'
-                }}
-              >
-                {sessions.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.phone || t('chats.noPhone')})
-                  </option>
-                ))}
-              </select>
-            ) : null
-          }
+          subtitle={t('chats.subtitle')}
         />
       )}
       {/* Real-time connection permanently dropped — let the user re-establish it instead of
@@ -1126,7 +1098,9 @@ export function Chats() {
         >
           {/* LEFT SIDEBAR: session & chat rooms */}
           <ChatSidebar
+            sessions={sessions}
             selectedSessionId={selectedSessionId}
+            onSelectSession={setSelectedSessionId}
             activeTab={activeTab}
             onSwitchTab={switchTab}
             searchQuery={searchQuery}
