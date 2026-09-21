@@ -350,10 +350,10 @@ body.__page_fullscreen .chats-page .icon-btn-full-chat {
    iframe dari tepi ke tepi — tanpa ini judul "Chats" nongol di atas baris
    header sidebar dan tinggi terbuang untuk border/radius dobel. */
 body.__in_iframe .chats-page {
-  padding: 0;
-  height: 100dvh;
+  padding: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
 }
-
 body.__in_iframe .chats-page .page-header {
   display: none;
 }
@@ -771,18 +771,15 @@ body.__in_iframe .chats-page .chats-layout {
   gap: 0.75rem;
   background-image: radial-gradient(var(--border) 1px, transparent 0);
   background-size: 24px 24px;
-  position: relative;
 }
 
-/* Floating scroll-to-bottom button. Sits at the bottom-right of the messages pane (not the footer)
-   so it overlays the conversation without stealing input-bar space. The default desktop scrollbar
-   gutter leaves ~15px to the right edge; we anchor a bit further in so the button doesn't overlap
-   the scrollbar on narrow viewports. */
+/* Floating scroll-to-bottom button. Positioned relative to .room-container so it stays
+   anchored right above the input footer and never scrolls out of view. */
 .chats-page .scroll-to-bottom-btn {
   position: absolute;
   right: 1.5rem;
-  bottom: 1rem;
-  z-index: 5;
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  z-index: 25;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -1441,12 +1438,28 @@ body.__in_iframe .chats-page .chats-layout {
     flex-shrink: 0;
   }
 
-  /* Input bar must never shrink, and respect mobile bottom safe-area */
-  .chats-page .room-input-footer {
-    flex-shrink: 0 !important;
-    padding: 0.65rem 0.75rem max(0.65rem, env(safe-area-inset-bottom, 0px)) !important;
+  /* Scroll-to-bottom floating button on mobile */
+  .chats-page .scroll-to-bottom-btn {
+    right: 1rem !important;
+    bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px)) !important;
+    width: 38px !important;
+    height: 38px !important;
   }
 
+  /* Input bar must never shrink, and respect mobile bottom safe-area with generous clearance */
+  .chats-page .room-input-footer {
+    flex-shrink: 0 !important;
+    padding: 0.65rem 0.75rem !important;
+    padding-bottom: max(1.1rem, calc(0.65rem + env(safe-area-inset-bottom, 0px))) !important;
+    background: var(--bg-white) !important;
+    position: relative !important;
+    z-index: 10 !important;
+  }
+
+  /* Prevent auto-zoom on iOS Safari that pushes input footer down */
+  .chats-page .message-text-input {
+    font-size: 16px !important;
+  }
   /* Flex-column chain fix: tanpa min-height: 0, item flex tumbuh setinggi isi
      (min-height: auto default) sehingga .room-messages tidak pernah bisa scroll
      internal — seluruh halaman yang scroll dan chat terbuka di pesan PERTAMA.

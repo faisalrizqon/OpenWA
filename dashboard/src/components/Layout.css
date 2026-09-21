@@ -407,20 +407,31 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  /* When an active conversation is open on mobile, hide the app-level mobile-header
+  /* When an active conversation is open on mobile or inside iframe, hide the app-level mobile-header
      and remove top padding so the chat header sits at the top (WhatsApp native style),
      and disable outer scroll so the inner chat messages container is the sole scroller. */
+  body.__has_active_chat .mobile-header,
+  body.__in_iframe .mobile-header,
   .layout:has(.has-active-chat) .mobile-header {
     display: none !important;
   }
 
+  body.__has_active_chat .main-content.mobile,
+  body.__in_iframe .main-content.mobile,
   .layout:has(.has-active-chat) .main-content.mobile,
   .main-content.mobile:has(.has-active-chat) {
     padding-top: 0 !important;
+    height: 100% !important;
     height: 100dvh !important;
+    max-height: 100dvh !important;
     overflow-y: hidden !important;
   }
 
+  body.__in_iframe .layout {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+  }
   .collapse-toggle {
     display: none;
   }

@@ -875,8 +875,18 @@ export function Chats() {
         })),
     [messages, formatChatTime],
   );
-
   const hasActiveItem = Boolean(activeChat || activeChannel || activeStatusGroup);
+
+  useEffect(() => {
+    if (hasActiveItem) {
+      document.body.classList.add('__has_active_chat');
+    } else {
+      document.body.classList.remove('__has_active_chat');
+    }
+    return () => {
+      document.body.classList.remove('__has_active_chat');
+    };
+  }, [hasActiveItem]);
 
   return (
     <div

@@ -94,6 +94,13 @@ button:focus:not(:focus-visible) {
   outline: none;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 100%;
+}
+
 html {
   /* Root/overscroll background follows the app theme token, so an explicit dark theme on a
      light-OS device doesn't reveal a white <html> background above/below the body (overscroll). */
