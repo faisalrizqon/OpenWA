@@ -98,14 +98,13 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
   const mapInstanceRef = useRef<any>(null);
   const addressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Helper to ensure Leaflet does not swallow clicks or mousedown on overlay buttons
+  // Helper to ensure Leaflet map dragging does not hijack the floating button
   const attachButtonEvents = useCallback((el: HTMLElement | null) => {
     if (!el) return;
-    const stopPropagation = (e: Event) => e.stopPropagation();
-    el.addEventListener('mousedown', stopPropagation);
-    el.addEventListener('pointerdown', stopPropagation);
-    el.addEventListener('touchstart', stopPropagation, { passive: true });
-    el.addEventListener('click', stopPropagation);
+    const stopMapDrag = (e: Event) => e.stopPropagation();
+    el.addEventListener('mousedown', stopMapDrag);
+    el.addEventListener('pointerdown', stopMapDrag);
+    el.addEventListener('touchstart', stopMapDrag, { passive: true });
   }, []);
 
   // Fetch real GPS
@@ -254,14 +253,15 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
     };
   }, [pinCoords.lat, pinCoords.lng, open]);
 
-  const handleRecenterGps = () => {
+  const handleRecenterGps = useCallback(() => {
     if (gpsCoords && mapInstanceRef.current) {
+      mapInstanceRef.current.invalidateSize();
       mapInstanceRef.current.flyTo([gpsCoords.lat, gpsCoords.lng], 16, { animate: true, duration: 0.6 });
       setPinCoords({ lat: gpsCoords.lat, lng: gpsCoords.lng });
     } else {
       fetchGpsLocation();
     }
-  };
+  }, [gpsCoords, fetchGpsLocation]);
 
   // Send Custom Pinpoint Location
   const handleSendCustomLocation = () => {
@@ -371,8 +371,10 @@ export function LocationShareModal({ open, onClose, onSend, sending = false }: L
             }}
             className="wa-loc-floating-btn wa-loc-btn-gps wa-loc-btn-recenter"
             title="Ke lokasi GPS Anda"
+            aria-label="Ke lokasi GPS Anda"
+            disabled={isLocating}
           >
-            <Icons.GpsTarget />
+            {isLocating ? <Icons.Spinner /> : <Icons.GpsTarget />}
           </button>
         </div>
 
