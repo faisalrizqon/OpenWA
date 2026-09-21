@@ -128,18 +128,18 @@ export function Chats() {
   // pada documentElement (real fullscreen, chrome dashboard hilang seluruhnya);
   // mobile = pseudo-fullscreen mode 'page' (hindari bar sistem browser).
   const handlePageFullscreenToggle = () => {
+    window.scrollTo(0, 0);
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const main = document.querySelector('.main-content');
+    if (main) main.scrollTop = 0;
+
     if (anyFullscreen) {
       pseudoFullscreenStore.setMode('none');
       if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
       return;
     }
     pseudoFullscreenStore.setMode('page');
-    // MOBILE JUGA memakai Fullscreen API: pseudo-fullscreen CSS hanya menutup
-    // viewport dan TIDAK bisa menyembunyikan chrome browser (status bar + URL
-    // bar), sehingga hasilnya bukan 100% layar penuh. Notifikasi sistem sesaat
-    // saat masuk lebih dapat diterima daripada browser chrome yang menetap.
-    // Bila API ditolak (iOS Safari / iframe tanpa izin), pseudo-fullscreen di
-    // atas tetap aktif sebagai fallback.
     void document.documentElement.requestFullscreen().catch(err => {
       console.warn('Fullscreen API ditolak, pseudo-fullscreen tetap aktif:', err);
     });
@@ -880,13 +880,20 @@ export function Chats() {
   useEffect(() => {
     if (hasActiveItem) {
       document.body.classList.add('__has_active_chat');
+      window.scrollTo(0, 0);
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+      const main = document.querySelector('.main-content');
+      if (main) main.scrollTop = 0;
+      const layout = document.querySelector('.layout');
+      if (layout) layout.scrollTop = 0;
     } else {
       document.body.classList.remove('__has_active_chat');
     }
     return () => {
       document.body.classList.remove('__has_active_chat');
     };
-  }, [hasActiveItem]);
+  }, [hasActiveItem, activeChat?.id]);
 
   return (
     <div
@@ -906,10 +913,10 @@ export function Chats() {
         </button>
       )}
 
-      {/* Sembunyikan PageHeader & subtitle saat mode fullscreen aktif (chat atau page). */}
-      {!anyFullscreen && (
-        <PageHeader 
-          title={t('nav.chats')} 
+      {/* Sembunyikan PageHeader saat mode fullscreen atau saat percakapan sedang dibuka */}
+      {!anyFullscreen && !hasActiveItem && (
+        <PageHeader
+          title={t('nav.chats')}
           subtitle={t('chats.subtitle')} 
           badge={
             sessions.length > 0 ? (
@@ -1012,7 +1019,7 @@ export function Chats() {
               <div className="room-container">
                 {/* Room header */}
                 <header className="room-header">
-                  <button className="room-back" onClick={() => setActiveChat(null)} aria-label={t('common.back')}>
+                  <button className="room-back" onClick={() => { setActiveChat(null); window.scrollTo(0, 0); }} aria-label={t('common.back')}>
                     <ArrowLeft size={20} />
                   </button>
                   <div className="room-avatar">

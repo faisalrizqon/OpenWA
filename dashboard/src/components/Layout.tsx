@@ -60,7 +60,7 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  // Show the build-time version immediately, then replace it with the live running version from the
+  const isEmbedded = typeof window !== 'undefined' && window.parent !== window;
   // backend so a stale-built bundle can't display the wrong number. Falls back silently on error.
   const [version, setVersion] = useState(__APP_VERSION__);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
@@ -135,7 +135,7 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
 
   return (
     <div className="layout">
-      {isMobile && (
+      {isMobile && !isEmbedded && (
         <header className="mobile-header">
           <button className="mobile-menu-btn" onClick={toggleMobile} aria-label={t('common.expand')}>
             {isMobileOpen ? <X size={24} /> : <Menu size={24} />}

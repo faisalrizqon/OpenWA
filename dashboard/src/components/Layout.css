@@ -1,7 +1,11 @@
-.layout {
-  display: flex;
-  min-height: 100vh;
-}
+ .layout {
+   display: flex;
+   height: 100%;
+   min-height: 100%;
+   max-height: 100%;
+   width: 100%;
+   box-sizing: border-box;
+ }
 
 /* ==================== Sidebar ==================== */
 .sidebar {
@@ -400,8 +404,9 @@
     margin-left: 0;
     width: 100%;
     padding-top: 56px;
-    height: 100vh;
-    height: 100dvh;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
     box-sizing: border-box;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -418,20 +423,28 @@
 
   body.__has_active_chat .main-content.mobile,
   body.__in_iframe .main-content.mobile,
+  body.__has_active_chat .main-content,
+  body.__in_iframe .main-content,
   .layout:has(.has-active-chat) .main-content.mobile,
   .main-content.mobile:has(.has-active-chat) {
     padding-top: 0 !important;
     height: 100% !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
     overflow-y: hidden !important;
   }
 
-  body.__in_iframe .layout {
+  body.__has_active_chat .layout,
+  body.__in_iframe .layout,
+  body.__page_fullscreen .layout,
+  body.__pseudo_fullscreen_lock .layout {
     height: 100% !important;
     min-height: 0 !important;
     max-height: 100% !important;
+    overflow: hidden !important;
   }
+
   .collapse-toggle {
     display: none;
   }
@@ -454,15 +467,23 @@ body.__page_fullscreen .sidebar {
   display: none !important;
 }
 
-body.__page_fullscreen .main-content {
+body.__page_fullscreen .main-content,
+body.__pseudo_fullscreen_lock .main-content {
   margin-left: 0 !important;
   width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
   padding-top: 0 !important;
+  overflow: hidden !important;
 }
 
 @media (max-width: 767px) {
-  body.__page_fullscreen .main-content {
-    height: 100dvh !important;
+  body.__page_fullscreen .main-content,
+  body.__pseudo_fullscreen_lock .main-content {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
     overflow: hidden !important;
   }
 }
@@ -476,6 +497,9 @@ body.__page_fullscreen .main-content {
   margin: 0 !important;
   padding: 0 !important;
   background: var(--bg-white);
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
 }
 
 body.__pseudo_fullscreen_lock .layout,
