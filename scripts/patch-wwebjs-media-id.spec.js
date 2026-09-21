@@ -6,46 +6,70 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const {
-  applyMediaIdFix,
-  isApplied,
-  TARGET_FIND,
-  TARGET_REPLACE,
-} = require('./patch-wwebjs-media-id');
+const { applyBackport, isApplied, ANCHOR, FIX } = require('./patch-wwebjs-media-id.js');
 
-function fakeWwjs(utilsSource) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wwjs-media-id-'));
-  const utilsDir = path.join(dir, 'src', 'util', 'Injected');
-  fs.mkdirSync(utilsDir, { recursive: true });
-  fs.writeFileSync(path.join(utilsDir, 'Utils.js'), utilsSource);
-  return { dir, utilsFile: path.join(utilsDir, 'Utils.js') };
+// The real shape around the anchor: the outgoing message object closes, then the bot comment.
+const BEFORE = `            ...extraOptions,\n        };\n\n${ANCHOR}        if (botOptions) {\n`;
+const AFTER = `            ...extraOptions,\n        };\n\n${FIX}${ANCHOR}        if (botOptions) {\n`;
+
+function makeDependency(source) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'openwa-media-id-'));
+  const utils = path.join(root, 'src', 'util', 'Injected', 'Utils.js');
+  fs.mkdirSync(path.dirname(utils), { recursive: true });
+  fs.writeFileSync(utils, source);
+  return { root, utils };
 }
 
-const PRISTINE = `exports.x = async () => {\n    const message = {\n${TARGET_FIND}\n};\n`;
+test('strips the media model id from the outgoing message before it is built', () => {
+  const { root, utils } = makeDependency(`head\n${BEFORE}tail\n`);
 
-test('applies media id fix to a pristine tree', () => {
-  const { dir, utilsFile } = fakeWwjs(PRISTINE);
-  assert.equal(isApplied(dir), false);
+  const result = applyBackport(root);
 
-  const result = applyMediaIdFix(dir);
-  assert.equal(result.skipped, false);
-  assert.equal(isApplied(dir), true);
-
-  const patched = fs.readFileSync(utilsFile, 'utf8');
-  assert.ok(patched.includes(TARGET_REPLACE));
-  assert.ok(patched.includes('delete message.__x_id;'));
+  assert.deepEqual(result, { skipped: false, note: 'media model id stripped from outgoing messages' });
+  assert.equal(fs.readFileSync(utils, 'utf8'), `head\n${AFTER}tail\n`);
 });
 
-test('is idempotent — second run is skipped', () => {
-  const { dir } = fakeWwjs(PRISTINE);
-  applyMediaIdFix(dir);
+test('is idempotent once the fix is present', () => {
+  const { root, utils } = makeDependency(`head\n${AFTER}tail\n`);
+  const original = fs.readFileSync(utils, 'utf8');
 
-  const second = applyMediaIdFix(dir);
-  assert.equal(second.skipped, true);
-  assert.equal(isApplied(dir), true);
+  assert.deepEqual(applyBackport(root), {
+    skipped: true,
+    reason: 'installed whatsapp-web.js already strips the media model id',
+  });
+  assert.equal(fs.readFileSync(utils, 'utf8'), original);
 });
 
-test('refuses unrecognised shapes', () => {
-  const { dir } = fakeWwjs('// completely different file');
-  assert.throws(() => applyMediaIdFix(dir), /unsupported Utils.js shape/);
+test('reports the patch as applied only once the transform has run', () => {
+  const { root } = makeDependency(`head\n${BEFORE}tail\n`);
+
+  assert.equal(isApplied(root), false);
+  applyBackport(root);
+  assert.equal(isApplied(root), true);
+});
+
+test('rejects an unknown dependency shape without changing it', () => {
+  const { root, utils } = makeDependency('window.WWebJS.sendMessage = async () => {};\n');
+  const original = fs.readFileSync(utils, 'utf8');
+
+  assert.throws(() => applyBackport(root), /unsupported Utils\.js shape/);
+  assert.equal(fs.readFileSync(utils, 'utf8'), original);
+});
+
+test('rejects an ambiguous dependency shape without changing it', () => {
+  const { root, utils } = makeDependency(`${BEFORE}${BEFORE}`);
+  const original = fs.readFileSync(utils, 'utf8');
+
+  assert.throws(() => applyBackport(root), /unsupported Utils\.js shape/);
+  assert.equal(fs.readFileSync(utils, 'utf8'), original);
+});
+
+// The patch stands down when the fix is already there, so a shape carrying both the fix and a
+// second anchor is not one it understands either.
+test('rejects a fix present alongside a second anchor', () => {
+  const { root, utils } = makeDependency(`${AFTER}${BEFORE}`);
+  const original = fs.readFileSync(utils, 'utf8');
+
+  assert.throws(() => applyBackport(root), /unsupported Utils\.js shape/);
+  assert.equal(fs.readFileSync(utils, 'utf8'), original);
 });

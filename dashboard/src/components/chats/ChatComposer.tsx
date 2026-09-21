@@ -109,6 +109,31 @@ function ChatComposer({
     };
   }, [activeChat.id]);
 
+  // Escape dismisses the emoji picker instead of closing the conversation behind it.
+  //
+  // On `document`, and in the capture phase, because neither alternative works: the picker is a div
+  // with no tabIndex, so an onKeyDown on it fires only when focus is already inside, and after the
+  // toggle button is clicked focus is on the button, outside. Capture also puts this ahead of the
+  // page's own Escape handler whatever order the two listeners were registered in, so the
+  // preventDefault below is what the page reads, and the room stays open without the picker having
+  // to advertise a role it does not implement.
+  //
+  // It still yields to a surface layered ABOVE it. The picker can stay open while the media viewer
+  // or a menu is opened over it, and taking the key there would dismiss the picker underneath
+  // instead of the thing the operator is looking at. Same test the page's own handler uses, so the
+  // three agree on who owns Escape.
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    const dismissOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.isComposing || event.defaultPrevented) return;
+      if (document.querySelector('[role="dialog"], [role="menu"]')) return;
+      event.preventDefault();
+      setShowEmojiPicker(false);
+    };
+    document.addEventListener('keydown', dismissOnEscape, true);
+    return () => document.removeEventListener('keydown', dismissOnEscape, true);
+  }, [showEmojiPicker]);
+
   // References
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textInputRef = useRef<HTMLInputElement | null>(null);
