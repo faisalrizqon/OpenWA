@@ -528,20 +528,70 @@ function ChatThread({
                       onOpenChat={onOpenChat}
                       onZoomPhoto={onZoomPhoto}
                     />
-                  ) : msg.type === 'order' ? (
-                    <div className="message-order-card">
-                      <div className="order-card-header">
-                        <span className="order-card-badge">🛍️ Pesanan WhatsApp</span>
-                        {(msg.metadata as any)?.order && typeof (msg.metadata as any).order?.orderId === 'string' && (
-                          <span className="order-card-id">#{(msg.metadata as any).order.orderId}</span>
-                        )}
-                      </div>
-                      {msg.body ? (
-                        <MessageBody text={msg.body} className="message-text order-card-body" />
-                      ) : (
-                        <div className="order-card-placeholder">Detail pesanan WhatsApp Business</div>
-                      )}
-                    </div>
+                  ) : msg.type === 'order' || Boolean(msg.metadata?.order) ? (
+                    (() => {
+                      const order = msg.metadata?.order;
+                      const statusLabel =
+                        order?.status === 'payment_requested'
+                          ? 'Menunggu Pembayaran'
+                          : order?.status === 'completed' || order?.status === 'paid'
+                          ? 'Selesai'
+                          : order?.status;
+                      const formattedTotal =
+                        order?.total != null
+                          ? typeof order.total === 'number'
+                            ? order.total.toLocaleString('id-ID')
+                            : String(order.total)
+                          : null;
+                      return (
+                        <div className="message-order-card">
+                          <div className="order-card-header">
+                            <span className="order-card-badge">🛍️ Pesanan WhatsApp</span>
+                            {statusLabel && <span className="order-status-badge">{statusLabel}</span>}
+                            {order?.orderId && <span className="order-card-id">#{order.orderId}</span>}
+                          </div>
+                          <div className="order-card-content">
+                            {order?.thumbnail && (
+                              <img
+                                src={
+                                  order.thumbnail.startsWith('data:')
+                                    ? order.thumbnail
+                                    : `data:image/jpeg;base64,${order.thumbnail}`
+                                }
+                                alt="Pesanan"
+                                className="order-card-thumb"
+                              />
+                            )}
+                            {order?.items && order.items.length > 0 ? (
+                              <div className="order-card-items">
+                                {order.items.map((item, idx) => (
+                                  <div key={idx} className="order-card-item">
+                                    <span className="order-item-name">{item.name}</span>
+                                    <span className="order-item-qty-price">
+                                      {item.quantity}x
+                                      {item.price != null &&
+                                        ` • ${order.currency || 'IDR'} ${item.price.toLocaleString('id-ID')}`}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : msg.body ? (
+                              <MessageBody text={msg.body} className="message-text order-card-body" />
+                            ) : (
+                              <div className="order-card-placeholder">Detail pesanan WhatsApp Business</div>
+                            )}
+                          </div>
+                          {formattedTotal && (
+                            <div className="order-card-footer">
+                              <span className="order-total-label">Total Pesanan</span>
+                              <span className="order-total-value">
+                                {order?.currency || 'IDR'} {formattedTotal}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()
                   ) : (
                     msg.body &&
                     (!mediaInfo || msg.body !== mediaInfo.filename) &&

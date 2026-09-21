@@ -8,7 +8,7 @@ import { chatKind } from '../identity/wa-id';
  * incoming with the neutral types outgoing sends already use) and `ptt` -> `voice`. Anything not
  * mapped becomes `unknown`.
  */
-export function mapWwebjsMessageType(raw: string): MessageType {
+export function mapWwebjsMessageType(raw: string, msg?: RawMessageFields): MessageType {
   switch (raw) {
     case 'chat':
       return 'text';
@@ -41,6 +41,18 @@ export function mapWwebjsMessageType(raw: string): MessageType {
       return 'product';
     case 'interactive':
     case 'native_flow':
+      if (msg) {
+        const d = msg._data as Record<string, any> | undefined;
+        if (
+          d?.nativeFlowName === 'order_details' ||
+          d?.interactivePayload?.buttons?.some((b: any) => b?.name === 'review_and_pay') ||
+          msg.orderId ||
+          d?.orderId
+        ) {
+          return 'order';
+        }
+      }
+      return 'text';
     case 'buttons_response':
     case 'list_response':
     case 'template_button_reply':
@@ -81,6 +93,32 @@ export interface RawMessageFields {
     lng?: number | string;
     loc?: string;
     clientUrl?: string;
+    nativeFlowName?: string;
+    interactiveType?: string;
+    interactiveHeader?: {
+      thumbnail?: string;
+      title?: string;
+      hasMediaAttachment?: boolean;
+    };
+    interactiveBody?: {
+      text?: string;
+    };
+    interactivePayload?: {
+      buttons?: Array<{
+        name?: string;
+        buttonParamsJson?: string | Record<string, unknown>;
+      }>;
+    };
+    orderId?: string;
+    token?: string;
+    orderTitle?: string;
+    itemCount?: number;
+    total?: number | string;
+    subtotal?: number | string;
+    currency?: string;
+    sellerJid?: string;
+    thumbnail?: string;
+    [key: string]: unknown;
   };
   /** Location payload on location-typed messages. */
   location?: {
@@ -101,6 +139,158 @@ export interface RawMessageFields {
   businessOwnerJid?: string;
 }
 
+export interface WwebjsOrderItem {
+  name: string;
+  quantity: number;
+  price?: number;
+  retailerId?: string;
+}
+
+export interface WwebjsOrderInfo {
+  orderId: string;
+  token?: string;
+  title?: string;
+  currency?: string;
+  total?: number | string;
+  subtotal?: number | string;
+  itemCount?: number;
+  status?: string;
+  thumbnail?: string;
+  items?: WwebjsOrderItem[];
+}
+
+interface RawOrderItem {
+  retailer_id?: string;
+  name?: string;
+  amount?: { value?: number; offset?: number };
+  price?: number;
+  quantity?: number;
+}
+
+interface RawOrderParams {
+  reference_id?: string;
+  order_request_id?: string;
+  currency?: string;
+  total_amount?: { value?: number; offset?: number };
+  total?: number | string;
+  order?: {
+    status?: string;
+    items?: RawOrderItem[];
+    subtotal?: { value?: number; offset?: number };
+  };
+  subtotal?: number | string;
+}
+
+/**
+ * Extract WhatsApp Business order details from either standard order messages or modern
+ * interactive native-flow order_details payloads.
+ */
+export function extractWwebjsOrder(msg: RawMessageFields): WwebjsOrderInfo | undefined {
+  const d = msg._data;
+  const isOrderRaw =
+    msg.type === 'order' ||
+    d?.nativeFlowName === 'order_details' ||
+    Boolean(msg.orderId) ||
+    Boolean(d?.orderId);
+
+  const buttons = d?.interactivePayload?.buttons;
+  let parsedParams: RawOrderParams | null = null;
+  if (Array.isArray(buttons)) {
+    const reviewBtn = buttons.find((b) => b?.name === 'review_and_pay' || Boolean(b?.buttonParamsJson));
+    if (reviewBtn?.buttonParamsJson) {
+      if (typeof reviewBtn.buttonParamsJson === 'string') {
+        try {
+          parsedParams = JSON.parse(reviewBtn.buttonParamsJson) as RawOrderParams;
+        } catch {
+          // unparseable json
+        }
+      } else if (typeof reviewBtn.buttonParamsJson === 'object') {
+        parsedParams = reviewBtn.buttonParamsJson as RawOrderParams;
+      }
+    }
+  }
+
+  if (parsedParams) {
+    const items = Array.isArray(parsedParams.order?.items)
+      ? parsedParams.order.items.map((item) => {
+          const qty = typeof item.quantity === 'number' ? item.quantity : 1;
+          const rawVal = item.amount?.value != null ? item.amount.value : item.price;
+          const offset = item.amount?.offset || 1;
+          const price = rawVal != null ? (offset > 1 ? rawVal / offset : rawVal) : undefined;
+          return {
+            name: item.name || 'Produk',
+            quantity: qty,
+            price,
+            retailerId: item.retailer_id,
+          };
+        })
+      : undefined;
+
+    const totalRaw = parsedParams.total_amount?.value != null ? parsedParams.total_amount.value : parsedParams.total;
+    const totalOffset = parsedParams.total_amount?.offset || 1;
+    const total =
+      totalRaw != null
+        ? typeof totalRaw === 'number' && totalOffset > 1
+          ? totalRaw / totalOffset
+          : totalRaw
+        : (d?.total as number | string | undefined);
+
+    const subtotalRaw =
+      parsedParams.order?.subtotal?.value != null ? parsedParams.order.subtotal.value : parsedParams.subtotal;
+    const subtotalOffset = parsedParams.order?.subtotal?.offset || 1;
+    const subtotal =
+      subtotalRaw != null
+        ? typeof subtotalRaw === 'number' && subtotalOffset > 1
+          ? subtotalRaw / subtotalOffset
+          : subtotalRaw
+        : (d?.subtotal as number | string | undefined);
+
+    const orderId =
+      parsedParams.reference_id ||
+      parsedParams.order_request_id ||
+      (d?.orderId as string | undefined) ||
+      msg.orderId ||
+      '';
+
+    const result: WwebjsOrderInfo = {
+      orderId,
+      currency: parsedParams.currency || (d?.currency as string | undefined) || 'IDR',
+      itemCount: items?.length || (d?.itemCount as number | undefined) || 1,
+    };
+    if (parsedParams.order?.status) result.status = parsedParams.order.status;
+    if (total != null) result.total = total;
+    if (subtotal != null) result.subtotal = subtotal;
+    if (items) result.items = items;
+    const thumb = d?.interactiveHeader?.thumbnail || (d?.thumbnail as string | undefined);
+    if (thumb) result.thumbnail = thumb;
+    return result;
+  }
+
+  if (isOrderRaw || msg.orderId || d?.orderId) {
+    const orderId = msg.orderId || (d?.orderId as string | undefined) || '';
+    if (!orderId && !d?.orderTitle && !msg.title) {
+      return undefined;
+    }
+    const result: WwebjsOrderInfo = { orderId };
+    const token = msg.token || (d?.token as string | undefined);
+    if (token) result.token = token;
+    const title =
+      (typeof msg.title === 'string' ? msg.title : '') ||
+      (d?.orderTitle as string | undefined) ||
+      (d?.title as string | undefined);
+    if (title) result.title = title;
+    if (typeof d?.itemCount === 'number') result.itemCount = d.itemCount;
+    if (d?.total != null) result.total = d.total as number | string;
+    if (d?.subtotal != null) result.subtotal = d.subtotal as number | string;
+    if (d?.currency) result.currency = d.currency as string;
+    const thumb = d?.thumbnail as string | undefined;
+    if (thumb) result.thumbnail = thumb;
+    return result;
+  }
+
+  return undefined;
+}
+
 /**
  * Extract display text from wwebjs message, recovering text from interactive / order shapes
  * when msg.body is empty (#562).
@@ -109,7 +299,33 @@ export function extractWwebjsBody(msg: RawMessageFields): string {
   if (typeof msg.body === 'string' && msg.body.trim().length > 0) {
     return msg.body;
   }
-  const d = msg._data as Record<string, any> | undefined;
+
+  const orderDetails = extractWwebjsOrder(msg);
+  if (orderDetails) {
+    const parts: string[] = [];
+    if (orderDetails.items && orderDetails.items.length > 0) {
+      const itemsList = orderDetails.items.map((i) => `${i.quantity}x ${i.name}`).join(', ');
+      parts.push(itemsList);
+    } else if (orderDetails.title) {
+      parts.push(orderDetails.title);
+    }
+    if (orderDetails.total != null) {
+      const cur = orderDetails.currency || 'IDR';
+      const formattedTotal =
+        typeof orderDetails.total === 'number'
+          ? orderDetails.total.toLocaleString('id-ID')
+          : String(orderDetails.total);
+      parts.push(`Total: ${cur} ${formattedTotal}`);
+    }
+    if (parts.length > 0) {
+      return `Pesanan: ${parts.join(' • ')}`;
+    }
+    if (orderDetails.orderId) {
+      return `Pesanan #${orderDetails.orderId}`;
+    }
+  }
+
+  const d = msg._data as Record<string, unknown> | undefined;
   if (!d) {
     return (
       (typeof msg.title === 'string' ? msg.title : '') ||
@@ -118,12 +334,14 @@ export function extractWwebjsBody(msg: RawMessageFields): string {
   }
 
   // 1. Interactive message body text
-  if (typeof d.interactiveBody?.text === 'string' && d.interactiveBody.text.trim().length > 0) {
-    return d.interactiveBody.text.trim();
+  const interactiveBody = d.interactiveBody as { text?: string } | undefined;
+  if (typeof interactiveBody?.text === 'string' && interactiveBody.text.trim().length > 0) {
+    return interactiveBody.text.trim();
   }
   // 2. Interactive header title
-  if (typeof d.interactiveHeader?.title === 'string' && d.interactiveHeader.title.trim().length > 0) {
-    return d.interactiveHeader.title.trim();
+  const interactiveHeader = d.interactiveHeader as { title?: string } | undefined;
+  if (typeof interactiveHeader?.title === 'string' && interactiveHeader.title.trim().length > 0) {
+    return interactiveHeader.title.trim();
   }
   // 3. Order title or message
   if (typeof d.orderTitle === 'string' && d.orderTitle.trim().length > 0) {
@@ -172,7 +390,7 @@ export function buildIncomingMessageBase(msg: RawMessageFields): IncomingMessage
     to: msg.to,
     chatId,
     body,
-    type: mapWwebjsMessageType(msg.type),
+    type: mapWwebjsMessageType(msg.type, msg),
     timestamp: msg.timestamp,
     fromMe: msg.fromMe,
     isGroup: chatId.endsWith('@g.us'),
@@ -212,8 +430,13 @@ export function buildIncomingMessageBase(msg: RawMessageFields): IncomingMessage
 
   // Commerce ids, keyed off the mapped type so a stray `title` on some other message shape cannot
   // fabricate a product. Without the id neither entry is actionable, so both are then left unset.
-  if (incoming.type === 'order' && msg.orderId) {
-    incoming.order = { orderId: msg.orderId, ...(msg.token ? { token: msg.token } : {}) };
+  if (incoming.type === 'order') {
+    const orderDetails = extractWwebjsOrder(msg);
+    if (orderDetails && (orderDetails.orderId || (orderDetails.items && orderDetails.items.length > 0))) {
+      incoming.order = orderDetails;
+    } else if (msg.orderId) {
+      incoming.order = { orderId: msg.orderId, ...(msg.token ? { token: msg.token } : {}) };
+    }
   } else if (incoming.type === 'product' && msg.productId) {
     incoming.product = {
       productId: msg.productId,

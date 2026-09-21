@@ -168,6 +168,57 @@ describe('buildIncomingMessageBase', () => {
     expect(r.product).toBeUndefined();
     expect(r.order).toBeUndefined();
   });
+
+  it('maps a modern interactive native-flow order_details message with items and amounts', () => {
+    const nativeOrderMsg: RawMessageFields = {
+      ...base,
+      type: 'interactive',
+      body: '',
+      _data: {
+        nativeFlowName: 'order_details',
+        interactivePayload: {
+          buttons: [
+            {
+              name: 'review_and_pay',
+              buttonParamsJson: JSON.stringify({
+                reference_id: 'REF123',
+                currency: 'IDR',
+                total_amount: { value: 60000000, offset: 1000 },
+                order: {
+                  status: 'payment_requested',
+                  items: [
+                    { name: 'Camera Canon', quantity: 1, amount: { value: 30000000, offset: 1000 } },
+                    { name: 'Camera Kodak', quantity: 1, amount: { value: 30000000, offset: 1000 } },
+                  ],
+                  subtotal: { value: 60000000, offset: 1000 },
+                },
+              }),
+            },
+          ],
+        },
+        interactiveHeader: {
+          thumbnail: 'base64thumbnail',
+        },
+      },
+    };
+
+    const r = buildIncomingMessageBase(nativeOrderMsg);
+    expect(r.type).toBe('order');
+    expect(r.order).toEqual({
+      orderId: 'REF123',
+      status: 'payment_requested',
+      currency: 'IDR',
+      total: 60000,
+      subtotal: 60000,
+      itemCount: 2,
+      thumbnail: 'base64thumbnail',
+      items: [
+        { name: 'Camera Canon', quantity: 1, price: 30000, retailerId: undefined },
+        { name: 'Camera Kodak', quantity: 1, price: 30000, retailerId: undefined },
+      ],
+    });
+    expect(r.body).toBe('Pesanan: 1x Camera Canon, 1x Camera Kodak • Total: IDR 60.000');
+  });
 });
 
 describe('mapWwebjsMessageType (engine type-token -> neutral MessageType boundary, #265)', () => {

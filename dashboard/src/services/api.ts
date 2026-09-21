@@ -299,9 +299,31 @@ export interface ChatMessage {
     quotedMessage?: { id: string; body: string };
     reactions?: Record<string, string>;
     call?: { video: boolean; missed: boolean };
+    location?: { latitude: number; longitude: number; description?: string; address?: string; url?: string };
     /** Business prompt choices (Baileys). Present on inbound prompts that offer buttons. */
     buttons?: Array<{ id: string; text: string }>;
+    order?: OrderDetailsView;
   };
+}
+
+export interface OrderItemView {
+  name: string;
+  quantity: number;
+  price?: number;
+  retailerId?: string;
+}
+
+export interface OrderDetailsView {
+  orderId: string;
+  token?: string;
+  title?: string;
+  currency?: string;
+  total?: number | string;
+  subtotal?: number | string;
+  itemCount?: number;
+  status?: string;
+  thumbnail?: string;
+  items?: OrderItemView[];
 }
 
 // Live WhatsApp message from the engine history endpoint (not a persisted DB row): it carries `fromMe`
@@ -360,9 +382,8 @@ export interface EngineHistoryMessage {
   };
   quotedMessage?: { id: string; body: string };
   location?: { latitude: number; longitude: number; description?: string; address?: string; url?: string };
-  /** Present on `order` messages only: the placed cart, plus the single-order token for its items. */
-  order?: { orderId: string; token?: string };
-  /** Present on `product` messages only: the catalog product shared into the chat. */
+  /** Present on `order` messages only: the placed cart, line items, and token. */
+  order?: OrderDetailsView;
   product?: { productId: string; title?: string; description?: string; businessOwnerJid?: string };
 }
 

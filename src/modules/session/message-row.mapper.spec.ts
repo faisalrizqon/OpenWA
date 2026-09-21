@@ -39,6 +39,15 @@ describe('buildMessageMetadata', () => {
     expect(buildMessageMetadata(msg({ buttons: [] }))).toBeUndefined();
   });
 
+  it('stores order metadata', () => {
+    const order = { orderId: 'ord-1', total: 60000, currency: 'IDR' };
+    expect(buildMessageMetadata(msg({ order }))).toEqual({ order });
+  });
+
+  it('stores product metadata', () => {
+    const product = { productId: 'prod-1', title: 'Camera' };
+    expect(buildMessageMetadata(msg({ product }))).toEqual({ product });
+  });
   it('stores every present field together', () => {
     const built = buildMessageMetadata(
       msg({

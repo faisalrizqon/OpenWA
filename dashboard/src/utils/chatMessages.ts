@@ -1,4 +1,4 @@
-import type { ChatMessage, EngineHistoryMessage, MessageType } from '../services/api';
+import type { ChatMessage, EngineHistoryMessage, MessageType, OrderDetailsView } from '../services/api';
 
 export type { EngineHistoryMessage };
 
@@ -35,6 +35,7 @@ export function mapEngineHistoryMessage(h: EngineHistoryMessage): ChatMessage {
       if (h.quotedMessage) metadata.quotedMessage = h.quotedMessage;
       if (h.call) metadata.call = h.call;
       if (h.location) metadata.location = h.location;
+      if (h.order) metadata.order = h.order;
       return Object.keys(metadata).length > 0 ? metadata : undefined;
     })(),
   };
@@ -53,10 +54,24 @@ export function mergeChatMessages(db: ChatMessage[], history: ChatMessage[]): Ch
   for (const m of db) {
     const key = msgKey(m);
     const hist = byId.get(key);
-    // The DB copy wins (authoritative status) — but a legacy row has no stable sender id, so
-    // salvage the engine-history copy's author or two same-named participants collapse into one
-    // attribution run in the chat view.
-    byId.set(key, hist?.author && !m.author ? { ...m, author: hist.author } : m);
+    if (hist) {
+      const mergedMsg = { ...m };
+      if (!mergedMsg.body && hist.body) {
+        mergedMsg.body = hist.body;
+      }
+      if ((mergedMsg.type === 'text' || mergedMsg.type === 'unknown') && hist.type === 'order') {
+        mergedMsg.type = hist.type;
+      }
+      if (hist.metadata?.order && !mergedMsg.metadata?.order) {
+        mergedMsg.metadata = { ...mergedMsg.metadata, order: hist.metadata.order };
+      }
+      if (hist.author && !mergedMsg.author) {
+        mergedMsg.author = hist.author;
+      }
+      byId.set(key, mergedMsg);
+    } else {
+      byId.set(key, m);
+    }
   }
   const sorted = [...byId.values()].sort((a, b) => msgTime(a) - msgTime(b) || a.createdAt.localeCompare(b.createdAt));
   return capMediaPayloads(sorted);
@@ -138,6 +153,7 @@ export interface ChatMessageView extends ChatMessage {
     call?: { video: boolean; missed: boolean };
     location?: { latitude: number; longitude: number; description?: string; address?: string; url?: string };
     buttons?: Array<{ id: string; text: string }>;
+    order?: OrderDetailsView;
   };
 }
 
@@ -152,15 +168,22 @@ export function liveMessageMetadata(msg: {
   call?: { video: boolean; missed: boolean };
   location?: { latitude: number; longitude: number; description?: string; address?: string; url?: string };
   buttons?: Array<{ id: string; text: string }>;
+  order?: OrderDetailsView;
   metadata?: ChatMessageView['metadata'];
 }): ChatMessageView['metadata'] {
-  if (msg.metadata) return msg.metadata;
+  if (msg.metadata) {
+    if (msg.order && !msg.metadata.order) {
+      return { ...msg.metadata, order: msg.order };
+    }
+    return msg.metadata;
+  }
   const metadata: NonNullable<ChatMessageView['metadata']> = {};
   if (msg.media) metadata.media = msg.media;
   if (msg.quotedMessage) metadata.quotedMessage = msg.quotedMessage;
   if (msg.call) metadata.call = msg.call;
   if (msg.location) metadata.location = msg.location;
   if (msg.buttons?.length) metadata.buttons = msg.buttons;
+  if (msg.order) metadata.order = msg.order;
   return Object.keys(metadata).length > 0 ? metadata : undefined;
 }
 

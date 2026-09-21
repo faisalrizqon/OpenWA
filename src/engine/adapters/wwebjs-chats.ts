@@ -63,7 +63,7 @@ function formatLastMessagePreview(lastMsg?: { type?: string; body?: string }): s
     case 'poll':
       return '📊 Polling';
     case 'order':
-      return body ? `🛍️ Pesanan: ${body}` : '🛍️ Pesanan';
+      return body ? `🛍️ ${body.replace(/^(?:🛍️\s*|Pesanan:\s*)/i, '')}` : '🛍️ Pesanan';
     case 'product':
       return body ? `🏷️ Produk: ${body}` : '🏷️ Produk';
     case 'interactive':

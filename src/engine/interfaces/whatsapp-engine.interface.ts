@@ -130,6 +130,19 @@ export interface IncomingMessage {
     orderId: string;
     /** Opaque, single-order credential. Pass through unchanged; do not log it. */
     token?: string;
+    title?: string;
+    currency?: string;
+    total?: number | string;
+    subtotal?: number | string;
+    itemCount?: number;
+    status?: string;
+    thumbnail?: string;
+    items?: Array<{
+      name: string;
+      quantity: number;
+      price?: number;
+      retailerId?: string;
+    }>;
   };
   /**
    * Set for `product` messages: the catalog product shared into the chat. `productId` identifies it
