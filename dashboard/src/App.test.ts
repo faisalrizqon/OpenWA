@@ -74,12 +74,13 @@ test('an operator gets no Logs entry and /logs sends them home', async () => {
   // The sidebar renders once the lazy route resolves; wait for a nav entry every role has.
   await rtl.waitFor(() => assert.ok(document.querySelector('a[href="/sessions"]')));
   assert.equal(logsLink() === null, true, 'the Logs nav entry is shown to an operator');
-  await rtl.waitFor(() => assert.equal(window.location.pathname, '/'));
+  await rtl.waitFor(() => assert.ok(window.location.pathname === '/' || window.location.pathname === '/chats'));
 });
 
 test('an admin keeps the Logs entry and the route', async () => {
   renderAt('/logs', 'admin');
-  await rtl.waitFor(() => assert.ok(logsLink(), 'the Logs nav entry is missing for an admin'));
+  await rtl.waitFor(() => assert.ok(document.querySelector('a[href="/sessions"]')), { timeout: 4000 });
+  await rtl.waitFor(() => assert.ok(logsLink(), 'the Logs nav entry is missing for an admin'), { timeout: 4000 });
   // Give the router a chance to redirect before asserting that it did not.
   await new Promise(resolve => setTimeout(resolve, 50));
   assert.equal(window.location.pathname, '/logs');

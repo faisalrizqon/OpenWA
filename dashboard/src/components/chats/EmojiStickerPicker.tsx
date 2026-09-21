@@ -453,6 +453,7 @@ export function EmojiStickerPicker({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if (document.querySelector('[role="dialog"], [role="menu"]')) return;
         onClose();
       }
     };
@@ -575,7 +576,7 @@ export function EmojiStickerPicker({
   };
 
   return (
-    <div ref={popupRef} className="wa-picker-popup">
+    <div ref={popupRef} className="wa-picker-popup chats-emoji-picker">
       {/* 1. TOP SUBHEADER (WhatsApp Native Style with Search on left & Segmented Control in center) */}
       <div className="wa-picker-subnav">
         {/* Left: Search Toggle */}
