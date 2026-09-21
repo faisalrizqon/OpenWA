@@ -140,6 +140,15 @@ function planSteps(root, env = process.env) {
       options: { stdio: 'inherit', cwd: root, env: cleanEnv },
     });
   }
+  const mediaIdPatcher = path.join(root, 'scripts', 'patch-wwebjs-media-id.js');
+  if (fs.existsSync(mediaIdPatcher)) {
+    steps.push({
+      name: 'whatsapp-web.js media outgoing id repair (scripts/patch-wwebjs-media-id.js --best-effort)',
+      command: process.execPath,
+      args: [mediaIdPatcher, '--best-effort'],
+      options: { stdio: 'inherit', cwd: root, env: cleanEnv },
+    });
+  }
   const baileysAppStatePatcher = path.join(root, 'scripts', 'patch-baileys-appstate.js');
   if (fs.existsSync(baileysAppStatePatcher)) {
     steps.push({
