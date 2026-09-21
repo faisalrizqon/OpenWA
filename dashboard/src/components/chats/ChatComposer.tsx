@@ -29,13 +29,13 @@ const MEDIA_UPLOAD_MAX_BYTES = 18 * 1024 * 1024;
 
 /** A picked-but-unsent file, staged until send, removal, or a move to another chat. */
 
-const WASendIcon = ({ size = 26, className = "wa-send-icon", style = {} }: { size?: number; className?: string; style?: React.CSSProperties }) => (
+const WASendIcon = ({ size = 24, className = "wa-send-icon", style = {} }: { size?: number; className?: string; style?: React.CSSProperties }) => (
   <svg
     viewBox="0 0 24 24"
     height={size}
     width={size}
     className={className}
-    style={style}
+    style={{ flexShrink: 0, minWidth: size, minHeight: size, ...style }}
     preserveAspectRatio="xMidYMid meet"
     fill="currentColor"
   >

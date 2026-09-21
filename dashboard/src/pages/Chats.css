@@ -1027,6 +1027,7 @@ body.__in_iframe .chats-page .chats-layout {
   justify-content: center;
   width: 44px;
   height: 44px;
+  padding: 0 !important;
   background: var(--primary);
   border: none;
   border-radius: 50%;
@@ -1056,6 +1057,9 @@ body.__in_iframe .chats-page .chats-layout {
 .chats-page .btn-send-message svg {
   width: 24px !important;
   height: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  flex-shrink: 0 !important;
 }
 
 .chats-page .btn-send-message svg:not(.animate-spin) {
