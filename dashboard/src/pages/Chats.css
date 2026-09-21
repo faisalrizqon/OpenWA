@@ -133,9 +133,7 @@
 body:has(.sidebar.open) .chats-page-fullscreen-btn,
 body:has(.sidebar-overlay) .chats-page-fullscreen-btn,
 body:has(.modal-overlay) .chats-page-fullscreen-btn,
-body:has(.yarl__root) .chats-page-fullscreen-btn,
-.chats-page.has-active-chat .chats-page-fullscreen-btn,
-.chats-page:has(.has-active-chat) .chats-page-fullscreen-btn {
+body:has(.yarl__root) .chats-page-fullscreen-btn {
   display: none !important;
 }
 
@@ -1027,8 +1025,8 @@ body.__in_iframe .chats-page .chats-layout {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   background: var(--primary);
   border: none;
   border-radius: 50%;
@@ -1057,8 +1055,11 @@ body.__in_iframe .chats-page .chats-layout {
 }
 
 .chats-page .btn-send-message svg {
-  width: 25px !important;
-  height: 25px !important;
+  width: 26px !important;
+  height: 26px !important;
+}
+
+.chats-page .btn-send-message svg:not(.animate-spin) {
   margin-left: 2px;
 }
 

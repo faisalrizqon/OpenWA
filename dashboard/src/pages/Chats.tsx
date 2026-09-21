@@ -901,7 +901,7 @@ export function Chats() {
         <PageHeader 
           title={t('nav.chats')} 
           subtitle={t('chats.subtitle')} 
-          actions={
+          badge={
             sessions.length > 0 ? (
               <select
                 value={selectedSessionId}
