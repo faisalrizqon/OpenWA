@@ -1120,9 +1120,7 @@ export function Chats() {
         >
           {/* LEFT SIDEBAR: session & chat rooms */}
           <ChatSidebar
-            sessions={sessions}
             selectedSessionId={selectedSessionId}
-            onSelectSession={setSelectedSessionId}
             activeTab={activeTab}
             onSwitchTab={switchTab}
             searchQuery={searchQuery}
