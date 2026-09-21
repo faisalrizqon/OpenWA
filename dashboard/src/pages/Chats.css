@@ -1164,6 +1164,7 @@ body.__in_iframe .chats-page .chats-layout {
   border-top: 1px solid var(--border);
   padding: 1rem 1.5rem;
   box-sizing: border-box;
+  position: relative;
 }
 
 .chats-page .input-form {
@@ -1392,122 +1393,137 @@ body.__in_iframe .chats-page .chats-layout {
   background: rgba(239, 68, 68, 0.12);
   color: var(--error-text);
 }
-
+/* =============================================================================
+   ATTACHMENT MENU: WhatsApp Native Style
+   Desktop: Vertical floating popup anchored above the paperclip button
+   Mobile: Bottom action sheet / tray
+   ============================================================================= */
 .chats-page .chats-attach-tray {
-  background: var(--bg-white);
-  border-top: 1px solid var(--border);
-  border-radius: 20px 20px 0 0;
-  padding: 0.75rem 0.5rem 0.85rem;
+  position: absolute;
+  bottom: calc(100% + 12px);
+  right: 56px;
+  background: var(--bg-white, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 16px;
+  padding: 8px 6px;
   box-sizing: border-box;
-  animation: slideUpAttach 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
-  flex-shrink: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08);
+  z-index: 50;
+  width: 205px;
+  animation: attachPopoverIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: bottom right;
 }
 
-@keyframes slideUpAttach {
+@keyframes attachPopoverIn {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: scale(0.9) translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1) translateY(0);
   }
 }
 
 .chats-page .attach-tray-handle {
-  width: 36px;
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-  margin: 0 auto 0.75rem;
+  display: none;
 }
 
 .chats-page .attach-tray-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  max-width: 520px;
-  align-items: center;
-  gap: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   width: 100%;
-  max-width: 440px;
-  margin: 0 auto;
-  box-sizing: border-box;
 }
 
 .chats-page .attach-item {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
+  gap: 12px;
+  padding: 7px 10px;
+  border-radius: 10px;
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 0.25rem 0;
-  min-width: 0;
   width: 100%;
-  border-radius: 8px;
-  transition: transform 0.15s ease;
+  text-align: left;
+  transition: background 0.15s ease, transform 0.1s ease;
+  user-select: none;
 }
 
 .chats-page .attach-item:hover:not(:disabled) {
-  transform: translateY(-2px);
+  background: var(--bg-light, #f1f5f9);
+  transform: none;
 }
 
 .chats-page .attach-item:active:not(:disabled) {
-  transform: scale(0.95);
+  background: var(--border, #e2e8f0);
+  transform: scale(0.98);
 }
 
 .chats-page .attach-icon-circle {
-  width: 46px;
-  height: 46px;
-  min-width: 46px;
-  min-height: 46px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-primary, #111b21);
-  background: var(--bg-light, #f0f2f5);
-  border: 1px solid var(--border, #e2e8f0);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  color: #ffffff !important;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
   flex-shrink: 0;
-  transition: all 0.15s ease;
 }
 
-.chats-page .attach-item:hover:not(:disabled) .attach-icon-circle {
-  background: var(--border, #e2e8f0);
-  color: var(--text-primary, #111b21);
+/* WhatsApp Vibrant Brand Colors for Attachment Icons */
+.chats-page .attach-document {
+  background: #7f66ff !important;
 }
 
-.chats-page .attach-gallery,
-.chats-page .attach-camera,
-.chats-page .attach-location,
-.chats-page .attach-document,
-.chats-page .attach-audio,
+.chats-page .attach-gallery {
+  background: #007bfc !important;
+}
+
+.chats-page .attach-camera {
+  background: #ff2e74 !important;
+}
+
 .chats-page .attach-contact {
-  background: var(--bg-light, #f0f2f5);
-  color: var(--text-primary, #111b21);
+  background: #02a698 !important;
 }
 
-[data-theme='dark'] .chats-page .attach-icon-circle,
-html[data-theme='dark'] .chats-page .attach-gallery,
-html[data-theme='dark'] .chats-page .attach-camera,
-html[data-theme='dark'] .chats-page .attach-location,
-html[data-theme='dark'] .chats-page .attach-document,
-html[data-theme='dark'] .chats-page .attach-audio,
-html[data-theme='dark'] .chats-page .attach-contact {
-  background: #202c33;
-  color: #e9edef;
-  border-color: #2a3942;
+.chats-page .attach-location {
+  background: #1fa855 !important;
 }
+
+.chats-page .attach-audio {
+  background: #e36619 !important;
+}
+
 .chats-page .attach-label {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-primary, #0f172a);
 }
 
+body[data-theme='dark'] .chats-page .chats-attach-tray,
+html[data-theme='dark'] .chats-page .chats-attach-tray {
+  background: #233138;
+  border-color: #2a3942;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+body[data-theme='dark'] .chats-page .attach-item:hover:not(:disabled),
+html[data-theme='dark'] .chats-page .attach-item:hover:not(:disabled) {
+  background: #182229;
+}
+
+body[data-theme='dark'] .chats-page .attach-label,
+html[data-theme='dark'] .chats-page .attach-label {
+  color: #e9edef;
+}
 /* Legacy emoji-picker styles reset so .wa-picker-popup in EmojiStickerPicker controls its own dimensions */
 .chats-page .chats-emoji-picker {
   box-sizing: border-box;
@@ -1625,10 +1641,65 @@ html[data-theme='dark'] .chats-page .attach-contact {
     z-index: 10 !important;
   }
 
+  /* Attachment Tray on mobile: bottom sheet tray */
+  .chats-page .chats-attach-tray {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    border-top: 1px solid var(--border) !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    padding: 0.75rem 0.5rem calc(0.85rem + env(safe-area-inset-bottom, 0px)) !important;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.12) !important;
+    transform-origin: center bottom !important;
+    z-index: 100 !important;
+  }
+
+  .chats-page .attach-tray-handle {
+    display: block !important;
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 0.75rem;
+  }
+
+  .chats-page .attach-tray-grid {
+    display: grid !important;
+    grid-template-columns: repeat(6, 1fr) !important;
+    max-width: 440px !important;
+    margin: 0 auto !important;
+    gap: 0.25rem !important;
+  }
+
+  .chats-page .attach-item {
+    flex-direction: column !important;
+    justify-content: center !important;
+    padding: 0.25rem 0 !important;
+    gap: 0.3rem !important;
+  }
+
+  .chats-page .attach-icon-circle {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
+  .chats-page .attach-label {
+    font-size: 0.75rem !important;
+    text-align: center !important;
+  }
+
   /* Prevent auto-zoom on iOS Safari that pushes input footer down */
   .chats-page .message-text-input {
     font-size: 16px !important;
   }
+
   /* Flex-column chain fix: tanpa min-height: 0, item flex tumbuh setinggi isi
      (min-height: auto default) sehingga .room-messages tidak pernah bisa scroll
      internal — seluruh halaman yang scroll dan chat terbuka di pesan PERTAMA.

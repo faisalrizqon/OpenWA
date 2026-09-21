@@ -584,91 +584,6 @@ function ChatComposer({
         </div>
       )}
 
-      {/* Attachment Tray (WhatsApp Native Style) */}
-      {showAttachMenu && (
-        <div ref={attachMenuRef} className="chats-attach-tray">
-          <div className="attach-tray-handle" />
-          <div className="attach-tray-grid">
-            <button
-              type="button"
-              className="attach-item"
-              onClick={() => handlePickMediaType('gallery')}
-              disabled={!canWrite}
-            >
-              <div className="attach-icon-circle attach-gallery">
-                <Image size={24} />
-              </div>
-              <span className="attach-label">{t('chats.media.gallery', 'Galeri')}</span>
-            </button>
-
-            <button
-              type="button"
-              className="attach-item"
-              onClick={() => handlePickMediaType('camera')}
-              disabled={!canWrite}
-            >
-              <div className="attach-icon-circle attach-camera">
-                <Camera size={24} />
-              </div>
-              <span className="attach-label">{t('chats.media.camera', 'Kamera')}</span>
-            </button>
-
-            <button
-              type="button"
-              className="attach-item"
-              onClick={() => {
-                setShowAttachMenu(false);
-                setShowLocationModal(true);
-              }}
-              disabled={!canWrite}
-            >
-              <div className="attach-icon-circle attach-location">
-                <MapPin size={24} />
-              </div>
-              <span className="attach-label">{t('chats.media.location', 'Lokasi')}</span>
-            </button>
-
-            <button
-              type="button"
-              className="attach-item"
-              onClick={() => {
-                setShowAttachMenu(false);
-                setShowContactModal(true);
-              }}
-              disabled={!canWrite}
-            >
-              <div className="attach-icon-circle attach-contact">
-                <User size={24} />
-              </div>
-              <span className="attach-label">{t('chats.media.contact', 'Kontak')}</span>
-            </button>
-            <button
-              type="button"
-              className="attach-item"
-              onClick={() => handlePickMediaType('document')}
-              disabled={!canWrite}
-            >
-              <div className="attach-icon-circle attach-document">
-                <FileText size={24} />
-              </div>
-              <span className="attach-label">{t('chats.media.document', 'Dokumen')}</span>
-            </button>
-
-            <button
-              type="button"
-              className="attach-item"
-              onClick={() => handlePickMediaType('audio')}
-              disabled={!canWrite}
-            >
-              <div className="attach-icon-circle attach-audio">
-                <Headphones size={24} />
-              </div>
-              <span className="attach-label">{t('chats.media.audio', 'Audio')}</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Replying preview banner */}
       {replyingTo && (
         <div className="replying-preview-banner">
@@ -691,11 +606,96 @@ function ChatComposer({
 
       {/* Message input bar */}
       <footer className="room-input-footer">
+        {/* Attachment Menu (WhatsApp Native Style: Vertical Popover on Desktop, Action Sheet on Mobile) */}
+        {showAttachMenu && (
+          <div ref={attachMenuRef} className="chats-attach-tray">
+            <div className="attach-tray-handle" />
+            <div className="attach-tray-grid">
+              <button
+                type="button"
+                className="attach-item"
+                onClick={() => handlePickMediaType('document')}
+                disabled={!canWrite}
+              >
+                <div className="attach-icon-circle attach-document">
+                  <FileText size={20} strokeWidth={2} />
+                </div>
+                <span className="attach-label">{t('chats.media.document', 'Dokumen')}</span>
+              </button>
+
+              <button
+                type="button"
+                className="attach-item"
+                onClick={() => handlePickMediaType('gallery')}
+                disabled={!canWrite}
+              >
+                <div className="attach-icon-circle attach-gallery">
+                  <Image size={20} strokeWidth={2} />
+                </div>
+                <span className="attach-label">{t('chats.media.gallery', 'Galeri')}</span>
+              </button>
+
+              <button
+                type="button"
+                className="attach-item"
+                onClick={() => handlePickMediaType('camera')}
+                disabled={!canWrite}
+              >
+                <div className="attach-icon-circle attach-camera">
+                  <Camera size={20} strokeWidth={2} />
+                </div>
+                <span className="attach-label">{t('chats.media.camera', 'Kamera')}</span>
+              </button>
+
+              <button
+                type="button"
+                className="attach-item"
+                onClick={() => {
+                  setShowAttachMenu(false);
+                  setShowContactModal(true);
+                }}
+                disabled={!canWrite}
+              >
+                <div className="attach-icon-circle attach-contact">
+                  <User size={20} strokeWidth={2} />
+                </div>
+                <span className="attach-label">{t('chats.media.contact', 'Kontak')}</span>
+              </button>
+
+              <button
+                type="button"
+                className="attach-item"
+                onClick={() => {
+                  setShowAttachMenu(false);
+                  setShowLocationModal(true);
+                }}
+                disabled={!canWrite}
+              >
+                <div className="attach-icon-circle attach-location">
+                  <MapPin size={20} strokeWidth={2} />
+                </div>
+                <span className="attach-label">{t('chats.media.location', 'Lokasi')}</span>
+              </button>
+
+              <button
+                type="button"
+                className="attach-item"
+                onClick={() => handlePickMediaType('audio')}
+                disabled={!canWrite}
+              >
+                <div className="attach-icon-circle attach-audio">
+                  <Headphones size={20} strokeWidth={2} />
+                </div>
+                <span className="attach-label">{t('chats.media.audio', 'Audio')}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSend} onPaste={handlePaste} className="input-form">
           <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} />
 
           <button
-            ref={emojiButtonRef}
             type="button"
             onClick={toggleEmojiPicker}
             disabled={!canWrite}
