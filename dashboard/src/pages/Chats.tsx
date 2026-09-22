@@ -4,7 +4,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { nextReconnectState } from '../utils/reconnectState';
 import { applyIncomingToChatList } from '../utils/chatList';
 import { filterChats, filterChannels, groupStatusesByContact } from '../utils/chatFilters';
-import { ArrowLeft, Loader2, Megaphone, CircleDashed, AlertCircle, MessageSquare, Maximize2, Minimize2, Pin, ZoomIn, UserPlus } from 'lucide-react';
+import { ArrowLeft, Loader2, Megaphone, CircleDashed, AlertCircle, MessageSquare, Maximize2, Minimize2, Pin, ZoomIn, UserPlus, MoreVertical } from 'lucide-react';
 import { useProfilePicture } from '../hooks/useProfilePicture';
 import { useProfilePictures } from '../hooks/useProfilePictures';
 import { useResolvedPhone } from '../hooks/useResolvedPhone';
@@ -276,6 +276,29 @@ export function Chats() {
   const [saveContactTarget, setSaveContactTarget] = useState<{ jid: string; initialName: string; phone: string } | null>(null);
   const [contactNameInput, setContactNameInput] = useState<string>('');
   const [savingContact, setSavingContact] = useState<boolean>(false);
+  // Dropdown menu state for room header actions
+  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState<boolean>(false);
+  const headerMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isHeaderMenuOpen) return;
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (headerMenuRef.current && !headerMenuRef.current.contains(e.target as Node)) {
+        setIsHeaderMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsHeaderMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isHeaderMenuOpen]);
 
   const handleZoomPhoto = useCallback((url: string, name: string) => {
     setZoomPhotoLightbox({
@@ -1200,45 +1223,76 @@ export function Chats() {
                       {activeChat.id}
                     </span>
                   </div>
-                  <div className="room-header-actions">
-                    {activePp.data && (
+                  <div className="room-header-actions" ref={headerMenuRef}>
+                    <div className="room-actions-dropdown-wrapper">
                       <button
                         type="button"
-                        className="room-pin-btn"
-                        onClick={() => handleZoomPhoto(activePp.data!, activeChat.name || activeChat.id.split('@')[0])}
-                        title={t('chats.zoomProfilePic', 'Perbesar Foto Profil')}
-                        aria-label={t('chats.zoomProfilePic', 'Perbesar Foto Profil')}
+                        className={`room-pin-btn room-more-btn ${isHeaderMenuOpen ? 'active' : ''}`}
+                        onClick={() => setIsHeaderMenuOpen(prev => !prev)}
+                        title={t('common.actions', 'Menu')}
+                        aria-label={t('common.actions', 'Menu')}
+                        aria-expanded={isHeaderMenuOpen}
+                        aria-haspopup="menu"
                       >
-                        <ZoomIn size={18} />
+                        <MoreVertical size={18} />
                       </button>
-                    )}
-                    {!activeChat.isGroup && (
-                      <button
-                        type="button"
-                        className="room-pin-btn"
-                        onClick={() => {
-                          setSaveContactTarget({
-                            jid: activeChat.id,
-                            initialName: activeChat.name || '',
-                            phone: activePhoneText || activeChat.id.split('@')[0],
-                          });
-                          setContactNameInput(activeChat.name || '');
-                        }}
-                        title={t('chats.saveContact', 'Simpan Kontak ke WhatsApp')}
-                        aria-label={t('chats.saveContact', 'Simpan Kontak ke WhatsApp')}
-                      >
-                        <UserPlus size={18} />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className={`room-pin-btn ${activeChat.pinned ? 'active' : ''}`}
-                      onClick={() => handleTogglePin(activeChat)}
-                      title={activeChat.pinned ? t('chats.unpinChat', 'Lepas Sematan') : t('chats.pinChat', 'Sematkan Chat')}
-                      aria-label={activeChat.pinned ? t('chats.unpinChat', 'Lepas Sematan') : t('chats.pinChat', 'Sematkan Chat')}
-                    >
-                      <Pin size={18} />
-                    </button>
+
+                      {isHeaderMenuOpen && (
+                        <div className="room-actions-menu-dropdown" role="menu">
+                          {activePp.data && (
+                            <button
+                              type="button"
+                              className="room-menu-item"
+                              role="menuitem"
+                              onClick={() => {
+                                setIsHeaderMenuOpen(false);
+                                handleZoomPhoto(activePp.data!, activeChat.name || activeChat.id.split('@')[0]);
+                              }}
+                            >
+                              <ZoomIn size={16} className="room-menu-icon" />
+                              <span>{t('chats.zoomProfilePic', 'Perbesar Foto Profil')}</span>
+                            </button>
+                          )}
+
+                          {!activeChat.isGroup && (
+                            <button
+                              type="button"
+                              className="room-menu-item"
+                              role="menuitem"
+                              onClick={() => {
+                                setIsHeaderMenuOpen(false);
+                                setSaveContactTarget({
+                                  jid: activeChat.id,
+                                  initialName: activeChat.name || '',
+                                  phone: activePhoneText || activeChat.id.split('@')[0],
+                                });
+                                setContactNameInput(activeChat.name || '');
+                              }}
+                            >
+                              <UserPlus size={16} className="room-menu-icon" />
+                              <span>{t('chats.saveContact', 'Simpan Kontak ke WhatsApp')}</span>
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            className="room-menu-item"
+                            role="menuitem"
+                            onClick={() => {
+                              setIsHeaderMenuOpen(false);
+                              handleTogglePin(activeChat);
+                            }}
+                          >
+                            <Pin size={16} className={`room-menu-icon ${activeChat.pinned ? 'is-pinned-icon' : ''}`} />
+                            <span>
+                              {activeChat.pinned
+                                ? t('chats.unpinChat', 'Lepas Sematan')
+                                : t('chats.pinChat', 'Sematkan Chat')}
+                            </span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </header>
 
