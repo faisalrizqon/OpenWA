@@ -180,8 +180,9 @@ select:disabled {
 /* Modal Card */
 .modal {
   background: var(--bg-white, #fff);
-  border-radius: 16px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 24px;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.08));
   width: 90%;
   max-width: 480px;
   animation: slideUp 0.3s ease;
@@ -199,6 +200,134 @@ select:disabled {
    so it isn't subject to the page-root scoping rule. */
 .modal.install-modal {
   max-width: 680px;
+}
+
+/* WhatsApp Native Delete Message Modal */
+.modal.wa-delete-message-modal {
+  width: 90%;
+  max-width: 360px;
+  border-radius: 28px;
+  padding: 0;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.modal-overlay:has(.wa-delete-message-modal) {
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+@media (max-width: 480px) {
+  .modal.wa-delete-message-modal {
+    width: 90%;
+    margin: auto;
+    border-radius: 28px;
+  }
+}
+
+.modal.wa-delete-message-modal .modal-header {
+  display: none;
+}
+
+.modal.wa-delete-message-modal .modal-body {
+  padding: 2.25rem 1.75rem 1.75rem;
+  overflow: visible;
+}
+
+.wa-delete-dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+}
+
+.wa-delete-dialog-title {
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: var(--text-primary, #111b21);
+  margin: 0 0 1.5rem 0;
+  letter-spacing: -0.01em;
+}
+
+.wa-delete-dialog-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.wa-dialog-pill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 44px;
+  border-radius: 9999px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.wa-dialog-pill-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Delete for everyone: green outline with crimson/red text */
+.wa-dialog-btn-everyone {
+  border: 1.5px solid #00a884;
+  color: #ea0038;
+}
+
+.wa-dialog-btn-everyone:hover:not(:disabled) {
+  background: rgba(0, 168, 132, 0.08);
+  border-color: #008069;
+}
+
+/* Delete for me: subtle border outline with WhatsApp teal/green text */
+.wa-dialog-btn-me {
+  border: 1.5px solid var(--border, #e2e8f0);
+  color: #008069;
+}
+
+[data-theme='dark'] .wa-dialog-btn-me {
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #00a884;
+}
+
+.wa-dialog-btn-me:hover:not(:disabled) {
+  background: rgba(0, 128, 105, 0.08);
+  border-color: #008069;
+}
+
+/* Cancel link */
+.wa-dialog-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #008069;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  margin-top: 0.25rem;
+  border-radius: 8px;
+  transition: opacity 0.15s ease;
+}
+
+[data-theme='dark'] .wa-dialog-link-btn {
+  color: #00a884;
+}
+
+.wa-dialog-link-btn:hover:not(:disabled) {
+  opacity: 0.75;
 }
 
 @keyframes slideUp {
@@ -293,14 +422,19 @@ select:disabled {
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: var(--bg-light, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
   cursor: pointer;
   color: var(--text-secondary, #64748b);
-  transition: all 0.2s;
+  transition: all 0.15s;
   flex-shrink: 0;
   padding: 0;
+}
+
+.btn-icon:hover {
+  background: var(--bg-light, #f1f5f9);
+  color: var(--text-primary);
 }
 
 .btn-icon svg {
@@ -518,7 +652,7 @@ code {
   .modal {
     width: 100%;
     margin: 0;
-    border-radius: 16px 16px 0 0;
+    border-radius: 24px 24px 0 0;
     /* max-height + body scroll already come from the base .modal rule; the bottom-sheet only
        changes width/anchoring. (Scrolling lives on .modal-body to avoid a double scrollbar.) */
   }

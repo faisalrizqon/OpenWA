@@ -265,7 +265,7 @@ export function Chats() {
     isFetchingNextPage: loadingOlderMessages,
     fetchNextPage,
   } = useChatMessages(selectedSessionId, activeChat?.id ?? null);
-  const { appendMessage, updateMessage } = useChatMessagesActions();
+  const { appendMessage, updateMessage, removeMessage } = useChatMessagesActions();
   const queryClient = useQueryClient();
 
   // Lightbox state for media viewer
@@ -278,6 +278,9 @@ export function Chats() {
   const [saveContactTarget, setSaveContactTarget] = useState<{ jid: string; initialName: string; phone: string } | null>(null);
   const [contactNameInput, setContactNameInput] = useState<string>('');
   const [savingContact, setSavingContact] = useState<boolean>(false);
+  // Modal for delete message confirmation (WhatsApp Web style)
+  const [deleteTargetMessage, setDeleteTargetMessage] = useState<ChatMessageView | null>(null);
+  const [deletingMessage, setDeletingMessage] = useState<boolean>(false);
   // Dropdown menu state for room header actions
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState<boolean>(false);
   const headerMenuRef = useRef<HTMLDivElement | null>(null);
@@ -844,22 +847,33 @@ export function Chats() {
     }
   };
 
-  const handleDeleteMessage = async (msg: ChatMessageView) => {
-    if (!selectedSessionId || !activeChat) return;
-    const msgId = msg.waMessageId || msg.id;
+  const handleDeleteMessage = (msg: ChatMessageView) => {
+    setDeleteTargetMessage(msg);
+  };
 
-    if (!window.confirm(t('chats.deleteConfirm'))) return;
+  const handleConfirmDelete = async (forEveryone: boolean) => {
+    if (!selectedSessionId || !activeChat || !deleteTargetMessage) return;
+    const msg = deleteTargetMessage;
+    const msgId = msg.waMessageId || msg.id;
+    setDeletingMessage(true);
 
     try {
       await messageApi.delete(selectedSessionId, {
         chatId: activeChat.id,
         messageId: msgId,
-        forEveryone: true,
+        forEveryone,
       });
 
-      updateMessage(selectedSessionId, activeChat.id, msg.id, { body: '', type: 'revoked' });
+      if (forEveryone) {
+        updateMessage(selectedSessionId, activeChat.id, msg.id, { body: '', type: 'revoked' });
+      } else {
+        removeMessage(selectedSessionId, activeChat.id, msg.id);
+      }
+      setDeleteTargetMessage(null);
     } catch (err) {
       showErrorToast(t('chats.errors.delete'), err instanceof Error ? err.message : undefined);
+    } finally {
+      setDeletingMessage(false);
     }
   };
 
@@ -1587,6 +1601,52 @@ export function Chats() {
                 placeholder={t('chats.phoneNumber', 'Nomor Telepon')}
                 style={{ width: '100%', opacity: 0.8 }}
               />
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {deleteTargetMessage && (
+        <Modal
+          open={Boolean(deleteTargetMessage)}
+          onClose={() => !deletingMessage && setDeleteTargetMessage(null)}
+          title=""
+          hideCloseButton
+          className="wa-delete-message-modal"
+        >
+          <div className="wa-delete-dialog-content">
+            <h3 className="wa-delete-dialog-title">{t('chats.deleteModalTitle', 'Delete message?')}</h3>
+            <div className="wa-delete-dialog-actions">
+              {deleteTargetMessage.direction === 'outgoing' && (
+                <button
+                  type="button"
+                  className="wa-dialog-pill-btn wa-dialog-btn-everyone"
+                  disabled={deletingMessage}
+                  onClick={() => void handleConfirmDelete(true)}
+                >
+                  {deletingMessage ? <Loader2 size={16} className="animate-spin" /> : t('chats.deleteForEveryone', 'Delete for everyone')}
+                </button>
+              )}
+              <button
+                type="button"
+                className="wa-dialog-pill-btn wa-dialog-btn-me"
+                disabled={deletingMessage}
+                onClick={() => void handleConfirmDelete(false)}
+              >
+                {deletingMessage && deleteTargetMessage.direction !== 'outgoing' ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  t('chats.deleteForMe', 'Delete for me')
+                )}
+              </button>
+              <button
+                type="button"
+                className="wa-dialog-link-btn"
+                disabled={deletingMessage}
+                onClick={() => setDeleteTargetMessage(null)}
+              >
+                {t('common.cancel', 'Cancel')}
+              </button>
             </div>
           </div>
         </Modal>
