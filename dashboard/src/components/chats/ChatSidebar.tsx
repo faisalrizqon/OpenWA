@@ -238,21 +238,7 @@ function ChatSidebar({
               {renderChatSnippet(chat)}
             </span>
             <div className="chat-item-meta-right">
-              {chat.pinned && (
-                <span className="chat-pinned-icon" title={t('chats.pinned', 'Disematkan')}>
-                  <Pin size={13} />
-                </span>
-              )}
-              {chat.unreadCount > 0 && (
-                <span
-                  className="chat-unread-badge"
-                  title={t('chats.unreadBadge', { count: chat.unreadCount })}
-                  aria-label={t('chats.unreadBadge', { count: chat.unreadCount })}
-                >
-                  {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
-                </span>
-              )}
-              {chatsTab.onTogglePin && (
+              {chatsTab.onTogglePin ? (
                 <button
                   type="button"
                   className={`chat-item-pin-btn ${chat.pinned ? 'is-pinned' : ''}`}
@@ -265,6 +251,21 @@ function ChatSidebar({
                 >
                   <Pin size={13} />
                 </button>
+              ) : (
+                chat.pinned && (
+                  <span className="chat-pinned-icon" title={t('chats.pinned', 'Disematkan')}>
+                    <Pin size={13} />
+                  </span>
+                )
+              )}
+              {chat.unreadCount > 0 && (
+                <span
+                  className="chat-unread-badge"
+                  title={t('chats.unreadBadge', { count: chat.unreadCount })}
+                  aria-label={t('chats.unreadBadge', { count: chat.unreadCount })}
+                >
+                  {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                </span>
               )}
             </div>
           </div>
