@@ -191,9 +191,9 @@ docker compose exec openwa-api printenv NODE_ENV CSP_UPGRADE_INSECURE_REQUESTS
 A production boot that serves the dashboard with the opt-out unset prints a warning naming this
 setting. If you are behind a TLS proxy, ignore that warning — the directive is doing its job.
 
-> The alternative is to front OpenWA with a TLS-terminating reverse proxy (the shipped
-> `docker-compose.yml` topology), which serves the dashboard over HTTPS and makes the upgrade a
-> no-op.
+> The alternative is to front OpenWA with your own TLS-terminating reverse proxy (the shipped
+> `docker-compose.yml` has none; see the nginx example in 12.8), which serves the dashboard over
+> HTTPS and makes the upgrade a no-op.
 
 ### Issue: Session Won't Connect
 
@@ -343,12 +343,30 @@ WWEBJS_WEB_VERSION=<a build from that registry's html/ folder>
 
 Restart the container after changing it. Pick the build from
 [wppconnect-team/wa-version](https://github.com/wppconnect-team/wa-version) (the `html/` folder) — a
-build the registry no longer serves is fetched, missed, and silently ignored, leaving you on the
-default behaviour rather than the pin you asked for. With
+build the registry no longer serves is fetched, missed, and ignored, leaving you on the default
+behaviour rather than the pin you asked for (the `ready`-time warning below names both builds). With
 `WWEBJS_WEB_VERSION` unset, `latest`, or `auto` (the default), OpenWA auto-resolves a settled build
 from that registry and pins its HTML — note this HTML is fetched from a third-party repository and
 executed inside the `web.whatsapp.com` origin without an integrity check. Set
-`WWEBJS_WEB_VERSION=off` to disable pinning and use the first-party build served by WhatsApp.
+`WWEBJS_WEB_VERSION=off` to disable pinning and use the first-party build served by WhatsApp. An
+unpinned session (this setting, or an auto-resolve that could not reach the registry) caches nothing to
+disk, so it also works on the image's read-only root filesystem.
+
+A pin is not guaranteed to hold. whatsapp-web.js applies it by answering the page's document request
+with the pinned HTML, and that can miss in two ways: a pin whose HTML could not be fetched is dropped
+and the live build loads, and WhatsApp Web's service worker can serve its own cached build without the
+request reaching whatsapp-web.js. Either way the page can run a different build than the one
+requested, while the startup line `Pinning WhatsApp Web version …` still names the requested build.
+When a session reaches `ready`, OpenWA reads the build the page reports and logs it (action
+`web_version_running`); when a pin was requested and the page runs a different build, it logs a
+warning naming both (action `web_version_pin_not_applied`). The comparison ignores the registry's
+suffix such as `-alpha`, so a pin and the same bare build count as a match.
+
+The warning changes nothing about the session. It reached `ready` on the build the warning names, so
+the pin did not cover that page load, and a session that works on that build needs no action.
+If the pin is one you set yourself, check that the registry still serves it. Whether the service worker
+answers can differ from one page load to the next, so a later restart may load the pin. When you report
+a problem with the session, include both builds.
 
 ### Issue: QR generation times out on slow first boot (WSL2 / low-resource)
 
@@ -662,13 +680,13 @@ curl -H "X-API-Key: $API_KEY" \
 
 **Common Causes:**
 
-| Cause                  | Symptom                | Solution                    |
-| ---------------------- | ---------------------- | --------------------------- |
-| Invalid phone number   | 400 error              | Format: `628123456789@c.us` |
-| Rate limited           | 429 error              | Reduce sending rate         |
-| Session disconnected   | 503 error              | Reconnect session           |
-| Media too large        | 413 error              | Compress or reduce size     |
-| Number not on WhatsApp | Message fails silently | Verify number first         |
+| Cause                            | Symptom                      | Solution                       |
+| -------------------------------- | ---------------------------- | ------------------------------ |
+| Invalid phone number             | 400 error                    | Format: `628123456789@c.us`    |
+| Rate limited                     | 429 error                    | Reduce sending rate            |
+| Session not started or not ready | 400 (`is not active`) or 409 | Start or reconnect the session |
+| Media too large                  | 413 error                    | Compress or reduce size        |
+| Number not on WhatsApp           | Message fails silently       | Verify number first            |
 
 **Phone Number Validation:**
 
@@ -730,7 +748,7 @@ rm -rf node_modules/whatsapp-web.js && npm ci
   block/unblock refusing every id, a status media send that never arrives, a group description that
   cannot be set, an app-state resync that never settles
 
-**Cause:** OpenWA applies nine exact source transforms to its engine libraries at install time
+**Cause:** OpenWA applies eleven exact source transforms to its engine libraries at install time
 (docs/29 §29.3). The Docker image runs them without `--best-effort`, so a source shape a patcher
 cannot recognise fails the image build. A source install runs them through `scripts/postinstall.js`
 with `--best-effort`, where a patcher that cannot apply prints one line into a long `npm install`
@@ -901,8 +919,8 @@ curl -X POST http://localhost:2785/api/sessions/{sessionId}/webhooks \
   }'
 ```
 
-`retryCount` (0–5, default 3) is per webhook. The delivery timings are process-wide environment
-variables:
+`retryCount` (0–5, default 3) is per webhook and counts total delivery attempts, including the first, so `1`
+retries nothing. The delivery timings are process-wide environment variables:
 
 ```bash
 WEBHOOK_TIMEOUT=10000      # per-attempt HTTP timeout in ms (default 10000)
@@ -1111,18 +1129,21 @@ npm run migration:run:main
 
 **Solutions:**
 
+The entrypoint starts as root, re-owns `/app/data` to the `openwa` user on every start, and then
+drops privileges with `gosu`. Keep that path intact:
+
+- Do not set `user:` on `openwa-api` (or `--user` on `docker run`). The entrypoint then cannot
+  `chown` or drop privileges, exits, and the container restarts in a loop.
+- Keep the `CHOWN`, `DAC_OVERRIDE`, `FOWNER`, `SETGID` and `SETUID` entries under `cap_add` in
+  `docker-compose.yml`; the `chown` and the `gosu` drop need them.
+- A `chown` of the host directory is not a fix: the entrypoint re-owns `/app/data` at the next start.
+- If the error persists on a bind mount, the host filesystem is refusing the `chown` (NFS with
+  `root_squash`, some rootless or SMB setups) or SELinux is denying access (add `:z` to the mount).
+  Use the named volume from the shipped `docker-compose.yml` instead.
+
 ```bash
-# Check current permissions
-ls -la ./data/
-
-# Fix ownership (use your user ID)
-sudo chown -R $(id -u):$(id -g) ./data/
-
-# Or use Docker's user mapping
-# docker-compose.yml
-services:
-  openwa-api:
-    user: "1000:1000"  # Your UID:GID
+# Look for the failing chown in the startup output
+docker compose logs openwa-api | head -20
 ```
 
 ### Issue: Container Networking
@@ -1326,9 +1347,17 @@ Remember OpenWA is **single-port**: the Dashboard, REST API, and Socket.IO all s
 **Q: How to backup sessions automatically?**
 
 ```bash
-# Add to crontab, for example: 0 */6 * * * cd /path/to/openwa && ./scripts/backup.sh
-BACKUP_DIR=/backups/openwa ./scripts/backup.sh
+# Production compose, whose data is the openwa-data volume: back up inside the container, then copy
+# the archive off the volume. In crontab, for example every six hours:
+# 0 */6 * * * docker exec -e BACKUP_DIR=/app/data/backups -e TMPDIR=/app/data/backups openwa-api ./scripts/backup.sh && docker cp openwa-api:/app/data/backups/. /backups/openwa/
+docker exec -e BACKUP_DIR=/app/data/backups -e TMPDIR=/app/data/backups openwa-api ./scripts/backup.sh
+docker cp openwa-api:/app/data/backups/. /backups/openwa/
+
+# Bare metal or docker-compose.dev.yml, whose data is ./data in the checkout:
+# 0 */6 * * * cd /path/to/openwa && BACKUP_DIR=/backups/openwa ./scripts/backup.sh
 ```
+
+The archives stay in `/app/data/backups` on the volume as well, so prune them there too.
 
 The shipped script also covers `main.sqlite`, the selected data store, whatsapp-web.js state,
 `BAILEYS_AUTH_DIR` (default `./data/baileys`), media, plugin packages/state, and generated secrets. Apply
@@ -1402,17 +1431,17 @@ available_events:
 
 ### HTTP Error Codes
 
-| Code | Meaning             | Common Cause             | Solution                  |
-| ---- | ------------------- | ------------------------ | ------------------------- |
-| 400  | Bad Request         | Invalid parameters       | Check request body/params |
-| 401  | Unauthorized        | Missing/invalid API key  | Add X-API-Key header      |
-| 403  | Forbidden           | Insufficient permissions | Check API key permissions |
-| 404  | Not Found           | Invalid session/endpoint | Verify session exists     |
-| 409  | Conflict            | Session already exists   | Use different session ID  |
-| 413  | Payload Too Large   | File too large           | Reduce file size          |
-| 429  | Too Many Requests   | Rate limited             | Reduce request rate       |
-| 500  | Internal Error      | Server error             | Check logs                |
-| 503  | Service Unavailable | Session disconnected     | Reconnect session         |
+| Code | Meaning             | Common Cause                                                                               | Solution                                        |
+| ---- | ------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| 400  | Bad Request         | Invalid parameters, or the session is not started                                          | Check request body/params; start the session    |
+| 401  | Unauthorized        | Missing/invalid API key                                                                    | Add X-API-Key header                            |
+| 403  | Forbidden           | Insufficient permissions                                                                   | Check API key permissions                       |
+| 404  | Not Found           | Invalid session/endpoint                                                                   | Verify session exists                           |
+| 409  | Conflict            | Session already exists, or the session is not ready (retryable)                            | Use a different session ID, or wait for `ready` |
+| 413  | Payload Too Large   | File too large                                                                             | Reduce file size                                |
+| 429  | Too Many Requests   | Rate limited                                                                               | Reduce request rate                             |
+| 500  | Internal Error      | Server error                                                                               | Check logs                                      |
+| 503  | Service Unavailable | The engine transport died during a read, or a media fetch through the session proxy failed | Retry; restart the session if it persists       |
 
 ### Error Body Shape
 

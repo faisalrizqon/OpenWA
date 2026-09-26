@@ -180,6 +180,7 @@ export interface ApiKey {
   role: 'admin' | 'operator' | 'viewer';
   allowedIps?: string[];
   allowedSessions?: string[];
+  allowedChats?: string[];
   isActive: boolean;
   expiresAt?: string;
   lastUsedAt?: string;
@@ -583,8 +584,8 @@ export interface InfraStatus {
   engine: {
     type: string;
     headless: boolean;
-    // whatsapp-web.js only: the actual WhatsApp Web build in use (distinct from the library version)
-    // and how it was chosen. (#488)
+    // whatsapp-web.js only: the WhatsApp Web build sessions request as their pin (distinct from the
+    // library version, and not necessarily the build a page runs) and how it was chosen. (#488)
     webVersion?: string | null;
     webVersionSource?: 'pinned' | 'auto' | 'native';
   };
@@ -851,7 +852,7 @@ export const sessionApi = {
     }),
   getStats: () => request<SessionStats>('/sessions/stats/overview'),
   getGroups: (id: string) =>
-    request<{ id: string; name: string; linkedParentJID?: string | null }[]>(`/sessions/${id}/groups`),
+    request<{ id: string; name?: string; linkedParentJID?: string | null }[]>(`/sessions/${id}/groups`),
   getChats: (id: string) => request<Chat[]>(`/sessions/${id}/chats`),
   markChatRead: (id: string, chatId: string) =>
     request<{ success: boolean }>(`/sessions/${id}/chats/read`, {
@@ -1022,6 +1023,7 @@ export const apiKeyApi = {
     allowedIps?: string[];
     allowedSessions?: string[];
     expiresAt?: string;
+    allowedChats?: string[];
   }) =>
     request<CreatedApiKey>('/auth/api-keys', {
       method: 'POST',
@@ -1035,6 +1037,7 @@ export const apiKeyApi = {
       allowedIps?: string[];
       allowedSessions?: string[];
       expiresAt?: string;
+      allowedChats?: string[];
     },
   ) =>
     request<ApiKey>(`/auth/api-keys/${id}`, {
@@ -1412,7 +1415,8 @@ export interface CreateInstanceInput {
 
 export interface UpdateInstanceInput {
   enabled?: boolean;
-  sessionScope?: string;
+  /** null resets a scoped instance to all sessions; omit to leave the scope unchanged. */
+  sessionScope?: string | null;
   config?: Record<string, unknown>;
 }
 

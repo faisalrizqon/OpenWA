@@ -4,6 +4,7 @@ import { WAStatusTick, WAStickerIcon, WAPhotoIcon } from './WAStatusTick';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { Channel, Chat, ContactStatusGroup, SearchHit } from '../../services/api';
+import { useRole } from '../../hooks/useRole';
 import ChatAvatar from './ChatAvatar';
 import { UnifiedSearch } from '../UnifiedSearch';
 import { listenForParentExitRequest, pseudoFullscreenStore } from '../../utils/pseudoFullscreenStore';
@@ -133,6 +134,9 @@ function ChatSidebar({
     // 2. Strip leading pictographic emoji if any
     return sanitized.replace(/^\p{Extended_Pictographic}+[\uFE0F\u200D\s]*/u, '').trim();
   };
+
+  // Posting a status needs an operator key; a read-only key would only reach a 403.
+  const { canWrite } = useRole();
 
   const renderChatSnippet = (chat: Chat) => {
     const rawText = chat.lastMessage?.trim();
@@ -304,7 +308,7 @@ function ChatSidebar({
         />
 
         {/* Compose a new status — only meaningful on the Status tab. */}
-        {activeTab === 'status' && (
+        {activeTab === 'status' && canWrite && (
           <button type="button" className="btn-primary status-compose-trigger" onClick={onComposeStatus}>
             <Plus size={16} />
             {t('chats.status.compose')}

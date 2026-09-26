@@ -6,6 +6,51 @@
         "operationId": "AuditController_findAll",
         "parameters": [
           {
+            "name": "sessionId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apiKeyId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "severity",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "info",
+                "warn",
+                "error"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "name": "action",
             "required": false,
             "in": "query",
@@ -54,51 +99,6 @@
               ],
               "type": "string"
             }
-          },
-          {
-            "name": "severity",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "info",
-                "warn",
-                "error"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "sessionId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "apiKeyId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "offset",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
           }
         ],
         "responses": {
@@ -111,6 +111,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "action or severity is repeated or not one of the listed values"
           }
         },
         "summary": "List audit logs with optional filters",
@@ -1130,7 +1133,7 @@
         },
         "responses": {
           "200": {
-            "description": "Returns `{ success }`. `false` means the engine declined to act: the Baileys engine sends the read receipt against the chat's last known message, so a chat it has seen no message in is reported as declined rather than marked read. The whatsapp-web.js engine reads the chat from the page and needs no local history.",
+            "description": "Returns `{ success }`. `false` means the engine declined to act: the Baileys engine sends the read receipt against the newest message the chat received, so a chat it has received no message in (one holding only the account's own sends included) is reported as declined rather than marked read. The whatsapp-web.js engine reads the chat from the page and needs no local history.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2415,7 +2418,7 @@
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
           "501": {
-            "description": "A caller-supplied `customLinkPreview` is not supported by the whatsapp-web.js engine — only Baileys can attach one. The send itself is supported on both; omit the field, or use `linkPreview`."
+            "description": "A caller-supplied `customLinkPreview` is not supported by the whatsapp-web.js engine — only Baileys can attach one. The send itself is supported on both; omit the field, or use `linkPreview`. whatsapp-web.js also refuses a send with `quotedMessageId` to a channel (`<id>@newsletter`) or a status or broadcast list (`@broadcast`); nothing is sent."
           }
         },
         "summary": "Send a text message",
@@ -2521,16 +2524,19 @@
             }
           },
           "400": {
-            "description": "Session not active or invalid request"
+            "description": "Session not active, invalid request, or a url that answers non-2xx, times out or cannot be reached"
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
           "413": {
-            "description": "The decoded base64 media exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
+            "description": "The decoded base64 media, or the media downloaded from `url`, exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
           },
           "501": {
-            "description": "Sending media to a channel (`<id>@newsletter`) is not supported by the whatsapp-web.js engine — the page method it needs was removed by a WhatsApp Web update. Text to a channel still works."
+            "description": "Sending media to a channel (`<id>@newsletter`) is not supported by the whatsapp-web.js engine — the page method it needs was removed by a WhatsApp Web update. Text to a channel still works. whatsapp-web.js also refuses a send with `quotedMessageId` to a channel (`<id>@newsletter`) or a status or broadcast list (`@broadcast`); nothing is sent."
+          },
+          "503": {
+            "description": "The session routes its `url` fetches through an egress proxy, and the fetch failed or timed out before any response arrived, so the request was not carried out. The proxy or the target behind it may be at fault; the gateway cannot tell which. Retryable, but a `503` that persists while the proxy works points at the `url`. Without a session proxy the same failure answers `400`."
           }
         },
         "summary": "Send an image message",
@@ -2584,16 +2590,19 @@
             }
           },
           "400": {
-            "description": "Session not active or invalid request"
+            "description": "Session not active, invalid request, or a url that answers non-2xx, times out or cannot be reached"
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
           "413": {
-            "description": "The decoded base64 media exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
+            "description": "The decoded base64 media, or the media downloaded from `url`, exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
           },
           "501": {
-            "description": "Sending media to a channel (`<id>@newsletter`) is not supported by the whatsapp-web.js engine — the page method it needs was removed by a WhatsApp Web update. Text to a channel still works."
+            "description": "Sending media to a channel (`<id>@newsletter`) is not supported by the whatsapp-web.js engine — the page method it needs was removed by a WhatsApp Web update. Text to a channel still works. whatsapp-web.js also refuses a send with `quotedMessageId` to a channel (`<id>@newsletter`) or a status or broadcast list (`@broadcast`); nothing is sent."
+          },
+          "503": {
+            "description": "The session routes its `url` fetches through an egress proxy, and the fetch failed or timed out before any response arrived, so the request was not carried out. The proxy or the target behind it may be at fault; the gateway cannot tell which. Retryable, but a `503` that persists while the proxy works points at the `url`. Without a session proxy the same failure answers `400`."
           }
         },
         "summary": "Send a video message",
@@ -2648,16 +2657,19 @@
             }
           },
           "400": {
-            "description": "Session not active or invalid request"
+            "description": "Session not active, invalid request, or a url that answers non-2xx, times out or cannot be reached"
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
           "413": {
-            "description": "The decoded base64 media exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
+            "description": "The decoded base64 media, or the media downloaded from `url`, exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
           },
           "501": {
-            "description": "Sending media to a channel (`<id>@newsletter`) is not supported by the whatsapp-web.js engine — the page method it needs was removed by a WhatsApp Web update. Text to a channel still works."
+            "description": "Sending media to a channel (`<id>@newsletter`) is not supported by the whatsapp-web.js engine — the page method it needs was removed by a WhatsApp Web update. Text to a channel still works. whatsapp-web.js also refuses a send with `quotedMessageId` to a channel (`<id>@newsletter`) or a status or broadcast list (`@broadcast`); nothing is sent."
+          },
+          "503": {
+            "description": "The session routes its `url` fetches through an egress proxy, and the fetch failed or timed out before any response arrived, so the request was not carried out. The proxy or the target behind it may be at fault; the gateway cannot tell which. Retryable, but a `503` that persists while the proxy works points at the `url`. Without a session proxy the same failure answers `400`."
           }
         },
         "summary": "Send an audio/voice message",
@@ -2712,16 +2724,19 @@
             }
           },
           "400": {
-            "description": "Session not active or invalid request"
+            "description": "Session not active, invalid request, or a url that answers non-2xx, times out or cannot be reached"
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
           "413": {
-            "description": "The decoded base64 media exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
+            "description": "The decoded base64 media, or the media downloaded from `url`, exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
           },
           "501": {
-            "description": "Sending media to a channel (`<id>@newsletter`) is not supported by the whatsapp-web.js engine — the page method it needs was removed by a WhatsApp Web update. Text to a channel still works."
+            "description": "Sending media to a channel (`<id>@newsletter`) is not supported by the whatsapp-web.js engine — the page method it needs was removed by a WhatsApp Web update. Text to a channel still works. whatsapp-web.js also refuses a send with `quotedMessageId` to a channel (`<id>@newsletter`) or a status or broadcast list (`@broadcast`); nothing is sent."
+          },
+          "503": {
+            "description": "The session routes its `url` fetches through an egress proxy, and the fetch failed or timed out before any response arrived, so the request was not carried out. The proxy or the target behind it may be at fault; the gateway cannot tell which. Retryable, but a `503` that persists while the proxy works points at the `url`. Without a session proxy the same failure answers `400`."
           }
         },
         "summary": "Send a document/file",
@@ -2781,6 +2796,9 @@
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
+          },
+          "501": {
+            "description": "whatsapp-web.js cannot send a location to a channel (`<id>@newsletter`) or a status or broadcast list (`@broadcast`); nothing is sent."
           }
         },
         "summary": "Send a location message",
@@ -2839,6 +2857,9 @@
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
+          },
+          "501": {
+            "description": "whatsapp-web.js cannot send a contact card to a channel (`<id>@newsletter`) or a status or broadcast list (`@broadcast`); nothing is sent."
           }
         },
         "summary": "Send a contact card message",
@@ -2898,10 +2919,13 @@
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
           "413": {
-            "description": "The decoded base64 media exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
+            "description": "The decoded base64 media, or the media downloaded from `url`, exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
           },
           "501": {
-            "description": "Sending media to a channel (`<id>@newsletter`) is not supported by the whatsapp-web.js engine — the page method it needs was removed by a WhatsApp Web update. Text to a channel still works."
+            "description": "Sending media to a channel (`<id>@newsletter`) is not supported by the whatsapp-web.js engine — the page method it needs was removed by a WhatsApp Web update. Text to a channel still works. whatsapp-web.js cannot send a sticker to a status or broadcast list (`@broadcast`) either; nothing is sent."
+          },
+          "503": {
+            "description": "The session routes its `url` fetches through an egress proxy, and the fetch failed or timed out before any response arrived, so the request was not carried out. The proxy or the target behind it may be at fault; the gateway cannot tell which. Retryable, but a `503` that persists while the proxy works points at the `url`. Without a session proxy the same failure answers `400`."
           }
         },
         "summary": "Send a sticker message",
@@ -2963,6 +2987,9 @@
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
+          },
+          "501": {
+            "description": "whatsapp-web.js cannot send a poll to a status or broadcast list (`@broadcast`), nor one with `quotedMessageId` to a channel (`<id>@newsletter`); nothing is sent."
           }
         },
         "summary": "Send a native WhatsApp poll",
@@ -3014,6 +3041,9 @@
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
+          },
+          "501": {
+            "description": "whatsapp-web.js cannot send a reply to a channel (`<id>@newsletter`) or a status or broadcast list (`@broadcast`); nothing is sent."
           }
         },
         "summary": "Reply to a message",
@@ -3182,6 +3212,103 @@
         ]
       }
     },
+    "/api/sessions/{sessionId}/messages/batch/{batchId}": {
+      "get": {
+        "operationId": "MessageController_getBatchStatus",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "description": "Session ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "description": "Batch ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch status and progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchStatusResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The calling key is restricted with `allowedChats`. A batch row has no key owner, so the status cannot be checked against the key's allowlist and a chat-restricted key is refused; use the single-send routes instead."
+          },
+          "404": {
+            "description": "Batch not found"
+          }
+        },
+        "summary": "Get batch processing status",
+        "tags": [
+          "messages"
+        ]
+      }
+    },
+    "/api/sessions/{sessionId}/messages/batch/{batchId}/cancel": {
+      "post": {
+        "operationId": "MessageController_cancelBatch",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "description": "Session ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "description": "Batch ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchCancelResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Batch already completed, cancelled, or failed (terminal statuses are exclusive)"
+          },
+          "403": {
+            "description": "The calling key is restricted with `allowedChats`. A batch row has no key owner, so the cancel cannot be checked against the key's allowlist and a chat-restricted key is refused."
+          },
+          "404": {
+            "description": "Batch not found"
+          }
+        },
+        "summary": "Cancel a running batch",
+        "tags": [
+          "messages"
+        ]
+      }
+    },
     "/api/sessions/{sessionId}/messages/{chatId}/history": {
       "get": {
         "description": "Reads messages directly from the WhatsApp client for the given chat, bypassing the local DB. Useful for retrieving messages that arrived before the gateway was started.",
@@ -3235,7 +3362,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Chat history (most recent messages)",
+            "description": "Chat history (most recent messages, oldest first)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3757,101 +3884,10 @@
             "description": "Session not active or invalid request"
           },
           "413": {
-            "description": "The decoded base64 media exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
+            "description": "An item's decoded base64 media exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A `url` item is fetched after the `202`; one over the cap fails that item in the batch results (`GET /messages/batch/{batchId}`) instead. The whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default)."
           }
         },
         "summary": "Send messages to multiple recipients (async batch processing)",
-        "tags": [
-          "messages"
-        ]
-      }
-    },
-    "/api/sessions/{sessionId}/messages/batch/{batchId}": {
-      "get": {
-        "operationId": "MessageController_getBatchStatus",
-        "parameters": [
-          {
-            "name": "sessionId",
-            "required": true,
-            "in": "path",
-            "description": "Session ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "batchId",
-            "required": true,
-            "in": "path",
-            "description": "Batch ID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Batch status and progress",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BatchStatusResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Batch not found"
-          }
-        },
-        "summary": "Get batch processing status",
-        "tags": [
-          "messages"
-        ]
-      }
-    },
-    "/api/sessions/{sessionId}/messages/batch/{batchId}/cancel": {
-      "post": {
-        "operationId": "MessageController_cancelBatch",
-        "parameters": [
-          {
-            "name": "sessionId",
-            "required": true,
-            "in": "path",
-            "description": "Session ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "batchId",
-            "required": true,
-            "in": "path",
-            "description": "Batch ID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Batch cancelled",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BatchCancelResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Batch already completed, cancelled, or failed (terminal statuses are exclusive)"
-          },
-          "404": {
-            "description": "Batch not found"
-          }
-        },
-        "summary": "Cancel a running batch",
         "tags": [
           "messages"
         ]
@@ -3891,6 +3927,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Session not found"
           },
           "409": {
             "description": "A template with that name already exists for the session"
@@ -4452,7 +4491,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "JSON pointing at the archive that was written under data/exports/. This route does NOT stream the tar.gz itself — fetch it from the returned `download` path.",
+            "description": "JSON pointing at the archive that was written under data/exports/. This route does NOT stream the tar.gz, and no route serves it: `download` is a server-side path to pass as `filePath` to POST /api/infra/storage/import.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4691,7 +4730,7 @@
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
           "503": {
-            "description": "The whatsapp-web.js page connection died mid-read, so the lookup could not reach an answer. Distinct from the `404` above, which asserts the contact does not exist: this one asserts nothing about the contact. Retry once the session is ready again."
+            "description": "The whatsapp-web.js page connection died mid-read, or WhatsApp Web did not answer within the protocol timeout, so the lookup could not reach an answer. Distinct from the `404` above, which asserts the contact does not exist: this one asserts nothing about the contact. Retry once the session is ready again."
           }
         },
         "summary": "Get a specific contact by ID",
@@ -5359,6 +5398,9 @@
           "403": {
             "description": "WhatsApp refused the operation. The request was well formed — the refusal happened WhatsApp-side, most often because the account lacks the admin rights the operation requires."
           },
+          "404": {
+            "description": "No such group — the id is unknown."
+          },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
@@ -5419,6 +5461,9 @@
           },
           "403": {
             "description": "WhatsApp refused the operation. The request was well formed — the refusal happened WhatsApp-side, most often because the account lacks the admin rights the operation requires."
+          },
+          "404": {
+            "description": "No such group — the id is unknown."
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
@@ -5483,6 +5528,9 @@
           "403": {
             "description": "WhatsApp refused the operation. The request was well formed — the refusal happened WhatsApp-side, most often because the account lacks the admin rights the operation requires."
           },
+          "404": {
+            "description": "No such group — the id is unknown."
+          },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
@@ -5546,6 +5594,9 @@
           "403": {
             "description": "WhatsApp refused the operation. The request was well formed — the refusal happened WhatsApp-side, most often because the account lacks the admin rights the operation requires."
           },
+          "404": {
+            "description": "No such group — the id is unknown."
+          },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
@@ -5599,6 +5650,9 @@
           },
           "403": {
             "description": "WhatsApp refused the operation. The request was well formed — the refusal happened WhatsApp-side, most often because the account lacks the admin rights the operation requires."
+          },
+          "404": {
+            "description": "No such group — the id is unknown."
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
@@ -5661,6 +5715,9 @@
           "403": {
             "description": "WhatsApp refused the operation. The request was well formed — the refusal happened WhatsApp-side, most often because the account lacks the admin rights the operation requires."
           },
+          "404": {
+            "description": "No such group — the id is unknown."
+          },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
@@ -5722,6 +5779,9 @@
           "403": {
             "description": "WhatsApp refused the operation. The request was well formed — the refusal happened WhatsApp-side, most often because the account lacks the admin rights the operation requires."
           },
+          "404": {
+            "description": "No such group — the id is unknown."
+          },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
@@ -5781,6 +5841,9 @@
           },
           "403": {
             "description": "The engine refused the change — admin rights are required"
+          },
+          "404": {
+            "description": "No such group — the id is unknown."
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
@@ -5842,6 +5905,9 @@
           "403": {
             "description": "The engine refused the change — admin rights are required"
           },
+          "404": {
+            "description": "No such group — the id is unknown."
+          },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
@@ -5888,6 +5954,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "No such group — the id is unknown."
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
@@ -5995,7 +6064,7 @@
             }
           },
           "400": {
-            "description": "The id does not name a group, or the session is not active, or neither url nor base64 was supplied"
+            "description": "The id does not name a group, the session is not active, neither url nor base64 was supplied, or the url answers non-2xx, times out or cannot be reached"
           },
           "403": {
             "description": "The engine refused the change — admin rights required"
@@ -6007,10 +6076,10 @@
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
           "413": {
-            "description": "The decoded base64 media exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
+            "description": "The decoded base64 media, or the media downloaded from `url`, exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
           },
           "503": {
-            "description": "WhatsApp did not answer within the request budget. The change may or may not have been applied — the gateway stopped waiting for a confirmation that never came."
+            "description": "WhatsApp did not answer within the request budget. The change may or may not have been applied — the gateway stopped waiting for a confirmation that never came. The session routes its `url` fetches through an egress proxy, and the fetch failed or timed out before any response arrived, so the request was not carried out. The proxy or the target behind it may be at fault; the gateway cannot tell which. Retryable, but a `503` that persists while the proxy works points at the `url`. Without a session proxy the same failure answers `400`."
           }
         },
         "summary": "Set the group's picture",
@@ -6110,6 +6179,9 @@
           "403": {
             "description": "The engine refused the request — admin rights required for this group"
           },
+          "404": {
+            "description": "No such group — the id is unknown."
+          },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
@@ -6159,6 +6231,9 @@
           },
           "403": {
             "description": "The engine refused the request — admin rights required for this group"
+          },
+          "404": {
+            "description": "No such group — the id is unknown."
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
@@ -6314,7 +6389,7 @@
             }
           },
           "400": {
-            "description": "Neither url nor base64 provided, base64 without mimetype, or session is not started"
+            "description": "Neither url nor base64 provided, base64 without mimetype, session is not started, or the url answers non-2xx, times out or cannot be reached"
           },
           "403": {
             "description": "The whatsapp-web.js engine refused the picture change. The Baileys engine has no acceptance signal and answers 200 for an upload WhatsApp declined."
@@ -6323,10 +6398,10 @@
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
           "413": {
-            "description": "Decoded base64 image exceeds the configured media cap"
+            "description": "The decoded base64 media, or the media downloaded from `url`, exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
           },
           "503": {
-            "description": "WhatsApp did not answer within the request budget. The change may or may not have been applied — the gateway stopped waiting for a confirmation that never came."
+            "description": "WhatsApp did not answer within the request budget. The change may or may not have been applied — the gateway stopped waiting for a confirmation that never came. The session routes its `url` fetches through an egress proxy, and the fetch failed or timed out before any response arrived, so the request was not carried out. The proxy or the target behind it may be at fault; the gateway cannot tell which. Retryable, but a `503` that persists while the proxy works points at the `url`. Without a session proxy the same failure answers `400`."
           }
         },
         "summary": "Set the account profile picture (URL or base64 image)",
@@ -6500,7 +6575,7 @@
         ],
         "responses": {
           "200": {
-            "description": "List of labels",
+            "description": "List of labels (empty on a personal, non-Business account)",
             "content": {
               "application/json": {
                 "schema": {
@@ -6513,7 +6588,7 @@
             }
           },
           "400": {
-            "description": "Session not ready or not a business account"
+            "description": "Session not started"
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
@@ -6749,7 +6824,7 @@
             "description": "The active engine cannot list chats by label (Baileys)"
           },
           "503": {
-            "description": "The whatsapp-web.js page connection died mid-read, so nothing could be read. Deliberately not reported as a missing label — a page that went away says nothing about whether the label exists. The other engine never answers this: Baileys has no label query at all and answers 501 above."
+            "description": "WhatsApp Web did not answer (the page died or the command timed out), so nothing could be read. Deliberately not reported as a missing label: no answer says nothing about whether the label exists. The other engine never answers this: Baileys has no label query at all and answers 501 above."
           }
         },
         "summary": "Get every chat carrying a label",
@@ -6862,6 +6937,9 @@
               }
             }
           },
+          "404": {
+            "description": "The chat does not exist on this session, or the account has no label with this id, so nothing was written (whatsapp-web.js)"
+          },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
@@ -6920,6 +6998,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "The chat does not exist on this session, so nothing was written (whatsapp-web.js)"
           },
           "409": {
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
@@ -7056,7 +7137,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Channel details. The whatsapp-web.js engine never fills `picture` or `createdAt`; the Baileys engine reads both off the newsletter metadata.",
+            "description": "Channel details. The Baileys engine reads `createdAt` off the newsletter metadata and the whatsapp-web.js engine never fills it. Neither engine fills `picture`: WhatsApp reports only a media path.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7491,6 +7572,9 @@
               }
             }
           },
+          "403": {
+            "description": "WhatsApp refused the operation. The request was well formed — the refusal happened WhatsApp-side, most often because the account lacks the admin rights the operation requires."
+          },
           "404": {
             "description": "The invite code does not resolve to a channel — it is wrong, expired, or revoked. This route takes an invite code rather than a channel id."
           },
@@ -7621,6 +7705,9 @@
           },
           "404": {
             "description": "Metrics endpoint is disabled (METRICS_TOKEN unset)"
+          },
+          "429": {
+            "description": "Too many failed token attempts from this client; retry after a minute"
           }
         },
         "security": [
@@ -7735,6 +7822,9 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Key lacks OPERATOR role; on whatsapp-web.js, the id is not one of the account's own statuses; on Baileys, the status was not posted by this session in the last 24 hours (it was posted from the phone or from another node, or before the session's engine was last created by a restart, a stop and start, or a reconnect the gateway runs itself), so its recipients are unknown and the revoke cannot be addressed to them."
           },
           "404": {
             "description": "No session is running under that id — it was never started, was stopped, or does not exist. These routes report an unstarted session as `404`, where the message and group routes report it as `400`."
@@ -7880,7 +7970,7 @@
             }
           },
           "400": {
-            "description": "Neither url nor base64 provided, or the post was blocked by a plugin."
+            "description": "Neither url nor base64 provided, the url answers non-2xx, times out or cannot be reached, or the post was blocked by a plugin."
           },
           "404": {
             "description": "No session is running under that id — it was never started, was stopped, or does not exist. These routes report an unstarted session as `404`, where the message and group routes report it as `400`."
@@ -7889,7 +7979,10 @@
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
           "413": {
-            "description": "Base64 media exceeds MEDIA_DOWNLOAD_MAX_BYTES."
+            "description": "The decoded base64 media, or the media downloaded from `url`, exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
+          },
+          "503": {
+            "description": "The session routes its `url` fetches through an egress proxy, and the fetch failed or timed out before any response arrived, so the request was not carried out. The proxy or the target behind it may be at fault; the gateway cannot tell which. Retryable, but a `503` that persists while the proxy works points at the `url`. Without a session proxy the same failure answers `400`."
           }
         },
         "summary": "Post an image status",
@@ -7933,7 +8026,7 @@
             }
           },
           "400": {
-            "description": "Neither url nor base64 provided, or the post was blocked by a plugin."
+            "description": "Neither url nor base64 provided, the url answers non-2xx, times out or cannot be reached, or the post was blocked by a plugin."
           },
           "404": {
             "description": "No session is running under that id — it was never started, was stopped, or does not exist. These routes report an unstarted session as `404`, where the message and group routes report it as `400`."
@@ -7942,7 +8035,10 @@
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
           "413": {
-            "description": "Base64 media exceeds MEDIA_DOWNLOAD_MAX_BYTES."
+            "description": "The decoded base64 media, or the media downloaded from `url`, exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
+          },
+          "503": {
+            "description": "The session routes its `url` fetches through an egress proxy, and the fetch failed or timed out before any response arrived, so the request was not carried out. The proxy or the target behind it may be at fault; the gateway cannot tell which. Retryable, but a `503` that persists while the proxy works points at the `url`. Without a session proxy the same failure answers `400`."
           }
         },
         "summary": "Post a video status",
@@ -7986,7 +8082,7 @@
             }
           },
           "400": {
-            "description": "Neither url nor base64 provided, or the post was blocked by a plugin."
+            "description": "Neither url nor base64 provided, the url answers non-2xx, times out or cannot be reached, or the post was blocked by a plugin."
           },
           "404": {
             "description": "No session is running under that id — it was never started, was stopped, or does not exist. These routes report an unstarted session as `404`, where the message and group routes report it as `400`."
@@ -7995,7 +8091,10 @@
             "description": "The session is not connected: an engine exists for it but is not `ready`, meaning disconnected, reconnecting, or still initializing, so the request never reached WhatsApp. Wait for `ready` and retry. A session that was never started answers `400` instead, and the session lifecycle routes answer `409` for a conflicting state rather than this. One window answers this while the session still reads `ready`: WhatsApp Web periodically reloads its own page and the engine re-injects into it, and for those few seconds the answer is a `409` naming the reload; retry shortly."
           },
           "413": {
-            "description": "Base64 media exceeds MEDIA_DOWNLOAD_MAX_BYTES."
+            "description": "The decoded base64 media, or the media downloaded from `url`, exceeds the media byte cap (`MEDIA_DOWNLOAD_MAX_BYTES`, 50 MiB by default). A whole request is separately bounded by `BODY_SIZE_LIMIT` (25 mb by default), and base64 inflates by about a third, so a large send usually meets that coarser limit first: the body parser rejects the request before this check runs."
+          },
+          "503": {
+            "description": "The session routes its `url` fetches through an egress proxy, and the fetch failed or timed out before any response arrived, so the request was not carried out. The proxy or the target behind it may be at fault; the gateway cannot tell which. Retryable, but a `503` that persists while the proxy works points at the `url`. Without a session proxy the same failure answers `400`."
           }
         },
         "summary": "Post an audio status as a voice note",
@@ -8072,13 +8171,13 @@
             }
           },
           "400": {
-            "description": "Neither url nor base64 given, or ffmpeg refused the input."
+            "description": "Neither url nor base64 given, the url answers non-2xx, times out or cannot be reached, or ffmpeg refused the input."
           },
           "413": {
             "description": "The supplied media is above the media size cap."
           },
           "503": {
-            "description": "Conversion is disabled, the ffmpeg binary is not runnable, or the conversion queue is saturated — retry shortly."
+            "description": "Conversion is disabled, the ffmpeg binary is not runnable, or the conversion queue is saturated — retry shortly. The session routes its `url` fetches through an egress proxy, and the fetch failed or timed out before any response arrived, so the request was not carried out. The proxy or the target behind it may be at fault; the gateway cannot tell which. Retryable, but a `503` that persists while the proxy works points at the `url`. Without a session proxy the same failure answers `400`."
           }
         },
         "summary": "Convert audio into a WhatsApp voice note (Ogg/Opus)",
@@ -8123,13 +8222,13 @@
             }
           },
           "400": {
-            "description": "Neither url nor base64 given, or ffmpeg refused the input."
+            "description": "Neither url nor base64 given, the url answers non-2xx, times out or cannot be reached, or ffmpeg refused the input."
           },
           "413": {
             "description": "The supplied media is above the media size cap."
           },
           "503": {
-            "description": "Conversion is disabled, the ffmpeg binary is not runnable, or the conversion queue is saturated — retry shortly."
+            "description": "Conversion is disabled, the ffmpeg binary is not runnable, or the conversion queue is saturated — retry shortly. The session routes its `url` fetches through an egress proxy, and the fetch failed or timed out before any response arrived, so the request was not carried out. The proxy or the target behind it may be at fault; the gateway cannot tell which. Retryable, but a `503` that persists while the proxy works points at the `url`. Without a session proxy the same failure answers `400`."
           }
         },
         "summary": "Convert video into a WhatsApp-compatible MP4",
@@ -8905,16 +9004,16 @@
             "name": "path",
             "required": true,
             "in": "path",
-            "description": "Provider-defined trailing path the plugin claims (may contain slashes).",
+            "description": "The plugin-declared route: a single path segment. Only the first segment selects the route; any further segments are ignored.",
             "schema": {
-              "example": "events/message",
+              "example": "chatwoot",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery is answered with the same ack as the first delivery, so it is not distinguishable by status."
+            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery that reaches the dedup check is answered with the route's ack (same status and headers as the first delivery), so it is not distinguishable by status."
           },
           "202": {
             "description": "Webhook accepted and queued for async plugin processing (the primary success path)."
@@ -8966,16 +9065,16 @@
             "name": "path",
             "required": true,
             "in": "path",
-            "description": "Provider-defined trailing path the plugin claims (may contain slashes).",
+            "description": "The plugin-declared route: a single path segment. Only the first segment selects the route; any further segments are ignored.",
             "schema": {
-              "example": "events/message",
+              "example": "chatwoot",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery is answered with the same ack as the first delivery, so it is not distinguishable by status."
+            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery that reaches the dedup check is answered with the route's ack (same status and headers as the first delivery), so it is not distinguishable by status."
           },
           "202": {
             "description": "Webhook accepted and queued for async plugin processing (the primary success path)."
@@ -9027,16 +9126,16 @@
             "name": "path",
             "required": true,
             "in": "path",
-            "description": "Provider-defined trailing path the plugin claims (may contain slashes).",
+            "description": "The plugin-declared route: a single path segment. Only the first segment selects the route; any further segments are ignored.",
             "schema": {
-              "example": "events/message",
+              "example": "chatwoot",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery is answered with the same ack as the first delivery, so it is not distinguishable by status."
+            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery that reaches the dedup check is answered with the route's ack (same status and headers as the first delivery), so it is not distinguishable by status."
           },
           "202": {
             "description": "Webhook accepted and queued for async plugin processing (the primary success path)."
@@ -9088,16 +9187,16 @@
             "name": "path",
             "required": true,
             "in": "path",
-            "description": "Provider-defined trailing path the plugin claims (may contain slashes).",
+            "description": "The plugin-declared route: a single path segment. Only the first segment selects the route; any further segments are ignored.",
             "schema": {
-              "example": "events/message",
+              "example": "chatwoot",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery is answered with the same ack as the first delivery, so it is not distinguishable by status."
+            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery that reaches the dedup check is answered with the route's ack (same status and headers as the first delivery), so it is not distinguishable by status."
           },
           "202": {
             "description": "Webhook accepted and queued for async plugin processing (the primary success path)."
@@ -9149,16 +9248,16 @@
             "name": "path",
             "required": true,
             "in": "path",
-            "description": "Provider-defined trailing path the plugin claims (may contain slashes).",
+            "description": "The plugin-declared route: a single path segment. Only the first segment selects the route; any further segments are ignored.",
             "schema": {
-              "example": "events/message",
+              "example": "chatwoot",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery is answered with the same ack as the first delivery, so it is not distinguishable by status."
+            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery that reaches the dedup check is answered with the route's ack (same status and headers as the first delivery), so it is not distinguishable by status."
           },
           "202": {
             "description": "Webhook accepted and queued for async plugin processing (the primary success path)."
@@ -9210,16 +9309,16 @@
             "name": "path",
             "required": true,
             "in": "path",
-            "description": "Provider-defined trailing path the plugin claims (may contain slashes).",
+            "description": "The plugin-declared route: a single path segment. Only the first segment selects the route; any further segments are ignored.",
             "schema": {
-              "example": "events/message",
+              "example": "chatwoot",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery is answered with the same ack as the first delivery, so it is not distinguishable by status."
+            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery that reaches the dedup check is answered with the route's ack (same status and headers as the first delivery), so it is not distinguishable by status."
           },
           "202": {
             "description": "Webhook accepted and queued for async plugin processing (the primary success path)."
@@ -9271,16 +9370,16 @@
             "name": "path",
             "required": true,
             "in": "path",
-            "description": "Provider-defined trailing path the plugin claims (may contain slashes).",
+            "description": "The plugin-declared route: a single path segment. Only the first segment selects the route; any further segments are ignored.",
             "schema": {
-              "example": "events/message",
+              "example": "chatwoot",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery is answered with the same ack as the first delivery, so it is not distinguishable by status."
+            "description": "GET verification challenge echo, or a route whose declared ack sets 200. Not the primary success path; see 202. A re-delivery that reaches the dedup check is answered with the route's ack (same status and headers as the first delivery), so it is not distinguishable by status."
           },
           "202": {
             "description": "Webhook accepted and queued for async plugin processing (the primary success path)."
@@ -9666,7 +9765,7 @@
             "name": "offset",
             "required": false,
             "in": "query",
-            "description": "Pagination offset",
+            "description": "Pagination offset, at most 100000",
             "schema": {
               "type": "number"
             }
@@ -9706,7 +9805,7 @@
   "info": {
     "title": "OpenWA API",
     "description": "Open Source WhatsApp API Gateway - Free, Self-Hosted HTTP API\n\n**Gateway-wide responses.** Two statuses are returned by middleware before routing, so any operation can emit them:\n\n- `415 Unsupported Media Type` — the request body carries a `Content-Encoding` other than `identity`. The aggregate in-flight body cap counts wire bytes, so a compressed body would be admitted on its compressed size and then inflated past the memory it is meant to bound. Send the body uncompressed.\n- `503 Service Unavailable` with `Retry-After` — the gateway already has too much request body data in flight. The body is not read; retry after the given delay.",
-    "version": "0.23.5",
+    "version": "0.23.7",
     "contact": {
       "name": "OpenWA",
       "url": "https://github.com/rmyndharis/OpenWA",
@@ -9994,6 +10093,17 @@
               "type": "string"
             }
           },
+          "allowedChats": {
+            "description": "Chat ids this key may read and send to — a curated allowlist independent of `allowedSessions`. Entries are a group `<id>@g.us`, a contact `<phone>@c.us` / `<lid>@lid`, or a bare phone number. A contact entry also matches its resolved `@lid` form (and vice versa) through the lid mapping table. Omit or leave empty to let the key reach every chat.",
+            "example": [
+              "120363000000000000@g.us",
+              "919999999999@c.us"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "expiresAt": {
             "type": "string",
             "description": "Expiration date (ISO 8601)",
@@ -10032,6 +10142,12 @@
             }
           },
           "allowedSessions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowedChats": {
             "type": "array",
             "items": {
               "type": "string"
@@ -10105,6 +10221,12 @@
               "type": "string"
             }
           },
+          "allowedChats": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "isActive": {
             "type": "boolean"
           },
@@ -10160,6 +10282,12 @@
               "type": "string"
             }
           },
+          "allowedChats": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "expiresAt": {
             "type": "string"
           }
@@ -10181,6 +10309,11 @@
               "viewer"
             ],
             "description": "The key's role; present only when valid."
+          },
+          "engineType": {
+            "type": "string",
+            "description": "Engine the process resolved at boot; present only when valid.",
+            "example": "baileys"
           }
         },
         "required": [
@@ -10199,7 +10332,7 @@
           },
           "config": {
             "type": "object",
-            "description": "Session configuration. Only three keys are read: autoRejectCalls (boolean, default false, Baileys engine only) rejects incoming calls as soon as they ring, and the call.received event is still emitted first; maxReconnectAttempts (0-20, default unlimited) caps consecutive reconnects and reconnectBaseDelay (1000-300000 ms, default 5000) sets the backoff base, both for the gateway's own reconnect only (on Baileys the engine retries a transient drop itself, with a fixed backoff and no cap). Anything else is stored but ignored. All three can be changed later with PATCH /api/sessions/{sessionId}/config, without restarting the session.",
+            "description": "Session configuration. Only three keys are read: autoRejectCalls (boolean, default false, Baileys engine only) rejects incoming calls as soon as they ring, and the call.received event is still emitted first; maxReconnectAttempts (0-20, default unlimited) caps consecutive reconnects and reconnectBaseDelay (1000-300000 ms, default 5000) sets the backoff base, both for the gateway's own reconnect only (on Baileys the engine retries a transient drop itself, with a fixed backoff and no cap). Anything else is stored but ignored. All three can be changed later with PATCH /api/sessions/{sessionId}/config without a restart: autoRejectCalls applies from the next incoming call, the two reconnect settings from the next session start.",
             "example": {
               "autoRejectCalls": false,
               "maxReconnectAttempts": 5,
@@ -10332,7 +10465,7 @@
           },
           "engineLoaded": {
             "type": "boolean",
-            "description": "Whether the gateway currently holds a live engine for this session. This is the precondition the lifecycle routes actually enforce, and `status` alone does not imply it: a `disconnected` session keeps its engine for the duration of an automatic reconnect backoff, while a session stopped through `POST /sessions/:sessionId/stop` carries the same status with no engine. When `true`, `stop`, `logout` and `force-kill` can act and `start` answers 400; when `false`, the reverse. Derived per request from live process state, so it is never persisted and never historical.",
+            "description": "Whether the gateway currently holds a live engine for this session: an engine in the answering process or, in a multi-node deployment, a live claim by the node running the session. `status` alone does not imply it: a `disconnected` session keeps its engine for the duration of an automatic reconnect backoff, while a session stopped through `POST /sessions/:sessionId/stop` carries the same status with no engine. On the node running the session, `true` means `stop`, `logout` and `force-kill` can act and `start` answers 400; `false` means the reverse. For a session another node runs, request routing (NODE_URL set on every node) forwards the lifecycle routes to that node, where they act; without routing, only that node can act on it, and any other node answers 409 to `start` and `stop` and 400 to `logout` and `force-kill`. Derived per request from live state, so it is never persisted and never historical.",
             "example": true
           }
         },
@@ -10618,7 +10751,7 @@
             "example": "1234567890@c.us"
           },
           "messageIds": {
-            "description": "Specific message IDs to mark read. Baileys acknowledges individual messages, so without this only the newest message the engine still holds in memory gets a receipt — a burst leaves its earlier messages unread forever, and a restarted session has no message to acknowledge at all. Callers that persist inbound message IDs should send them here. Ignored by whatsapp-web.js, whose own sendSeen is chat-level.",
+            "description": "Specific message IDs to mark read. Baileys acknowledges individual messages, so without this only the newest received message the engine still holds in memory gets a receipt — a burst leaves its earlier messages unread forever, and a restarted session has no message to acknowledge at all. Callers that persist inbound message IDs should send them here. Ignored by whatsapp-web.js, whose own sendSeen is chat-level.",
             "maxItems": 100,
             "minItems": 1,
             "example": [
@@ -11039,7 +11172,7 @@
           },
           "headers": {
             "type": "object",
-            "description": "Custom headers to include in webhook requests. Never returned by any webhook route. At delivery, `content-type` and `x-openwa-*` names are stripped so a custom header cannot shadow a system one.",
+            "description": "Custom headers to include in webhook requests. Never returned by any webhook route. At delivery, `content-type` and `x-openwa-*` names are stripped so a custom header cannot shadow a system one, and so are the connection-level names the HTTP client owns (`connection`, `content-length`, `expect`, `keep-alive`, `te`, `trailer`, `transfer-encoding`, `upgrade`).",
             "example": {
               "X-Custom-Header": "value"
             }
@@ -11072,7 +11205,7 @@
           },
           "retryCount": {
             "type": "number",
-            "description": "Number of retry attempts on failure",
+            "description": "Total delivery attempts per event, including the first (0 and 1 both mean a single attempt with no retry). An event that exhausts them is recorded in GET /api/webhooks/delivery-failures; the webhook stays active.",
             "example": 3,
             "minimum": 0,
             "maximum": 5
@@ -11268,7 +11401,7 @@
           },
           "retryCount": {
             "type": "number",
-            "description": "Delivery attempts before the webhook is parked. Same range the create route enforces.",
+            "description": "Total delivery attempts per event, including the first (0 and 1 both mean a single attempt). Same range the create route enforces.",
             "example": 3,
             "minimum": 0,
             "maximum": 5
@@ -11379,7 +11512,7 @@
           },
           "conditions": {
             "type": "object",
-            "description": "Match conditions in the webhook filter format (message family: sender, recipient, chatId, body, type, isGroup, kind, fromMe, hasMedia, mentions). All conditions must match (AND). Omitted or empty means the rule matches every inbound message."
+            "description": "Match conditions in the webhook filter format (message family: sender, recipient, chatId, body, type, isGroup, kind, fromMe, hasMedia, mentions). All conditions must match (AND). Omitted or empty means the rule matches every inbound message except channel, broadcast-list and status messages, which a rule answers only when it has a `kind` condition that matches them."
           },
           "cooldownSeconds": {
             "type": "number",
@@ -11416,7 +11549,7 @@
           },
           "conditions": {
             "type": "object",
-            "description": "Match conditions in the webhook filter format (message family: sender, recipient, chatId, body, type, isGroup, kind, fromMe, hasMedia, mentions). All conditions must match (AND). Omitted or empty means the rule matches every inbound message.",
+            "description": "Match conditions in the webhook filter format (message family: sender, recipient, chatId, body, type, isGroup, kind, fromMe, hasMedia, mentions). All conditions must match (AND). Omitted or empty means the rule matches every inbound message except channel, broadcast-list and status messages, which a rule answers only when it has a `kind` condition that matches them.",
             "nullable": true
           },
           "replyText": {
@@ -11460,7 +11593,7 @@
           },
           "conditions": {
             "type": "object",
-            "description": "Match conditions in the webhook filter format (message family: sender, recipient, chatId, body, type, isGroup, kind, fromMe, hasMedia, mentions). All conditions must match (AND). Omitted or empty means the rule matches every inbound message."
+            "description": "Match conditions in the webhook filter format (message family: sender, recipient, chatId, body, type, isGroup, kind, fromMe, hasMedia, mentions). All conditions must match (AND). Omitted or empty means the rule matches every inbound message except channel, broadcast-list and status messages, which a rule answers only when it has a `kind` condition that matches them."
           },
           "cooldownSeconds": {
             "type": "number",
@@ -12065,6 +12198,173 @@
         },
         "required": [
           "success"
+        ]
+      },
+      "BatchProgressDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "example": 10
+          },
+          "sent": {
+            "type": "number",
+            "example": 7
+          },
+          "failed": {
+            "type": "number",
+            "example": 1
+          },
+          "pending": {
+            "type": "number",
+            "example": 2
+          },
+          "cancelled": {
+            "type": "number",
+            "example": 0
+          }
+        },
+        "required": [
+          "total",
+          "sent",
+          "failed",
+          "pending",
+          "cancelled"
+        ]
+      },
+      "BatchMessageErrorDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Machine-readable failure code.",
+            "example": "RECIPIENT_UNREACHABLE"
+          },
+          "message": {
+            "type": "string",
+            "example": "The number is not registered on WhatsApp"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "BatchMessageResultDto": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "example": "628123456789@c.us"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "sent",
+              "failed",
+              "cancelled"
+            ],
+            "example": "sent"
+          },
+          "messageId": {
+            "type": "string",
+            "description": "Assigned on a successful send.",
+            "example": "true_628123456789@c.us_3EB0123456789"
+          },
+          "error": {
+            "description": "Present on a failed send.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BatchMessageErrorDto"
+              }
+            ]
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the send completed."
+          }
+        },
+        "required": [
+          "chatId",
+          "status"
+        ]
+      },
+      "BatchStatusResponseDto": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "example": "batch_abc123"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "processing",
+              "completed",
+              "cancelled",
+              "failed"
+            ],
+            "example": "processing"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/BatchProgressDto"
+          },
+          "results": {
+            "description": "One entry per recipient already attempted.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchMessageResultDto"
+            }
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When processing started; null while the batch is pending."
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When the batch reached a terminal status; null while it is still running."
+          }
+        },
+        "required": [
+          "batchId",
+          "status",
+          "progress",
+          "results"
+        ]
+      },
+      "BatchCancelResponseDto": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "example": "batch_abc123"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "processing",
+              "completed",
+              "cancelled",
+              "failed"
+            ],
+            "example": "cancelled"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/BatchProgressDto"
+          }
+        },
+        "required": [
+          "batchId",
+          "status",
+          "progress"
         ]
       },
       "ChatHistoryCallDto": {
@@ -12817,173 +13117,6 @@
           "statusUrl"
         ]
       },
-      "BatchProgressDto": {
-        "type": "object",
-        "properties": {
-          "total": {
-            "type": "number",
-            "example": 10
-          },
-          "sent": {
-            "type": "number",
-            "example": 7
-          },
-          "failed": {
-            "type": "number",
-            "example": 1
-          },
-          "pending": {
-            "type": "number",
-            "example": 2
-          },
-          "cancelled": {
-            "type": "number",
-            "example": 0
-          }
-        },
-        "required": [
-          "total",
-          "sent",
-          "failed",
-          "pending",
-          "cancelled"
-        ]
-      },
-      "BatchMessageErrorDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "Machine-readable failure code.",
-            "example": "RECIPIENT_UNREACHABLE"
-          },
-          "message": {
-            "type": "string",
-            "example": "The number is not registered on WhatsApp"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ]
-      },
-      "BatchMessageResultDto": {
-        "type": "object",
-        "properties": {
-          "chatId": {
-            "type": "string",
-            "example": "628123456789@c.us"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "sent",
-              "failed",
-              "cancelled"
-            ],
-            "example": "sent"
-          },
-          "messageId": {
-            "type": "string",
-            "description": "Assigned on a successful send.",
-            "example": "true_628123456789@c.us_3EB0123456789"
-          },
-          "error": {
-            "description": "Present on a failed send.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/BatchMessageErrorDto"
-              }
-            ]
-          },
-          "sentAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "When the send completed."
-          }
-        },
-        "required": [
-          "chatId",
-          "status"
-        ]
-      },
-      "BatchStatusResponseDto": {
-        "type": "object",
-        "properties": {
-          "batchId": {
-            "type": "string",
-            "example": "batch_abc123"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "processing",
-              "completed",
-              "cancelled",
-              "failed"
-            ],
-            "example": "processing"
-          },
-          "progress": {
-            "$ref": "#/components/schemas/BatchProgressDto"
-          },
-          "results": {
-            "description": "One entry per recipient already attempted.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/BatchMessageResultDto"
-            }
-          },
-          "startedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true,
-            "description": "When processing started; null while the batch is pending."
-          },
-          "completedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true,
-            "description": "When the batch reached a terminal status; null while it is still running."
-          }
-        },
-        "required": [
-          "batchId",
-          "status",
-          "progress",
-          "results"
-        ]
-      },
-      "BatchCancelResponseDto": {
-        "type": "object",
-        "properties": {
-          "batchId": {
-            "type": "string",
-            "example": "batch_abc123"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "processing",
-              "completed",
-              "cancelled",
-              "failed"
-            ],
-            "example": "cancelled"
-          },
-          "progress": {
-            "$ref": "#/components/schemas/BatchProgressDto"
-          }
-        },
-        "required": [
-          "batchId",
-          "status",
-          "progress"
-        ]
-      },
       "CreateTemplateDto": {
         "type": "object",
         "properties": {
@@ -13159,7 +13292,7 @@
           },
           "autoReconnect": {
             "type": "boolean",
-            "description": "Always true: the engine auto-reconnects on a transient disconnect and there is no global off switch — reconnection is bounded per session by RECONNECT_MAX_ATTEMPTS.",
+            "description": "Always true: the engine auto-reconnects on a transient disconnect and there is no global off switch. Attempts are unlimited by default; cap them per session with config.maxReconnectAttempts (0-20, PATCH /api/sessions/{sessionId}/config).",
             "example": true
           },
           "debugMode": {
@@ -13414,7 +13547,7 @@
           "webVersion": {
             "type": "string",
             "nullable": true,
-            "description": "whatsapp-web.js only: the WhatsApp Web build actually in use, which is distinct from the library version. Omitted for other engines.",
+            "description": "whatsapp-web.js only: the WhatsApp Web build sessions request as their pin, which is distinct from the library version. A page can still run another build; each session logs the one it runs when it reaches ready. Omitted for other engines.",
             "example": "2.3000.1234567890"
           },
           "webVersionSource": {
@@ -13523,7 +13656,7 @@
             }
           },
           "library": {
-            "description": "Absent when the plugin does not report a library, which includes any disabled engine.",
+            "description": "Absent when the plugin does not report a library. Built-in engines report it whether or not they are enabled.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/EngineLibraryDto"
@@ -14554,12 +14687,12 @@
         "properties": {
           "message": {
             "type": "string",
-            "example": "Storage archive created."
+            "example": "Storage export completed"
           },
           "download": {
             "type": "string",
-            "description": "Path to download the archive from.",
-            "example": "/api/infra/storage/download/xyz.tar"
+            "description": "Server-side path of the archive, relative to the gateway working directory. Not a download URL: pass it as `filePath` to POST /api/infra/storage/import.",
+            "example": "data/exports/storage-export-1750000000000-abc.tar.gz"
           }
         },
         "required": [
@@ -15789,7 +15922,7 @@
           "chatName": {
             "type": "string",
             "nullable": true,
-            "description": "Null when no name is known for the chat."
+            "description": "The contact's push name for a 1:1 chat, taken from its incoming messages. Null for a group chat, or when no name is known."
           },
           "messageCount": {
             "type": "number",
@@ -15902,7 +16035,7 @@
           "chatName": {
             "type": "string",
             "nullable": true,
-            "description": "Null when no name is known for the chat."
+            "description": "The contact's push name for a 1:1 chat, taken from its incoming messages. Null for a group chat, or when no name is known."
           },
           "count": {
             "type": "number",
@@ -16028,11 +16161,8 @@
           },
           "mediaUrl": {
             "type": "string",
-            "description": "Media URL as the engine reported it."
-          },
-          "media": {
-            "type": "object",
-            "description": "Downloaded media bytes, present only when the engine fetched them and they fit the inbound media cap. Absent is not an error — fetch the bytes from the media route instead."
+            "description": "Same-origin path to GET /sessions/{sessionId}/status/{statusId}/media, which needs X-API-Key like any other route. Present only when the stored status kept its media.",
+            "example": "/api/sessions/0a941dac-a965-45e7-b318-74ae8be134f0/status/ABCD1234/media"
           },
           "backgroundColor": {
             "type": "string",
@@ -16385,17 +16515,17 @@
           },
           "price": {
             "type": "number",
-            "description": "Price in the currency’s minor-unit-free numeric form.",
+            "description": "Price in the currency’s minor-unit-free numeric form. Absent when the product has no price.",
             "example": 85000
           },
           "currency": {
             "type": "string",
-            "description": "ISO currency code.",
+            "description": "ISO currency code. Absent when the product carries no currency.",
             "example": "IDR"
           },
           "priceFormatted": {
             "type": "string",
-            "description": "Price rendered for display. Synthesized by the gateway from price + currency, so an unrecognised currency code falls back to a plain \"CODE amount\" pair.",
+            "description": "Price rendered for display. Synthesized by the gateway from price + currency, so an unrecognised currency code falls back to a plain \"CODE amount\" pair, and a product with no currency shows the bare amount. Present only when price is.",
             "example": "IDR 85,000.00"
           },
           "imageUrl": {
@@ -16422,9 +16552,6 @@
         "required": [
           "id",
           "name",
-          "price",
-          "currency",
-          "priceFormatted",
           "url",
           "isAvailable"
         ]
@@ -16644,7 +16771,7 @@
         "properties": {
           "url": {
             "type": "string",
-            "description": "URL of the plugin .zip to download and install (SSRF-guarded; private-network hosts remain subject to the guard). https:// is accepted as-is. Plain http:// is only accepted when the URL pins the package content — append `#sha256=<64 hex>` (fragment — never sent to the server; query params are ignored) — because the package is executable code and must be integrity-protected in transit. A pinned digest that does not match the downloaded archive fails the install."
+            "description": "URL of the plugin .zip to download and install (SSRF-guarded; private-network hosts remain subject to the guard). https:// is accepted without a pin, except that NODE_ENV=production (the Docker image default) requires the `#sha256=` pin described below on every URL unless PLUGIN_INSTALL_REQUIRE_PIN=false, and PLUGIN_INSTALL_REQUIRE_PIN=true requires it everywhere. Plain http:// is only accepted when the URL pins the package content — append `#sha256=<64 hex>` (fragment — never sent to the server; query params are ignored) — because the package is executable code and must be integrity-protected in transit. A pinned digest that does not match the downloaded archive fails the install."
           }
         },
         "required": [
@@ -16962,7 +17089,8 @@
           },
           "sessionScope": {
             "type": "string",
-            "description": "Session id the instance is scoped to. Omit for all sessions."
+            "description": "Session id to bind the instance to, or null for all sessions. Omit to leave the scope unchanged.",
+            "nullable": true
           },
           "config": {
             "type": "object",

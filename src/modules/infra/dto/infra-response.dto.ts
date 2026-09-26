@@ -101,8 +101,9 @@ export class InfraEngineStatusDto {
     type: String,
     nullable: true,
     description:
-      'whatsapp-web.js only: the WhatsApp Web build actually in use, which is distinct from the ' +
-      'library version. Omitted for other engines.',
+      'whatsapp-web.js only: the WhatsApp Web build sessions request as their pin, which is distinct from the ' +
+      'library version. A page can still run another build; each session logs the one it runs when it reaches ' +
+      'ready. Omitted for other engines.',
     example: '2.3000.1234567890',
   })
   webVersion?: string | null;
@@ -183,7 +184,8 @@ export class AvailableEngineDto {
 
   @ApiPropertyOptional({
     type: EngineLibraryDto,
-    description: 'Absent when the plugin does not report a library, which includes any disabled engine.',
+    description:
+      'Absent when the plugin does not report a library. Built-in engines report it whether or not they are enabled.',
   })
   library?: EngineLibraryDto;
 }
@@ -529,10 +531,15 @@ export class StorageFileCountResponseDto {
 }
 
 export class StorageExportResponseDto {
-  @ApiProperty({ example: 'Storage archive created.' })
+  @ApiProperty({ example: 'Storage export completed' })
   message!: string;
 
-  @ApiProperty({ description: 'Path to download the archive from.', example: '/api/infra/storage/download/xyz.tar' })
+  @ApiProperty({
+    description:
+      'Server-side path of the archive, relative to the gateway working directory. Not a download URL: ' +
+      'pass it as `filePath` to POST /api/infra/storage/import.',
+    example: 'data/exports/storage-export-1750000000000-abc.tar.gz',
+  })
   download!: string;
 }
 
