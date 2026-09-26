@@ -91,14 +91,8 @@
   z-index: 50;
 }
 
-@media (max-width: 768px) {
-  .wa-loc-top-header {
-    min-height: calc(56px + max(34px, env(safe-area-inset-top, 0px))) !important;
-    padding-top: max(34px, env(safe-area-inset-top, 0px)) !important;
-    padding-bottom: 0.5rem !important;
-  }
-}
-
+body.__page_fullscreen .wa-loc-top-header,
+:fullscreen .wa-loc-top-header,
 .modal.wa-location-modal.is-fullscreen .wa-loc-top-header {
   min-height: calc(56px + max(34px, env(safe-area-inset-top, 0px))) !important;
   padding-top: max(34px, env(safe-area-inset-top, 0px)) !important;

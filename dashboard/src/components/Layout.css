@@ -347,9 +347,8 @@
     top: 0;
     left: 0;
     right: 0;
-    min-height: calc(56px + max(34px, env(safe-area-inset-top, 0px)));
-    height: auto;
-    padding: max(34px, env(safe-area-inset-top, 0px)) 1rem 0.5rem 1rem;
+    height: 56px;
+    padding: 0 1rem;
     background: var(--bg-white);
     border-bottom: 1px solid var(--border);
     z-index: 90;
@@ -421,7 +420,7 @@
   .main-content.mobile {
     margin-left: 0;
     width: 100%;
-    padding-top: calc(56px + max(34px, env(safe-area-inset-top, 0px)));
+    padding-top: 56px;
     height: 100%;
     min-height: 0;
     max-height: 100%;
