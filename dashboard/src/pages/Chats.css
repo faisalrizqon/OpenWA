@@ -1222,6 +1222,8 @@ body.__in_iframe .chats-page .chats-layout {
   justify-content: flex-end;
   gap: 0.25rem;
   margin-top: 0.25rem;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .chats-page .message-time {
@@ -2283,6 +2285,8 @@ html[data-theme='dark'] .chats-page .chat-location-card {
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.14);
   border-radius: 20px;
   padding: 2px 6px;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .chats-page .message-bubble-wrapper.outgoing .message-actions-menu {
@@ -2295,7 +2299,9 @@ html[data-theme='dark'] .chats-page .chat-location-card {
   left: auto;
 }
 
-.chats-page .message-bubble-container:hover .message-actions-menu {
+.chats-page .message-bubble-container:hover .message-actions-menu,
+.chats-page .message-bubble-container:active .message-actions-menu,
+.chats-page .message-bubble-container:focus-within .message-actions-menu {
   display: flex;
 }
 
@@ -2315,6 +2321,19 @@ html[data-theme='dark'] .chats-page .chat-location-card {
 .chats-page .action-btn:hover {
   background: var(--bg-light);
   color: var(--text-primary);
+}
+
+.chats-page .action-btn.copy-btn:hover {
+  color: var(--primary, #22c55e);
+}
+
+.chats-page .action-btn.copy-btn.is-copied {
+  color: var(--primary, #22c55e);
+}
+
+.chats-page .copy-success-icon {
+  color: var(--primary, #22c55e);
+  stroke-width: 2.5;
 }
 
 .chats-page .action-btn.delete-btn:hover {

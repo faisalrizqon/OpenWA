@@ -1,18 +1,20 @@
-import { Fragment, useCallback, useEffect, useMemo, useState, type RefObject } from 'react';
+import { Fragment, useCallback, useContext, useEffect, useMemo, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, ChevronDown, CornerUpLeft, Loader2, MessageSquare, Smile, Trash2 } from 'lucide-react';
+import { AlertCircle, Check, ChevronDown, Copy, CornerUpLeft, Loader2, MessageSquare, Smile, Trash2 } from 'lucide-react';
 import { useRole } from '../../hooks/useRole';
+import { ToastContext } from '../../hooks/useToast';
 import { sessionApi, type Chat } from '../../services/api';
 import {
   buildMentionNameMap,
   getMediaSrc,
   resolveMentions,
   senderKey,
+  stripMentionDelimiters,
   type ChatMessageView,
 } from '../../utils/chatMessages';
 import { shouldFetchOlderMessages } from '../../utils/scrollDecision';
 import MessageBody from './MessageBody';
-import ContactMessageCard from './ContactMessageCard';
+import ContactMessageCard, { parseVCardText } from './ContactMessageCard';
 import LocationMapPreview from './LocationMapPreview';
 import { WAStatusTick } from './WAStatusTick';
 function formatDateDivider(timestamp: number): string {
@@ -142,6 +144,102 @@ function ChatThread({
   const [buttonClick, setButtonClick] = useState<
     Record<string, { loadingId?: string; done?: boolean; selectedId?: string }>
   >({});
+  const toast = useContext(ToastContext);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const getCopyableText = useCallback(
+    (msg: ChatMessageView): string => {
+      // 1. Regular text / media caption (with resolved mentions and clean formatting)
+      if (msg.body && msg.type !== 'location' && msg.type !== 'call') {
+        const raw = resolveMentions(msg.body, mentionNames);
+        return stripMentionDelimiters(raw);
+      }
+
+      // 2. Location
+      if (msg.type === 'location') {
+        if (msg.body && !msg.body.startsWith('data:image') && msg.body.length < 500) {
+          return stripMentionDelimiters(msg.body);
+        }
+        const loc = msg.metadata?.location;
+        if (loc) {
+          const parts = [loc.description, loc.address].filter(Boolean);
+          if (parts.length > 0) return parts.join(' - ');
+          if (loc.latitude != null && loc.longitude != null) return `${loc.latitude}, ${loc.longitude}`;
+        }
+      }
+
+      // 3. Order
+      if (msg.metadata?.order) {
+        const order = msg.metadata.order;
+        const lines: string[] = ['*Detail Pesanan*'];
+        if (order.items && order.items.length > 0) {
+          order.items.forEach(item => {
+            const priceStr = item.price != null ? ` • ${order.currency || 'IDR'} ${item.price.toLocaleString('id-ID')}` : '';
+            lines.push(`- ${item.name} (${item.quantity}x${priceStr})`);
+          });
+        }
+        if (order.subtotal != null || order.total != null) {
+          const tot = (order.total ?? order.subtotal ?? 0).toLocaleString('id-ID');
+          lines.push(`Total: ${order.currency || 'IDR'} ${tot}`);
+        }
+        return lines.join('\n');
+      }
+
+      // 4. Contact
+      if ((msg.type === 'contact' || msg.body?.includes('BEGIN:VCARD')) && msg.body) {
+        const cards = parseVCardText(msg.body);
+        if (cards.length > 0) {
+          return cards.map(c => [c.name, c.phone].filter(Boolean).join('\n')).join('\n\n');
+        }
+        return stripMentionDelimiters(msg.body);
+      }
+      return msg.body ? stripMentionDelimiters(msg.body) : '';
+    },
+    [mentionNames],
+  );
+
+  const handleCopyMessage = useCallback(
+    async (msg: ChatMessageView) => {
+      const text = getCopyableText(msg);
+      if (!text) return;
+
+      let ok = false;
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          ok = true;
+        }
+      } catch {
+        ok = false;
+      }
+
+      if (!ok) {
+        try {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.left = '-999999px';
+          textarea.style.top = '-999999px';
+          textarea.style.opacity = '0';
+          textarea.setAttribute('readonly', '');
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+          ok = document.execCommand('copy');
+          document.body.removeChild(textarea);
+        } catch {
+          ok = false;
+        }
+      }
+
+      if (ok) {
+        setCopiedId(msg.id);
+        setTimeout(() => setCopiedId(prev => (prev === msg.id ? null : prev)), 2000);
+        toast?.success(t('chats.actions.copied', 'Pesan disalin ke clipboard'));
+      }
+    },
+    [getCopyableText, t, toast],
+  );
   const downloadMedia = useCallback(
     async (message: ChatMessageView) => {
       const messageId = message.waMessageId;
@@ -701,6 +799,18 @@ function ChatThread({
                         ))}
                       </div>
                     </div>
+
+                    {Boolean(getCopyableText(msg)) && (
+                      <button
+                        type="button"
+                        className={`action-btn copy-btn ${copiedId === msg.id ? 'is-copied' : ''}`}
+                        onClick={() => void handleCopyMessage(msg)}
+                        title={copiedId === msg.id ? t('chats.actions.copied', 'Disalin!') : t('chats.actions.copy', 'Salin pesan')}
+                        aria-label={t('chats.actions.copy', 'Salin pesan')}
+                      >
+                        {copiedId === msg.id ? <Check size={14} className="copy-success-icon" /> : <Copy size={14} />}
+                      </button>
+                    )}
 
                     {isMe && msg.status !== 'pending' && (
                       <button
